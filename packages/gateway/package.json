@@ -1,0 +1,23 @@
+{
+  "name": "@lyrie/gateway",
+  "version": "0.1.0",
+  "description": "Multi-channel messaging gateway for Lyrie Agent — Telegram, WhatsApp, Discord",
+  "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "test": "bun test",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lyrie/core": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5.5.0"
+  }
+}

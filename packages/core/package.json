@@ -1,0 +1,15 @@
+{
+  "name": "@lyrie/core",
+  "version": "0.1.0",
+  "description": "Lyrie Agent Core — The brain",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  }
+}

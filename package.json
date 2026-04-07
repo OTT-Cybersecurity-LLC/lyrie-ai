@@ -1,0 +1,41 @@
+{
+  "name": "lyrie-agent",
+  "version": "0.1.0",
+  "description": "The world's first autonomous AI agent with built-in cybersecurity",
+  "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lyrie-ai/lyrie-agent.git"
+  },
+  "homepage": "https://lyrie.ai",
+  "keywords": [
+    "ai",
+    "agent",
+    "autonomous",
+    "cybersecurity",
+    "llm",
+    "assistant",
+    "security"
+  ],
+  "scripts": {
+    "start": "bun run packages/core/src/index.ts",
+    "dev": "bun run --watch packages/core/src/index.ts",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "shield:build": "cd packages/shield && cargo build --release",
+    "shield:test": "cd packages/shield && cargo test",
+    "migrate": "bun run scripts/migrate.ts",
+    "migrate:detect": "bun run scripts/migrate.ts --detect",
+    "migrate:openclaw": "bun run scripts/migrate.ts --from openclaw",
+    "migrate:hermes": "bun run scripts/migrate.ts --from hermes",
+    "migrate:autogpt": "bun run scripts/migrate.ts --from autogpt",
+    "migrate:all": "bun run scripts/migrate.ts --from all"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0",
+    "bun-types": "latest"
+  }
+}

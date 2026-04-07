@@ -1,0 +1,9 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/memory/page": "app/memory/page.js",
+  "/page": "app/page.js",
+  "/settings/page": "app/settings/page.js",
+  "/agents/page": "app/agents/page.js",
+  "/overview/page": "app/overview/page.js",
+  "/shield/page": "app/shield/page.js"
+}

@@ -1,0 +1,9 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/memory/page": "/memory",
+  "/page": "/",
+  "/settings/page": "/settings",
+  "/agents/page": "/agents",
+  "/overview/page": "/overview",
+  "/shield/page": "/shield"
+}
