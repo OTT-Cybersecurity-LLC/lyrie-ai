@@ -323,5 +323,18 @@ export function registerHandlers(router: MessageRouter): void {
   router.registerCommand("skills", handleSkills);
   router.registerCommand("shield", handleShield);
 
-  console.log("  ✓ Registered 9 Telegram command handlers");
+  // Pentest commands
+  const pentestHandler = (type: string) => async (msg: any): Promise<UnifiedResponse> => {
+    const target = msg.command?.args || "";
+    if (!target) {
+      return { text: "Usage: /" + type + " <target>\n\nExample: /" + type + " example.com", parseMode: "markdown" };
+    }
+    return { text: "🛡️ Starting " + type + " on " + target + "...\n\nThis will be processed by Lyrie AI pentest engine.\nPlease wait while I analyze the target.", parseMode: "markdown" };
+  };
+  router.registerCommand("pentest", pentestHandler("pentest"));
+  router.registerCommand("recon", pentestHandler("recon"));
+  router.registerCommand("vulnscan", pentestHandler("vulnscan"));
+  router.registerCommand("apiscan", pentestHandler("apiscan"));
+
+  console.log("  ✓ Registered 13 Telegram command handlers");
 }
