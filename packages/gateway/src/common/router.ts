@@ -133,11 +133,24 @@ export class MessageRouter {
     const data = message.callbackData!;
 
     // Callbacks are formatted as "command:arg1:arg2"
+    // Handle pentest button callbacks
+    const pentestCallbacks: Record<string, string> = {
+      "pentest_scan": "Enter a target to quick scan:\n\n`/scan example.com`",
+      "pentest_full": "Enter a target for full pentest:\n\n`/pentest example.com`\n\nRuns all modules: recon + vulns + web app + API (~10 min)",
+      "pentest_recon": "Enter a target for recon:\n\n`/recon example.com`\n\nDNS, subdomains, ports, WHOIS, SSL certs",
+      "pentest_vuln": "Enter a target for vuln scan:\n\n`/vulnscan example.com`\n\nSQLi, XSS, SSRF, RCE, CORS, CVE lookup",
+      "pentest_api": "Enter a target for API scan:\n\n`/apiscan example.com`\n\nEndpoints, GraphQL, JWT bypass, rate limits",
+      "pentest_report": "No recent scan report available. Run a scan first with `/scan <target>`",
+    };
+
+    if (pentestCallbacks[data]) {
+      return { text: pentestCallbacks[data], parseMode: "markdown" };
+    }
+
     const [cmd, ...args] = data.split(":");
     const handler = this.commandHandlers.get(cmd.toLowerCase());
 
     if (handler) {
-      // Inject the parsed command info
       message.command = {
         name: cmd,
         args: args.join(":"),
@@ -147,7 +160,7 @@ export class MessageRouter {
     }
 
     return {
-      text: `⚠️ Unknown action: ${cmd}`,
+      text: `⚠️ Unknown action: ${data}`,
     };
   }
 
