@@ -38,8 +38,8 @@ async function handleStart(msg: UnifiedMessage): Promise<UnifiedResponse> {
       "",
       "Powered by *OTT Cybersecurity LLC*",
       `Version ${VERSION}`,
-    ].join("
-"),
+    ].join("\n"),
+
     parseMode: "markdown",
     buttons: [
       [
