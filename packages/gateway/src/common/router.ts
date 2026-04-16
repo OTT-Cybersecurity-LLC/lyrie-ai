@@ -118,8 +118,11 @@ export class MessageRouter {
 
     const response = await this.engine.process(engineMsg);
 
+    // Engine returns { message: { content }, toolCallsMade, turns, model, durationMs }
+    const content = response?.message?.content || response?.content || "";
+
     return {
-      text: response.content || "🤔 I didn't generate a response. Try again?",
+      text: content || "🤔 I didn't generate a response. Try again?",
       parseMode: "markdown",
     };
   }

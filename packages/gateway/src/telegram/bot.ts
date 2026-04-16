@@ -41,6 +41,7 @@ import type {
 } from "../common/types";
 
 import { MiddlewarePipeline } from "./middleware";
+import { MediaProcessor, buildMediaEnrichedText } from "./media-processor";
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
@@ -66,12 +67,18 @@ export class TelegramBot implements ChannelBot {
   private polling = false;
   private pollAbort: AbortController | null = null;
   private shutdownRequested = false;
+  private mediaProcessor: MediaProcessor;
 
   constructor(config: TelegramConfig) {
     this.config = config;
     this.token = config.token;
     this.apiBase = `${TG_API_BASE}${this.token}`;
     this.middleware = new MiddlewarePipeline(config);
+    this.mediaProcessor = new MediaProcessor({
+      telegramToken: this.token,
+      openaiApiKey: process.env.OPENAI_API_KEY,
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    });
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -318,10 +325,14 @@ export class TelegramBot implements ChannelBot {
     // Run middleware
     const middlewareResult = this.middleware.process(update);
     if (!middlewareResult.allowed) {
-      // Handle rate limiting: send a message to the user
-      if (middlewareResult.reason?.startsWith("rate_limited")) {
-        const chatId = update.message?.chat.id || update.callback_query?.message?.chat.id;
-        if (chatId) {
+      const chatId = update.message?.chat.id || update.callback_query?.message?.chat.id;
+      if (chatId) {
+        if (middlewareResult.reason === "unauthorized") {
+          await this.send(String(chatId), {
+            text: "🛡️ *Lyrie Agent*\n\nThis is a private AI agent. You are not authorized to use this bot.\n\nTo get access, contact the owner.\n\n_Powered by Lyrie.ai — OTT Cybersecurity LLC_",
+            parseMode: "markdown",
+          });
+        } else if (middlewareResult.reason?.startsWith("rate_limited")) {
           await this.send(String(chatId), {
             text: "⏳ You're sending messages too fast. Please wait a moment.",
           });
@@ -358,7 +369,36 @@ export class TelegramBot implements ChannelBot {
     const tgMsg = update.message;
     if (!tgMsg) return;
 
+    // Show "typing..." indicator while processing
+    await this.sendChatAction(String(tgMsg.chat.id), "typing");
+
     const unified = this.toUnified(tgMsg);
+
+    // ── Media Processing ────────────────────────────────────────────────────
+    // If the message contains media, download and process it before
+    // passing to the engine. Voice → transcription, photos → description, etc.
+    if (unified.media && unified.media.length > 0) {
+      try {
+        const mediaResults = await this.mediaProcessor.processAttachments(
+          unified.media,
+          tgMsg.caption,
+        );
+        // Enrich the message text with media processing results
+        unified.text = buildMediaEnrichedText(mediaResults, unified.text);
+      } catch (err: any) {
+        this.middleware.log.error(
+          "media",
+          `Media processing failed: ${err.message}`,
+          err,
+        );
+        // Don't block the message — send with a note about the failure
+        const fallbackNote = `[Media received but processing failed: ${err.message}]`;
+        unified.text = unified.text
+          ? `${fallbackNote}\n\n${unified.text}`
+          : fallbackNote;
+      }
+    }
+
     const response = await this.handler(unified);
     if (response) {
       await this.send(String(tgMsg.chat.id), response);
@@ -462,6 +502,10 @@ export class TelegramBot implements ChannelBot {
   }
 
   // ── API Layer ───────────────────────────────────────────────────────────────
+
+  private async sendChatAction(chatId: string, action: string = "typing"): Promise<void> {
+    await this.callApi("sendChatAction", { chat_id: chatId, action });
+  }
 
   private async callApi<T>(
     method: string,

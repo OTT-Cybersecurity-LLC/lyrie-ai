@@ -53,7 +53,7 @@ const DEFAULT_MODELS: ModelConfig[] = [
     isLocal: false,
   },
   {
-    id: "gemini-3.1-flash",
+    id: "gemini-2.5-flash",
     name: "Gemini 3.1 Flash",
     provider: "google",
     taskType: "fast",
@@ -64,7 +64,7 @@ const DEFAULT_MODELS: ModelConfig[] = [
     isLocal: false,
   },
   {
-    id: "gemini-3.1-pro",
+    id: "gemini-2.5-pro",
     name: "Gemini 3.1 Pro",
     provider: "google",
     taskType: "reasoning",
@@ -132,14 +132,54 @@ const DEFAULT_MODELS: ModelConfig[] = [
   },
 ];
 
+import { AnthropicProvider } from "./providers/anthropic";
+import { OpenAIProvider } from "./providers/openai";
+import { GoogleProvider } from "./providers/google";
+import { XAIProvider } from "./providers/xai";
+
+export interface RouterConfig {
+  anthropicApiKey?: string;
+  openaiApiKey?: string;
+  googleApiKey?: string;
+  xaiApiKey?: string;
+  minimaxApiKey?: string;
+  preferLocal?: boolean;
+}
+
 export class ModelRouter {
   private models: ModelConfig[] = [];
   private preferLocal = false;
+  private providers: Map<string, any> = new Map();
+  private config: RouterConfig = {};
 
-  async initialize(): Promise<void> {
+  async initialize(config?: RouterConfig): Promise<void> {
     this.models = [...DEFAULT_MODELS];
+    if (config) {
+      this.config = config;
+      this.preferLocal = config.preferLocal || false;
+    }
+
+    // Instantiate real providers with API keys
+    if (this.config.anthropicApiKey) {
+      this.providers.set("anthropic", new AnthropicProvider({ apiKey: this.config.anthropicApiKey }));
+      console.log("   ✓ Anthropic provider connected");
+    }
+    if (this.config.openaiApiKey) {
+      this.providers.set("openai", new OpenAIProvider({ apiKey: this.config.openaiApiKey }));
+      console.log("   ✓ OpenAI provider connected");
+    }
+    if (this.config.googleApiKey) {
+      this.providers.set("google", new GoogleProvider({ apiKey: this.config.googleApiKey }));
+      console.log("   ✓ Google provider connected");
+    }
+    if (this.config.xaiApiKey) {
+      this.providers.set("xai", new XAIProvider({ apiKey: this.config.xaiApiKey }));
+      console.log("   ✓ xAI provider connected");
+    }
+
     console.log(`   → ${this.models.length} models configured`);
     console.log(`   → Cloud: ${this.models.filter((m) => !m.isLocal).length} | Local: ${this.models.filter((m) => m.isLocal).length}`);
+    console.log(`   → Active providers: ${Array.from(this.providers.keys()).join(", ") || "none"}`);
   }
 
   /**
@@ -154,12 +194,87 @@ export class ModelRouter {
       ? candidates.find((m) => m.isLocal) || candidates[0]
       : candidates.find((m) => !m.isLocal) || candidates[0];
 
-    // Return a model instance (placeholder — real implementation connects to APIs)
+    // Find a real provider for the selected model
+    const provider = this.providers.get(selected.provider);
+
+    // If no provider for the selected model, fall back to first available provider
+    const fallbackProvider = provider || this.providers.values().next().value;
+    const fallbackModel = provider ? selected : this.models.find((m) => m.provider === this.providers.keys().next().value) || selected;
+
+    if (!fallbackProvider) {
+      // No providers at all — return empty stub
+      console.warn("[ModelRouter] No providers available! Returning empty response.");
+      return {
+        config: selected,
+        complete: async () => ({ content: "⚠️ No AI providers configured. Please set API keys in .env", toolCalls: [] }),
+      };
+    }
+
+    const actualModel = provider ? selected : fallbackModel;
+    const actualProvider = fallbackProvider;
+
     return {
-      config: selected,
+      config: actualModel,
       complete: async (prompt: any, options?: any) => {
-        // TODO: Connect to actual model API based on provider
-        return { content: "", toolCalls: [] };
+        try {
+          // Route to the correct provider API
+          if (actualModel.provider === "anthropic" || actualProvider instanceof AnthropicProvider) {
+            const anthropic = actualProvider as AnthropicProvider;
+            const messages = (prompt.messages || []).filter((m: any) => m.role !== "system").map((m: any) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+            }));
+            const result = await anthropic.complete(actualModel.id, messages, {
+              system: prompt.system,
+              maxTokens: options?.maxTokens || actualModel.maxTokens,
+              temperature: 0.7,
+            });
+            console.log(`[ModelRouter] Anthropic response: content=${result.content?.substring(0, 100)}, toolCalls=${result.toolCalls?.length || 0}, stopReason=${result.stopReason}`);
+            return { content: result.content, toolCalls: result.toolCalls };
+          }
+
+          if (actualModel.provider === "openai" || actualProvider instanceof OpenAIProvider) {
+            const openai = actualProvider as OpenAIProvider;
+            const messages = [
+              ...(prompt.system ? [{ role: "system", content: prompt.system }] : []),
+              ...(prompt.messages || []),
+            ];
+            const result = await openai.complete(actualModel.id, messages, {
+              maxTokens: options?.maxTokens || actualModel.maxTokens,
+              temperature: 0.7,
+            });
+            return { content: result.content, toolCalls: result.toolCalls };
+          }
+
+          if (actualModel.provider === "google" || actualProvider instanceof GoogleProvider) {
+            const google = actualProvider as GoogleProvider;
+            const messages = (prompt.messages || []).filter((m: any) => m.role !== "system");
+            const result = await google.complete(actualModel.id, messages, {
+              systemInstruction: prompt.system,
+              maxTokens: options?.maxTokens || actualModel.maxTokens,
+              temperature: 0.7,
+            });
+            return { content: result.content, toolCalls: result.toolCalls };
+          }
+
+          if (actualModel.provider === "xai" || actualProvider instanceof XAIProvider) {
+            const xai = actualProvider as XAIProvider;
+            const messages = [
+              ...(prompt.system ? [{ role: "system", content: prompt.system }] : []),
+              ...(prompt.messages || []),
+            ];
+            const result = await xai.complete(actualModel.id, messages, {
+              maxTokens: options?.maxTokens || actualModel.maxTokens,
+              temperature: 0.7,
+            });
+            return { content: result.content, toolCalls: result.toolCalls };
+          }
+
+          return { content: "⚠️ No matching provider for model: " + actualModel.id, toolCalls: [] };
+        } catch (err: any) {
+          console.error(`[ModelRouter] Provider error (${actualModel.provider}/${actualModel.id}):`, err.message);
+          return { content: `⚠️ AI error: ${err.message}`, toolCalls: [] };
+        }
       },
     };
   }
@@ -168,34 +283,9 @@ export class ModelRouter {
    * Classify a task into the appropriate type.
    */
   private classifyTask(input: string): TaskType {
-    const lower = input.toLowerCase();
-
-    // Coding patterns
-    if (/\b(code|build|implement|refactor|debug|fix bug|function|class|api|deploy|git)\b/.test(lower)) {
-      return "coder";
-    }
-
-    // Fast/simple patterns
-    if (/\b(check|status|ping|list|search|find|what is|how many)\b/.test(lower)) {
-      return "fast";
-    }
-
-    // Reasoning patterns
-    if (/\b(analyze|reason|compare|evaluate|calculate|prove|explain why|architecture)\b/.test(lower)) {
-      return "reasoning";
-    }
-
-    // Bulk patterns
-    if (/\b(generate \d+|batch|bulk|mass|all articles|every page)\b/.test(lower)) {
-      return "bulk";
-    }
-
-    // Complex/strategy patterns
-    if (/\b(strategy|plan|design|decide|trade|invest|launch)\b/.test(lower)) {
-      return "brain";
-    }
-
-    return "general";
+    // TEMPORARY: Route everything to Claude Opus (brain) until all providers are tested
+    // TODO: Re-enable smart routing after Gemini/xAI/OpenAI providers are verified
+    return "brain";
   }
 
   availableModels(): ModelConfig[] {

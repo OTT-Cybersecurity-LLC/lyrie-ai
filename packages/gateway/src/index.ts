@@ -26,6 +26,9 @@ import { WhatsAppBot } from "./whatsapp/bot";
 import { DiscordBot } from "./discord/bot";
 import { registerHandlers } from "./telegram/handlers";
 
+// Re-export core types so consumers can use @lyrie/gateway as the single import
+export type { LyrieConfig, LyrieEngineConfig, Message } from "@lyrie/core";
+
 // ─── Config from Environment ────────────────────────────────────────────────────
 
 function loadConfig(): GatewayConfig {
