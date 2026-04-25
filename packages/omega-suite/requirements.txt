@@ -1,0 +1,58 @@
+# Lyrie OMEGA — Python Dependencies
+# Lyrie.ai | OTT Cybersecurity LLC
+# Install with: pip3 install -r requirements.txt
+
+# ============================================================
+# Core dependencies (required)
+# ============================================================
+requests>=2.31.0
+pydantic>=2.9.2
+
+# Structured LLM output (works with OpenAI and Anthropic SDKs)
+instructor>=1.0.0
+
+# ============================================================
+# LLM Provider SDKs (install for your provider)
+# ============================================================
+# openai         — OpenAI, Gemini (via shim), Mistral, Ollama
+# anthropic      — Anthropic Claude (native structured output)
+# google-genai   — Google Gemini (native SDK, accurate thinking token costs)
+
+# ============================================================
+# Optional: Enhanced inventory metadata
+# ============================================================
+# tree-sitter
+# tree-sitter-python
+# tree-sitter-java
+# tree-sitter-javascript
+# tree-sitter-c
+# tree-sitter-go
+
+# ============================================================
+# Optional: Enhanced dataflow visualization
+# ============================================================
+tabulate>=0.9.0
+
+# ============================================================
+# Optional: SMT-based constraint analysis
+# (used by core/smt_solver — one-gadget feasibility, etc.)
+# ============================================================
+# z3-solver==4.16.0.0
+
+# ============================================================
+# Optional: Web scanning
+# ============================================================
+# beautifulsoup4>=4.12.0
+# playwright>=1.40.0
+
+# ============================================================
+# Optional: OSS Forensics (Lyrie Intel module)
+# ============================================================
+# google-cloud-bigquery  — GH Archive queries
+# gitpython              — Local git forensics
+
+# ============================================================
+# Note on local LLM support
+# ============================================================
+# For Ollama: install 'openai' package (Ollama exposes OpenAI-compatible endpoint)
+# https://ollama.ai
