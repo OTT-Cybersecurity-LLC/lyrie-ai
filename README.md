@@ -24,6 +24,24 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 | Threat intelligence | ❌ | ❌ | ❌ | **✅** |
 | Auditable codebase | ❌ (430K lines) | ❌ | ✅ | **✅ (<30K)** |
 
+## 📦 Modules
+
+This monorepo consolidates all Lyrie components:
+
+| Path | Description |
+|------|-------------|
+| `packages/omega-suite/` | **Lyrie OMEGA** — Autonomous Security Intelligence Platform (CVE intel, KEV watcher, publisher pipeline powering [research.lyrie.ai](https://research.lyrie.ai)) |
+| `research/` | Reproducible exploit labs + PoCs for every published research.lyrie.ai post |
+| `tools/exploit-lab/` | Autonomous exploit reproduction framework (Docker labs + asciinema recordings) |
+| `skills/` | Agent skills and capability modules |
+| `packages/*` | Core runtime packages |
+
+## 🌐 Public Channels
+
+- **Research blog:** [research.lyrie.ai](https://research.lyrie.ai)
+- **X / Twitter:** [@lyrie_ai](https://x.com/lyrie_ai)
+- **Main site:** [lyrie.ai](https://lyrie.ai)
+
 ## Quick Start
 
 ```bash
