@@ -16,7 +16,8 @@ See [`tools/exploit-lab/LAB-PROTOCOL.md`](../tools/exploit-lab/LAB-PROTOCOL.md) 
 ## Index
 
 | CVE | Severity | Status | Blog post |
-|-----|----------|--------|-----------|
+|-----|----------|--------|-----------|  
+| [CVE-2024-7399](./CVE-2024-7399/) | 9.8 CRITICAL | ✅ Reproduced (mock — license-gated) | [Samsung MagicINFO Path Traversal](https://research.lyrie.ai/research/cve-2024-7399-samsung-magicinfo-9-server) |
 | [CVE-2024-57726](./CVE-2024-57726/) | 9.9 CRITICAL | ✅ Reproduced (mock — license-gated) | [SimpleHelp PrivEsc](https://research.lyrie.ai/research/cve-2024-57726-simple-help-simplehelp) |
 
 > Backfill in progress for other published posts. Auto-scaffolder: `tools/exploit-lab/scaffold-cve.sh CVE-YYYY-NNNNN`.
