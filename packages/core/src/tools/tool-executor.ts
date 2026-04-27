@@ -17,6 +17,7 @@
  */
 
 import { ShieldManager } from "../engine/shield-manager";
+import { ShieldGuard, type ShieldGuardLike } from "../engine/shield-guard";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,14 @@ export interface Tool {
   parameters: Record<string, ToolParameter>;
   execute: (args: Record<string, any>) => Promise<ToolResult>;
   risk: "safe" | "moderate" | "dangerous";
+  /**
+   * Shield Doctrine: if the tool returns text the agent will read but did
+   * NOT author (e.g. web fetch, web search, shell stdout, file read), set
+   * this to true. The executor runs every successful result through the
+   * Shield's `scanRecalled` and redacts unsafe content before it reaches
+   * the model.
+   */
+  untrustedOutput?: boolean;
 }
 
 export interface ToolCall {
@@ -102,6 +111,8 @@ export class ToolExecutor {
   private registerBuiltinTools(): void {
     // ── exec ──────────────────────────────────────────────────────────────
     this.register({
+      // Shield Doctrine: shell stdout is untrusted text — redact prompt-injection.
+      untrustedOutput: true,
       name: "exec",
       description:
         "Execute a shell command. Returns stdout. Commands are scanned by Shield before execution. Max timeout 120s.",
@@ -195,6 +206,8 @@ export class ToolExecutor {
 
     // ── read_file ─────────────────────────────────────────────────────────
     this.register({
+      // Shield Doctrine: file contents may contain attacker-controlled text.
+      untrustedOutput: true,
       name: "read_file",
       description:
         "Read the contents of a file. Supports text files. Path must be within allowed workspace.",
@@ -391,6 +404,8 @@ export class ToolExecutor {
 
     // ── web_search ────────────────────────────────────────────────────────
     this.register({
+      // Shield Doctrine: third-party search snippets are untrusted text.
+      untrustedOutput: true,
       name: "web_search",
       description:
         "Search the web using Brave Search API. Falls back to DuckDuckGo HTML scraping if no API key. Returns titles, URLs, and snippets.",
@@ -435,6 +450,8 @@ export class ToolExecutor {
 
     // ── web_fetch ─────────────────────────────────────────────────────────
     this.register({
+      // Shield Doctrine: scraped web content is the #1 prompt-injection vector.
+      untrustedOutput: true,
       name: "web_fetch",
       description:
         "Fetch a URL and extract readable content. Strips HTML to plain text/markdown. Max 200KB response.",
@@ -606,8 +623,14 @@ export class ToolExecutor {
 
     try {
       const result = await tool.execute(call.args);
-      this.logExecution(call.tool, call.args, result.success, Date.now() - startTime);
-      return result;
+      // Shield Doctrine: scan tool output that the agent will treat as recalled
+      // text. Tools opt in via `untrustedOutput: true`. Skipping for failed
+      // calls (the error path is operator-visible only).
+      const filtered = result.success && tool.untrustedOutput
+        ? this.shieldFilterOutput(call.tool, result)
+        : result;
+      this.logExecution(call.tool, call.args, filtered.success, Date.now() - startTime);
+      return filtered;
     } catch (err: any) {
       const result: ToolResult = {
         success: false,
@@ -617,6 +640,36 @@ export class ToolExecutor {
       this.logExecution(call.tool, call.args, false, Date.now() - startTime);
       return result;
     }
+  }
+
+  /** Lightweight Shield-guard used to scan untrusted tool output. */
+  private outputShield: ShieldGuardLike = ShieldGuard.fallback();
+
+  /** Override the output Shield (e.g. inject a real ShieldManager-backed guard). */
+  setOutputShield(guard: ShieldGuardLike): void {
+    this.outputShield = guard;
+  }
+
+  /**
+   * Post-execute Shield filter for untrusted tool output. Redacts (does not
+   * drop) so the agent still sees the structural recall — it just can't be
+   * hijacked by injected text inside scraped pages, search snippets, or
+   * shell stdout.
+   */
+  private shieldFilterOutput(toolName: string, result: ToolResult): ToolResult {
+    if (!result?.output || typeof result.output !== "string") return result;
+    const verdict = this.outputShield.scanRecalled(result.output);
+    if (!verdict.blocked) return result;
+    return {
+      ...result,
+      output: `⚠️ Lyrie Shield redacted ${toolName} output: ${verdict.reason ?? "unsafe content"}`,
+      metadata: {
+        ...(result.metadata ?? {}),
+        shielded: true,
+        shieldReason: verdict.reason,
+        shieldSeverity: verdict.severity,
+      },
+    };
   }
 
   /**

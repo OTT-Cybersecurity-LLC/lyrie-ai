@@ -39,11 +39,12 @@ For every Lyrie surface that handles **text not authored by the operator**:
 | **Pairing greeting** | `DmPairingManager.greet` calls `scanInbound` | Pairing codes are a small attack surface; don't issue codes to obvious abusers. |
 | **Memory recall** | `searchAcrossSessions` calls `scanRecalled` | Recalled snippets can carry prompt-injection. Redact, don't drop. |
 | **MCP tool results** | `McpRegistry.shieldFilter` | Third-party MCP servers are untrusted. Scan every text/resource block. |
-| **Skill output** | _(planned: Phase 1 final)_ | Skills can shell out — outputs must be scanned. |
-| **Browser content / scrapes** | _(planned: Phase 2)_ | Web pages routinely contain prompt-injection in markdown. |
+| **Tool output (untrustedOutput=true)** | `ToolExecutor.shieldFilterOutput` | Shell stdout, web fetch, web search, file reads are scanned post-execute. |
+| **Skill output** | `SkillManager.shieldFilter` | Skills shell out, scrape, or call APIs — every output passes the Shield. |
 | **Cross-session summaries** | summarizer runs on already-shielded inputs | Defense-in-depth. |
-| **External webhooks** | _(planned)_ | All inbound webhooks pass through `scanInbound`. |
-| **Diff-view applied edits** | _(Phase 1)_ | Static-analyze patches before they touch disk. |
+| **Browser content / scrapes** | _(via `web_fetch` `untrustedOutput`)_ — standalone browser package gets dedicated hook in Phase 2 | Web pages are the #1 prompt-injection vector. |
+| **External webhooks** | _(planned: Phase 2)_ | All inbound webhooks must pass through `scanInbound`. |
+| **Diff-view applied edits** | _(planned: Phase 1 — immediately after this PR)_ | Static-analyze patches before they touch disk. |
 
 If you add a new surface that touches untrusted text and it does **not**
 appear in this table or call into one of the two Shield types, your PR is

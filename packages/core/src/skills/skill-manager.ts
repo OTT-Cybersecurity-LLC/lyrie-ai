@@ -17,6 +17,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from "fs";
 import { join, basename } from "path";
 
+import { ShieldGuard, type ShieldGuardLike } from "../engine/shield-guard";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface SkillStep {
@@ -361,8 +363,22 @@ export class SkillManager {
     this.executors.set(skillId, executor);
   }
 
+  /** Shield guard used to scan skill outputs before they reach the agent. */
+  private outputShield: ShieldGuardLike = ShieldGuard.fallback();
+
+  /** Override the default Shield guard (e.g. inject a real ShieldManager). */
+  setOutputShield(guard: ShieldGuardLike): void {
+    this.outputShield = guard;
+  }
+
   /**
    * Execute a skill and track the result.
+   *
+   * Shield Doctrine: every skill output is scanned through the Shield guard.
+   * Skills frequently shell out, scrape pages, or call third-party APIs —
+   * exactly the surfaces where prompt-injection / credential exfil shows up.
+   * Unsafe output is redacted with a clear Shield notice; the structural
+   * recall is preserved so the agent still knows the skill ran.
    */
   async execute(skillId: string, context: any): Promise<SkillExecutionResult> {
     const skill = this.skills.get(skillId);
@@ -379,10 +395,11 @@ export class SkillManager {
     try {
       const result = await executor(context);
       const duration = Date.now() - start;
+      const filtered = result.success ? this.shieldFilter(skillId, result) : result;
 
       // Track usage
       skill.timesUsed++;
-      if (result.success) {
+      if (filtered.success) {
         skill.timesSucceeded++;
       } else {
         skill.timesFailed++;
@@ -392,7 +409,7 @@ export class SkillManager {
       skill.updatedAt = new Date().toISOString();
 
       this.saveToDisk(skill);
-      return { ...result, duration };
+      return { ...filtered, duration };
     } catch (err: any) {
       const duration = Date.now() - start;
       skill.timesUsed++;
@@ -402,6 +419,22 @@ export class SkillManager {
       this.saveToDisk(skill);
       return { success: false, output: null, duration, error: err.message || String(err) };
     }
+  }
+
+  /** Redact skill output that fails the Shield's recalled-text check. */
+  private shieldFilter(skillId: string, result: SkillExecutionResult): SkillExecutionResult {
+    const text = typeof result.output === "string"
+      ? result.output
+      : (result.output != null ? JSON.stringify(result.output) : "");
+    if (!text) return result;
+    const verdict = this.outputShield.scanRecalled(text);
+    if (!verdict.blocked) return result;
+    return {
+      success: result.success,
+      output: `⚠️ Lyrie Shield redacted skill \"${skillId}\" output: ${verdict.reason ?? "unsafe content"}`,
+      duration: result.duration,
+      error: result.error,
+    };
   }
 
   // ─── Self-Improvement ────────────────────────────────────────────────────
