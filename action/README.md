@@ -1,14 +1,16 @@
 # 🛡️ Lyrie Pentest Action
 
+_Lyrie.ai by OTT Cybersecurity LLC._
+
 Run Lyrie's autonomous AI pentest in your GitHub Actions pipeline.
-Finds vulnerabilities, validates findings with Lyrie Shield, posts a
+Finds vulnerabilities, validates findings with the Lyrie Shield, posts a
 Markdown summary on every pull request, and uploads SARIF to GitHub
 Code Scanning.
 
-> **Phase 2 starter (v0.2.x)** — wraps the existing
-> [`skills/ai-pentest/`](../skills/ai-pentest/) engine and Lyrie Shield.
-> Deeper RAPTOR-style attack-surface mapping and Stages A–F validation
-> land in the next two PRs.
+> **Phase 2 starter (v0.2.x)** — wraps the
+> [`skills/ai-pentest/`](../skills/ai-pentest/) engine and the Lyrie Shield.
+> Deeper Lyrie attack-surface mapping (`/understand`) and Stages A–F
+> exploitation validation land in the next two PRs.
 
 ## Usage
 
@@ -95,13 +97,13 @@ permissions:
   prompt-injection payloads at PR time.
 
 `v0.2.1` (next PR):
-- Pre-scan attack-surface mapping (`/understand`)
-- Stages A–F exploitation validator (RAPTOR absorption)
+- Lyrie attack-surface mapping (`/understand`)
+- Lyrie Stages A–F exploitation validator
 
 `v0.2.2` (PR after that):
 - Semgrep + CodeQL pre-screen
-- 38 LLM Guard scanners ported into Shield
-- Multi-language vuln scanners (Go / Python / JS-TS / C-C++ / PHP / Ruby)
+- 38-scanner Shield Doctrine port (input + output sanitizers)
+- Multi-language Lyrie vuln scanners (Go / Python / JS-TS / C-C++ / PHP / Ruby)
 
 ## Ethics
 
@@ -111,4 +113,4 @@ running on PR-changed files inside your own repo is unambiguously safe.
 
 ## License
 
-MIT — © OTT Cybersecurity LLC.
+MIT — © OTT Cybersecurity LLC. _Lyrie.ai — https://lyrie.ai_

@@ -1,11 +1,13 @@
 # @lyrie/mcp
 
 Model Context Protocol (MCP) adapter for Lyrie Agent.
+_Lyrie.ai by OTT Cybersecurity LLC._
 
 MCP is the open standard ([modelcontextprotocol.io](https://modelcontextprotocol.io))
-that lets agents discover and call tools/resources/prompts from any
-compliant server — Cursor, Claude Code, Cline, OpenAI Codex, Gemini CLI,
-Continue, and many others ship MCP support out of the box.
+that lets agents discover and call tools / resources / prompts from any
+compliant server. Lyrie speaks fluent MCP both as a client and as a server,
+so the entire MCP ecosystem becomes part of Lyrie's tool surface and Lyrie's
+own skills become callable from any other MCP-aware host.
 
 This package gives Lyrie:
 
@@ -64,11 +66,11 @@ Lyrie auto-discovers this file on boot when MCP is enabled in
 
 ## Status
 
-Phase 1 Lyrie absorption — ships in `v0.1.x`. Wire-protocol implementation
-is intentionally minimal but spec-compliant; the goal is **interoperability**
-not feature parity with every host. Use `bun run packages/mcp/src/index.ts list`
-to verify a configured server responds.
+Ships in Lyrie `v0.1.x`. Wire-protocol implementation is intentionally
+minimal but spec-compliant; the goal is **interoperability** with the broader
+MCP ecosystem, not feature parity with any one host. Use
+`bun run packages/mcp/src/index.ts list` to verify a configured server responds.
 
 ## License
 
-MIT — © OTT Cybersecurity LLC.
+MIT — © OTT Cybersecurity LLC. _Lyrie.ai — https://lyrie.ai_
