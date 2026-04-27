@@ -16,6 +16,18 @@ import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, copyFileSync, statSync } from "fs";
 import { join, basename } from "path";
 
+import {
+  ensureFtsIndex,
+  searchAcrossSessions as ftsSearchAcrossSessions,
+  summarizeSession as ftsSummarizeSession,
+  type CrossSessionHit,
+  type CrossSessionSearchOptions,
+  type SessionSummary,
+  type SummarizeSessionOptions,
+} from "./fts-search";
+import type { ShieldGuardLike } from "../engine/shield-guard";
+import { ShieldGuard } from "../engine/shield-guard";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type Importance = "critical" | "high" | "medium" | "low";
@@ -105,7 +117,13 @@ function scoreResult(entry: { key: string; content: string; importance: string; 
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
-const SCHEMA_VERSION = 1;
+/**
+ * Schema versions:
+ *   1 — initial (memories, conversations, rules, projects, entities)
+ *   2 — + FTS5 cross-session search index (additive; safe to skip if FTS5
+ *        is not available in the SQLite build)
+ */
+const SCHEMA_VERSION = 2;
 
 const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS schema_version (
@@ -196,6 +214,21 @@ export class MemoryCore {
 
     // Run self-healing check
     await this.heal();
+
+    // Phase 1: ensure the FTS5 cross-session index exists (idempotent).
+    // Falls back silently if the SQLite build lacks FTS5.
+    try {
+      const fts = ensureFtsIndex(this.db);
+      if (fts.created) {
+        console.log(`   → FTS5 index built (${fts.backfilled} rows backfilled)`);
+      }
+      // Bump persisted schema version when we add columns/indices in the
+      // future. For v2 we only added a virtual table + triggers, no destructive
+      // change — still safe to record the version we shipped.
+      this.db.exec(`UPDATE schema_version SET version = MAX(version, ${SCHEMA_VERSION});`);
+    } catch (err) {
+      console.warn("   ⚠️  FTS5 setup skipped:", err instanceof Error ? err.message : err);
+    }
 
     // Start hourly auto-backup
     this.startAutoBackup();
@@ -498,6 +531,32 @@ export class MemoryCore {
     params.push(limit);
 
     return this.db.query(sql).all(...params) as ConversationMessage[];
+  }
+
+  /**
+   * Phase 1 — cross-session FTS5-backed search with mandatory Shield gate.
+   *
+   * Every recalled snippet passes through the configured Shield guard
+   * (defaults to the heuristic fallback) so prompt-injection or
+   * credential-like material is redacted before it reaches the agent.
+   *
+   * Falls back to LIKE-based scan when FTS5 is unavailable so memory recall
+   * keeps working in any SQLite build.
+   */
+  async searchAcrossSessions(
+    query: string,
+    options: CrossSessionSearchOptions = {},
+  ): Promise<CrossSessionHit[]> {
+    const shield = options.shield ?? ShieldGuard.fallback();
+    return ftsSearchAcrossSessions(this.db, query, { ...options, shield });
+  }
+
+  /**
+   * Phase 1 — summarize a user/channel session window. Pluggable summarizer
+   * (defaults to a heuristic; an LLM-backed summarizer can be passed in).
+   */
+  async summarizeSession(options: SummarizeSessionOptions): Promise<SessionSummary> {
+    return ftsSummarizeSession(this.db, options);
   }
 
   /** Prune old conversations keeping only the last N per user+channel. */
