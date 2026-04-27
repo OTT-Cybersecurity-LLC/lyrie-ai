@@ -8,6 +8,10 @@ Lyrie is not just another AI assistant. It's a guardian that runs your operation
 [![Security: Native](https://img.shields.io/badge/Security-Native-green.svg)](SECURITY.md)
 [![Research](https://img.shields.io/badge/research-research.lyrie.ai-7c3aed.svg)](https://research.lyrie.ai)
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
+[![CI](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml)
+
+> 🌐 **Localized READMEs** (community translations welcome): [العربية](locales/README.ar.md) · [Deutsch](locales/README.de.md) · [Español](locales/README.es.md) · [Français](locales/README.fr.md) · [日本語](locales/README.ja.md) · [Português](locales/README.pt-BR.md) · [简体中文](locales/README.zh-CN.md)
 
 ---
 
