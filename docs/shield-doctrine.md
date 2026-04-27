@@ -44,7 +44,7 @@ For every Lyrie surface that handles **text not authored by the operator**:
 | **Cross-session summaries** | summarizer runs on already-shielded inputs | Defense-in-depth. |
 | **Browser content / scrapes** | _(via `web_fetch` `untrustedOutput`)_ — standalone browser package gets dedicated hook in Phase 2 | Web pages are the #1 prompt-injection vector. |
 | **External webhooks** | _(planned: Phase 2)_ | All inbound webhooks must pass through `scanInbound`. |
-| **Diff-view applied edits** | _(planned: Phase 1 — immediately after this PR)_ | Static-analyze patches before they touch disk. |
+| **Diff-view applied edits** | `EditEngine.plan` calls `scanRecalled` on patch contents | Patches are scanned BEFORE the file is touched; blocked patches never land on disk. |
 
 If you add a new surface that touches untrusted text and it does **not**
 appear in this table or call into one of the two Shield types, your PR is

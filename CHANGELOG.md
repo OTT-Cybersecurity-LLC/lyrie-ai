@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 1 (Core Agent Absorption — part 4: Diff-View Edits)
+- **`EditEngine`** (`packages/core/src/edits/edit-engine.ts`) — Cline-style
+  diff-view file edits with approval gates. Targeted `oldText → newText`
+  replacements with strict uniqueness checks, unified-diff generation
+  (LCS-based, context-3 hunks), and three approval modes:
+  `auto-approve`, `require-approval` (default — production-safe),
+  `dry-run`.
+- **Shield Doctrine on patches**: every plan's resulting content is
+  scanned through `scanRecalled` BEFORE the file is touched. Blocked
+  patches never land on disk (the doctrine table now shows ✅ for
+  diff-view edits).
+- **Edit ledger** at `~/.lyrie/edits.json` (mode 0600). Tracks pending
+  plans + applied edits with sha256 before/after hashes; refuses to apply
+  if the file drifted between plan and apply.
+- **Workspace scoping**: paths outside the configured workspace root are
+  refused.
+- **`apply_diff` tool** registered in `ToolExecutor`. The agent uses this
+  for in-place edits; `write_file` is preserved for whole-file writes.
+  In `require-approval` mode, the tool returns the unified diff with a
+  pending-approval pointer instead of applying.
+- **`lyrie edits` operator CLI** (`scripts/edits.ts`):
+  `list`, `review <planId>`, `approve <planId>`, `log`.
+- **Unit tests (14 new, all pass)**: diff rendering, plan applicability,
+  Shield-block-on-injection, Shield-block-on-credentials, auto-approve,
+  drift detection, require-approval flow, dry-run, workspace scoping.
+
 ### Added — Phase 1 (Core Agent Absorption — part 3: Shield Doctrine Backfill)
 - **Tool Executor Shield filter**: new `Tool.untrustedOutput` flag.
   Tools opting in have their successful output scanned through `ShieldGuard.scanRecalled`
