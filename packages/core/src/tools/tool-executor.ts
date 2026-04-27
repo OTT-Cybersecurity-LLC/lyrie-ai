@@ -577,6 +577,113 @@ export class ToolExecutor {
         };
       },
     });
+
+    // ── apply_diff ────────────────────────────────────────────────────────
+    // Cline-style targeted edits with optional approval gate. Lyrie's
+    // existing write_file is preserved unchanged for whole-file writes;
+    // apply_diff is the recommended path for in-place edits because every
+    // patch produces a unified diff and passes the Shield Doctrine before
+    // touching disk.
+    this.register({
+      name: "apply_diff",
+      description:
+        "Edit a file by applying targeted oldText→newText replacements. Each oldText must be unique. Returns the unified diff. In `require-approval` mode, the plan is queued for `lyrie edits review`/`approve` instead of applied.",
+      parameters: {
+        path: {
+          type: "string",
+          description: "Path to the file (relative to the workspace).",
+          required: true,
+        },
+        edits: {
+          type: "array",
+          description:
+            'Array of { oldText, newText }. Each oldText must appear exactly once in the file.',
+          required: true,
+        },
+        description: {
+          type: "string",
+          description: "Optional human-friendly description of the edit's intent.",
+        },
+        mode: {
+          type: "string",
+          description: 'Override approval mode: "auto-approve" | "require-approval" | "dry-run".',
+          enum: ["auto-approve", "require-approval", "dry-run"],
+        },
+      },
+      risk: "moderate",
+      execute: async (args) => {
+        const engine = this.editEngine ?? (this.editEngine = new EditEngine());
+        try {
+          const plan = engine.plan({
+            path: args.path,
+            edits: args.edits,
+            description: args.description,
+            mode: args.mode as EditApprovalMode | undefined,
+          });
+
+          if (plan.shielded) {
+            return {
+              success: false,
+              output: `🛡️ Shield blocked diff: ${plan.shieldReason ?? "unsafe content"}`,
+              error: "shield_blocked",
+              metadata: { planId: plan.id, shielded: true },
+            };
+          }
+          if (!plan.applicable) {
+            return {
+              success: false,
+              output: `Edit not applicable. Detail: ${JSON.stringify(plan.applicableDetail)}`,
+              error: "not_applicable",
+              metadata: { planId: plan.id, detail: plan.applicableDetail },
+            };
+          }
+
+          if (plan.mode === "auto-approve") {
+            const applied = engine.apply(plan, true);
+            return {
+              success: !!applied,
+              output: plan.unifiedDiff || "(no changes)",
+              metadata: {
+                planId: plan.id,
+                applied: !!applied,
+                bytesBefore: applied?.bytesBefore,
+                bytesAfter: applied?.bytesAfter,
+              },
+            };
+          }
+
+          if (plan.mode === "dry-run") {
+            return {
+              success: true,
+              output: plan.unifiedDiff,
+              metadata: { planId: plan.id, dryRun: true },
+            };
+          }
+
+          return {
+            success: true,
+            output:
+              plan.unifiedDiff +
+              `\n\n— Pending approval. Run: \`lyrie edits approve ${plan.id}\``,
+            metadata: { planId: plan.id, pending: true },
+          };
+        } catch (err: any) {
+          return {
+            success: false,
+            output: "",
+            error: `apply_diff failed: ${err.message}`,
+          };
+        }
+      },
+    });
+  }
+
+  /** Lazy-initialized EditEngine for the apply_diff tool. */
+  private editEngine: EditEngine | null = null;
+
+  /** Inject a custom EditEngine (e.g. with a workspace-pinned root). */
+  setEditEngine(engine: EditEngine): void {
+    this.editEngine = engine;
   }
 
   // ─── Public API ────────────────────────────────────────────────────────

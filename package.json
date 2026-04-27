@@ -43,7 +43,8 @@
     "doctor:json": "bun run scripts/doctor.ts --json",
     "release:notes": "bash scripts/release/notes.sh",
     "pairing": "bun run scripts/pairing.ts",
-    "mcp": "bun run packages/mcp/src/index.ts"
+    "mcp": "bun run packages/mcp/src/index.ts",
+    "edits": "bun run scripts/edits.ts"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

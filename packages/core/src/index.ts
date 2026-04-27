@@ -30,6 +30,18 @@ export type { ThreatScanResult, ToolCallValidation } from "./engine/shield-manag
 export { ShieldGuard, FallbackShieldGuard } from "./engine/shield-guard";
 export type { ShieldGuardLike, ShieldVerdict } from "./engine/shield-guard";
 
+// Edits (Cline-style diff-view + approval gates)
+export { EditEngine, buildUnifiedDiff } from "./edits/edit-engine";
+export type {
+  EditOperation,
+  EditApprovalMode,
+  EditRequest,
+  EditPlan,
+  EditApply,
+  EditLedger,
+  EditEngineOptions,
+} from "./edits/edit-engine";
+
 // Memory
 export { MemoryCore } from "./memory/memory-core";
 export type { MemoryEntry, Importance, Source } from "./memory/memory-core";
