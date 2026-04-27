@@ -1,0 +1,30 @@
+{
+  "name": "@lyrie/mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol (MCP) adapter for Lyrie Agent — connect to and host MCP servers",
+  "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "test": "bun test",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "lyrie",
+    "mcp",
+    "model-context-protocol",
+    "agent",
+    "tools"
+  ],
+  "dependencies": {
+    "@lyrie/core": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5.5.0"
+  }
+}
