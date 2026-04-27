@@ -1,7 +1,7 @@
 {
-  "name": "@lyrie/gateway",
+  "name": "@lyrie/mcp",
   "version": "0.1.0",
-  "description": "Multi-channel messaging gateway for Lyrie Agent — Telegram, WhatsApp, Discord",
+  "description": "Model Context Protocol (MCP) adapter for Lyrie Agent — connect to and host MCP servers",
   "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
   "license": "MIT",
   "type": "module",
@@ -13,6 +13,13 @@
     "test": "bun test",
     "lint": "tsc --noEmit"
   },
+  "keywords": [
+    "lyrie",
+    "mcp",
+    "model-context-protocol",
+    "agent",
+    "tools"
+  ],
   "dependencies": {
     "@lyrie/core": "workspace:*"
   },
