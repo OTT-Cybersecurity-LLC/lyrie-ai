@@ -40,6 +40,22 @@ export {
   VALIDATOR_VERSION as STAGES_VALIDATOR_VERSION,
 } from "./pentest/stages-validator";
 
+// Lyrie Pentest — Threat-Intel client (research.lyrie.ai feed)
+export {
+  ThreatIntelClient,
+  THREAT_INTEL_VERSION,
+  DEFAULT_FEED_URL as LYRIE_THREAT_INTEL_FEED_URL,
+  versionAffected as lyrieVersionAffected,
+} from "./pentest/threat-intel";
+export type {
+  ThreatAdvisory,
+  ThreatIntelMatch,
+  ThreatIntelClientOptions,
+  KevAttribution,
+  AdvisorySeverity,
+  AdvisorySource,
+} from "./pentest/threat-intel";
+
 // Lyrie Pentest — OSS-Scan service (research.lyrie.ai/scan)
 export {
   runOssScan,

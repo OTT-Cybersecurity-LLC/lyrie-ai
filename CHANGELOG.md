@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 2 (Pentest — part 5: Lyrie Threat-Intel)
+- **Lyrie Threat-Intel Client**
+  (`packages/core/src/pentest/threat-intel/`).
+  Lyrie's runtime that pulls KEV-aligned CVE advisories from
+  `research.lyrie.ai` and attributes them to:
+    - dependencies discovered by the Attack-Surface Mapper
+    - findings produced by the Multi-Language Scanners
+    - findings whose text references a CVE / Lyrie advisory slug
+  Network-optional: when the feed is unreachable the client returns no
+  matches and never throws — CI is never gated on intel availability.
+  Pluggable fetcher for hermetic tests + offline mode for fully offline
+  pipelines. Built-in TTL cache (1h default) so CI runs that scan many
+  PRs in a day don't pummel the feed.
+- **`enrichFindings()`**: bumps KEV-listed matches to `critical` and
+  appends a Lyrie Threat-Intel badge with CVSS, KEV status, Lyrie
+  Verdict, and a `research.lyrie.ai` link inline in every finding
+  description.
+- **Action runner integration**: every PR run now enriches findings
+  through the Threat-Intel client before they reach the Stages A–F
+  validator. Findings carrying KEV-listed CVEs surface as critical with
+  a one-line operator-facing verdict.
+- **`lyrie intel` CLI** (`scripts/intel.ts`):
+    `bun run intel list` — list cached advisories
+    `bun run intel refresh` — force-refresh feed
+    `bun run intel lookup <CVE>` — single advisory deep-dive
+    `bun run intel scan-deps` — match feed against package.json
+  Honors `LYRIE_INTEL_OFFLINE=1` for fully offline runs.
+- **Lyrie semver-ish version-range matcher** (`versionAffected`): zero
+  external semver dependency in core; supports `<= < > >= = ^ ~ A - B`
+  forms.
+- **Tests**: 15 new (versionAffected ranges, offline + seed, fetcher
+  hook with success / HTTP-error / throw paths, dependency matching
+  including version filtering and scope-loose matching, CVE-text +
+  slug-text finding matching, KEV severity bumping, no-match passthrough).
+  All pass. Total suite now: 234 / 0 / 619 expect()s.
+
 ### Added — Phase 2 (Pentest — part 4: Multi-Language Scanners + Lyrie OSS-Scan)
 - **Lyrie Multi-Language Vulnerability Scanners**
   (`packages/core/src/pentest/scanners/`).
