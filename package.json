@@ -37,7 +37,10 @@
     "migrate:openclaw": "bun run scripts/migrate.ts --from openclaw",
     "migrate:hermes": "bun run scripts/migrate.ts --from hermes",
     "migrate:autogpt": "bun run scripts/migrate.ts --from autogpt",
-    "migrate:all": "bun run scripts/migrate.ts --from all"
+    "migrate:all": "bun run scripts/migrate.ts --from all",
+    "doctor": "bun run scripts/doctor.ts",
+    "doctor:json": "bun run scripts/doctor.ts --json",
+    "release:notes": "bash scripts/release/notes.sh"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
