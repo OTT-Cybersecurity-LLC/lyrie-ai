@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// lyrie-shield: ignore-file (Lyrie pentest runner: contains category-inference regexes that name attack types like "jailbreak" — product code, not an injection vector)
 /**
  * lyrie-action runner — invoked from action.yml inside GitHub Actions.
  *
@@ -21,6 +22,11 @@ import { execSync } from "node:child_process";
 
 import { ShieldGuard } from "../packages/core/src/engine/shield-guard";
 import { buildAttackSurface, type AttackSurface } from "../packages/core/src/pentest/attack-surface";
+import {
+  validateBatch,
+  type RawFinding,
+  type VulnerabilityCategory,
+} from "../packages/core/src/pentest/stages-validator";
 import {
   SEVERITY_RANK,
   countBySeverity,
@@ -187,15 +193,67 @@ async function runScan(): Promise<ScanResult> {
     console.warn(`::warning::Lyrie attack-surface mapper failed: ${err.message}`);
   }
 
+  // Stages A–F validator: kill false positives, generate PoCs, attach
+  // Lyrie remediation hints. Findings the validator rejects are dropped
+  // from the report — we only ship confirmed signals.
+  const validated = await validateBatch(
+    findings.map<RawFinding>((f) => ({
+      id: f.id,
+      title: f.title,
+      severity: f.severity,
+      description: f.description,
+      file: f.file,
+      line: f.line,
+      cwe: f.cwe,
+      category: inferCategory(f),
+      evidence: f.description.split("\n")[0]?.slice(0, 200) ?? "",
+    })),
+    { surface: attackSurface, fastMode: scanMode === "quick" },
+  );
+
+  const confirmedFindings: Finding[] = validated.map((v) => ({
+    id: v.finding.id,
+    title: v.finding.title,
+    severity: v.finding.severity,
+    description:
+      v.finding.description +
+      "\n\n" +
+      `Lyrie Stages A–F: ${v.stages.map((s) => `${s.stage}=${s.passed ? "✓" : "✗"}`).join(" ")} ` +
+      `— confidence ${(v.confidence * 100).toFixed(0)}%` +
+      (v.poc?.kind === "automatic"
+        ? `\n\n**Lyrie PoC:**\n\n\`\`\`\n${v.poc.payload}\n\`\`\`\n`
+        : ""),
+    file: v.finding.file,
+    line: v.finding.line,
+    cwe: v.finding.cwe,
+    remediation: v.remediation?.summary ?? v.finding.cwe,
+  }));
+
   return {
     scanMode,
     target,
     startedAt,
     finishedAt: new Date().toISOString(),
-    findings,
-    shielded: findings.filter((f) => f.id.startsWith("lyrie-shield")).length,
+    findings: confirmedFindings,
+    shielded: confirmedFindings.filter((f) => f.id.startsWith("lyrie-shield")).length,
     attackSurface,
   };
+}
+
+function inferCategory(f: { id: string; title: string; description: string }): VulnerabilityCategory {
+  const text = `${f.id} ${f.title} ${f.description}`.toLowerCase();
+  if (/shell|command|exec|spawn/.test(text)) return "shell-injection";
+  if (/sqli|sql injection|union select/.test(text)) return "sql-injection";
+  if (/xss|cross.site/.test(text)) return "xss";
+  if (/ssrf|server.side request/.test(text)) return "ssrf";
+  if (/path traversal|directory traversal/.test(text)) return "path-traversal";
+  if (/deserial/.test(text)) return "deserialization";
+  if (/auth.bypass|broken auth/.test(text)) return "auth-bypass";
+  if (/secret|credential|api[_-]?key|private key/.test(text)) return "secret-exposure";
+  if (/prompt.injection|jailbreak/.test(text)) return "prompt-injection";
+  if (/tainted data flow.*shell/.test(text)) return "shell-injection";
+  if (/tainted data flow.*sql/.test(text)) return "sql-injection";
+  return "other";
 }
 
 async function listRepoTextFiles(root: string): Promise<string[]> {
