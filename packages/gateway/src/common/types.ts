@@ -134,6 +134,17 @@ export interface GatewayConfig {
   discord?: DiscordConfig;
 }
 
+/**
+ * DM access policy for any DM-capable channel.
+ *
+ * - "open"     — anyone can DM (back-compat default; existing allowlists
+ *                still enforced if you set them)
+ * - "pairing"  — unknown DMs receive a one-time code; operator approves via
+ *                `lyrie pairing approve <channel> <code>`
+ * - "closed"   — only senders in `allowedUsers`/`allowedChats` reach the agent
+ */
+export type DmPolicy = "open" | "pairing" | "closed";
+
 export interface TelegramConfig {
   enabled: boolean;
   token: string;
@@ -147,6 +158,8 @@ export interface TelegramConfig {
   pollInterval?: number;
   /** Rate limit: max messages per user per minute (default: 30) */
   rateLimitPerMinute?: number;
+  /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
 }
 
 export interface WhatsAppConfig {
@@ -157,6 +170,10 @@ export interface WhatsAppConfig {
   accessToken?: string;
   /** Webhook verify token */
   verifyToken?: string;
+  /** Allowed sender phone numbers / ids */
+  allowedUsers?: string[];
+  /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
 }
 
 export interface DiscordConfig {
@@ -167,4 +184,8 @@ export interface DiscordConfig {
   applicationId?: string;
   /** Allowed guild IDs */
   allowedGuilds?: string[];
+  /** Allowed user IDs (DM allowlist) */
+  allowedUsers?: string[];
+  /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
 }

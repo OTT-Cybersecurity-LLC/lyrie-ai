@@ -31,6 +31,14 @@ export type { LyrieConfig, LyrieEngineConfig, Message } from "@lyrie/core";
 
 // ─── Config from Environment ────────────────────────────────────────────────────
 
+function parseDmPolicy(raw: string | undefined): "open" | "pairing" | "closed" | undefined {
+  if (!raw) return undefined;
+  const v = raw.trim().toLowerCase();
+  if (v === "open" || v === "pairing" || v === "closed") return v;
+  console.warn(`[gateway] ignoring unknown dmPolicy=${raw} (must be open|pairing|closed)`);
+  return undefined;
+}
+
 function loadConfig(): GatewayConfig {
   return {
     telegram: {
@@ -39,16 +47,21 @@ function loadConfig(): GatewayConfig {
       allowedUsers: process.env.LYRIE_TELEGRAM_USERS?.split(",").filter(Boolean),
       allowedChats: process.env.LYRIE_TELEGRAM_CHATS?.split(",").filter(Boolean),
       rateLimitPerMinute: Number(process.env.LYRIE_TELEGRAM_RATE) || 30,
+      dmPolicy: parseDmPolicy(process.env.LYRIE_TELEGRAM_DM_POLICY),
     },
     whatsapp: {
       enabled: !!process.env.LYRIE_WHATSAPP_PHONE_ID,
       phoneNumberId: process.env.LYRIE_WHATSAPP_PHONE_ID,
       accessToken: process.env.LYRIE_WHATSAPP_TOKEN,
+      allowedUsers: process.env.LYRIE_WHATSAPP_USERS?.split(",").filter(Boolean),
+      dmPolicy: parseDmPolicy(process.env.LYRIE_WHATSAPP_DM_POLICY),
     },
     discord: {
       enabled: !!process.env.LYRIE_DISCORD_TOKEN,
       token: process.env.LYRIE_DISCORD_TOKEN,
       applicationId: process.env.LYRIE_DISCORD_APP_ID,
+      allowedUsers: process.env.LYRIE_DISCORD_USERS?.split(",").filter(Boolean),
+      dmPolicy: parseDmPolicy(process.env.LYRIE_DISCORD_DM_POLICY),
     },
   };
 }
@@ -92,6 +105,13 @@ export class LyrieGateway {
     // Telegram
     if (this.config.telegram?.enabled) {
       try {
+        if (this.config.telegram.dmPolicy) {
+          this.router.configureChannelPolicy("telegram", {
+            dmPolicy: this.config.telegram.dmPolicy,
+            allowedUsers: this.config.telegram.allowedUsers,
+            allowedChats: this.config.telegram.allowedChats,
+          });
+        }
         const tgBot = new TelegramBot(this.config.telegram);
         tgBot.onMessage(this.router.handler());
         await tgBot.start();
@@ -106,6 +126,12 @@ export class LyrieGateway {
     // WhatsApp
     if (this.config.whatsapp?.enabled) {
       try {
+        if (this.config.whatsapp.dmPolicy) {
+          this.router.configureChannelPolicy("whatsapp", {
+            dmPolicy: this.config.whatsapp.dmPolicy,
+            allowedUsers: this.config.whatsapp.allowedUsers,
+          });
+        }
         const waBot = new WhatsAppBot(this.config.whatsapp);
         waBot.onMessage(this.router.handler());
         await waBot.start();
@@ -120,6 +146,12 @@ export class LyrieGateway {
     // Discord
     if (this.config.discord?.enabled) {
       try {
+        if (this.config.discord.dmPolicy) {
+          this.router.configureChannelPolicy("discord", {
+            dmPolicy: this.config.discord.dmPolicy,
+            allowedUsers: this.config.discord.allowedUsers,
+          });
+        }
         const dcBot = new DiscordBot(this.config.discord);
         dcBot.onMessage(this.router.handler());
         await dcBot.start();
