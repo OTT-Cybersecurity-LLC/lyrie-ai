@@ -130,3 +130,94 @@ describe("renderSarif", () => {
     expect(log.runs[0].tool.driver.rules.length).toBe(3);
   });
 });
+
+describe("renderSarif — deeper metadata (v0.2.6+)", () => {
+  test("driver advertises OTT Cybersecurity LLC + Lyrie generatedBy", () => {
+    const log = renderSarif(sample);
+    expect(log.runs[0].tool.driver.organization).toBe("OTT Cybersecurity LLC");
+    expect(log.runs[0].tool.driver.informationUri).toBe("https://lyrie.ai");
+    expect(log.runs[0].properties?.generatedBy).toBe("Lyrie.ai by OTT Cybersecurity LLC");
+  });
+
+  test("every rule advertises Lyrie tags + security-severity", () => {
+    const log = renderSarif(sample);
+    for (const rule of log.runs[0].tool.driver.rules) {
+      expect(rule.properties?.tags).toEqual(
+        expect.arrayContaining(["security"]),
+      );
+      expect(rule.properties?.tags?.some((t) => t.startsWith("lyrie:"))).toBe(true);
+      expect(rule.properties?.["security-severity"]).toMatch(/^\d+(\.\d+)?$/);
+      expect(rule.defaultConfiguration?.level).toMatch(/^(none|note|warning|error)$/);
+    }
+  });
+
+  test("rule.help.markdown carries the Lyrie / OTT Cybersecurity LLC signature", () => {
+    const log = renderSarif(sample);
+    for (const rule of log.runs[0].tool.driver.rules) {
+      expect(rule.help?.markdown ?? "").toContain("Lyrie");
+    }
+  });
+
+  test("CWE relationship is emitted when finding has a cwe", () => {
+    const log = renderSarif(sample);
+    const ruleWithCwe = log.runs[0].tool.driver.rules.find(
+      (r) => r.relationships && r.relationships.length > 0,
+    );
+    expect(ruleWithCwe).toBeDefined();
+    expect(ruleWithCwe?.relationships?.[0].target.toolComponent?.name).toBe("CWE");
+  });
+
+  test("results carry Lyrie partialFingerprints for GitHub dedup", () => {
+    const log = renderSarif(sample);
+    for (const result of log.runs[0].results) {
+      expect(result.partialFingerprints?.lyrieFingerprint).toBeDefined();
+      expect(typeof result.partialFingerprints?.lyrieFingerprint).toBe("string");
+    }
+  });
+
+  test("results carry per-result security-severity matching the rule", () => {
+    const log = renderSarif(sample);
+    const crit = log.runs[0].results.find((r) => r.ruleId === "lyrie-shield-2");
+    const high = log.runs[0].results.find((r) => r.ruleId === "lyrie-shield-1");
+    const low = log.runs[0].results.find((r) => r.ruleId === "lyrie-shield-3");
+    expect(crit?.properties?.["security-severity"]).toBe("9.5");
+    expect(high?.properties?.["security-severity"]).toBe("8.0");
+    expect(low?.properties?.["security-severity"]).toBe("3.0");
+  });
+
+  test("lyrie:source is inferred from finding id", () => {
+    const log = renderSarif(sample);
+    // sample uses lyrie-shield-* ids
+    expect(
+      log.runs[0].results.every((r) => r.properties?.["lyrie:source"] === "shield"),
+    ).toBe(true);
+  });
+
+  test("message.markdown surfaces Lyrie / OTT Cybersecurity LLC signature", () => {
+    const log = renderSarif(sample);
+    for (const result of log.runs[0].results) {
+      expect(result.message.markdown ?? "").toContain("OTT Cybersecurity LLC");
+    }
+  });
+
+  test("lyrie:confidence is parsed out of Stages A–F line when present", () => {
+    const withConfidence: ScanResult = {
+      ...sample,
+      findings: [
+        {
+          ...sample.findings[0],
+          description: "Lyrie Stages A–F: A=✓ B=✓ C=✓ D=✓ E=✓ F=✓ — confidence 87%",
+        },
+      ],
+    };
+    const log = renderSarif(withConfidence);
+    expect(log.runs[0].results[0].properties?.["lyrie:confidence"]).toBe("87%");
+  });
+
+  test("empty findings still emit driver metadata + properties", () => {
+    const log = renderSarif({ ...sample, findings: [] });
+    expect(log.runs[0].tool.driver.organization).toBe("OTT Cybersecurity LLC");
+    expect(log.runs[0].tool.driver.rules.length).toBe(0);
+    expect(log.runs[0].results.length).toBe(0);
+  });
+});

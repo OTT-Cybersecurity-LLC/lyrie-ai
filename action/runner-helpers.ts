@@ -125,6 +125,60 @@ export function renderMarkdown(r: ScanResult): string {
   return lines.join("\n");
 }
 
+// SARIF 2.1.0 surface (subset Lyrie emits)
+// Spec reference: https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html
+
+export type SarifLevel = "none" | "note" | "warning" | "error";
+
+export interface SarifMultiformatMessageString {
+  text: string;
+  markdown?: string;
+}
+
+export interface SarifReportingDescriptor {
+  id: string;
+  name: string;
+  shortDescription: SarifMultiformatMessageString;
+  fullDescription?: SarifMultiformatMessageString;
+  help?: SarifMultiformatMessageString;
+  helpUri: string;
+  defaultConfiguration?: { level: SarifLevel; rank?: number };
+  properties?: {
+    /** Tags surface in the GitHub Code Scanning UI (e.g. "security", "cwe-79"). */
+    tags?: string[];
+    /** Floating 0–10; GitHub uses this for the security-severity sidebar. */
+    "security-severity"?: string;
+    /** Lyrie-extension fields. */
+    "lyrie:category"?: string;
+    "lyrie:cwe"?: string;
+    "lyrie:source"?: "shield" | "mapper" | "scanner" | "validator" | "intel" | "proxy";
+  };
+  relationships?: Array<{
+    target: { id: string; toolComponent?: { name: string } };
+    kinds: string[];
+  }>;
+}
+
+export interface SarifResult {
+  ruleId: string;
+  level: SarifLevel;
+  message: SarifMultiformatMessageString;
+  locations?: Array<{
+    physicalLocation: {
+      artifactLocation: { uri: string };
+      region?: { startLine: number; startColumn?: number; endLine?: number; endColumn?: number };
+    };
+  }>;
+  /** Lyrie-grade dedup hashes — GitHub uses these to merge duplicate alerts across runs. */
+  partialFingerprints?: Record<string, string>;
+  properties?: {
+    "security-severity"?: string;
+    "lyrie:confidence"?: string;
+    "lyrie:category"?: string;
+    "lyrie:cwe"?: string;
+  };
+}
+
 export interface SarifLog {
   $schema: string;
   version: "2.1.0";
@@ -134,50 +188,124 @@ export interface SarifLog {
         name: string;
         informationUri: string;
         version: string;
-        rules: Array<{
-          id: string;
-          name: string;
-          shortDescription: { text: string };
-          helpUri: string;
-        }>;
+        organization?: string;
+        semanticVersion?: string;
+        rules: SarifReportingDescriptor[];
       };
     };
-    results: Array<{
-      ruleId: string;
-      level: "warning" | "error" | "note";
-      message: { text: string };
-      locations?: Array<{
-        physicalLocation: {
-          artifactLocation: { uri: string };
-          region?: { startLine: number };
-        };
-      }>;
-    }>;
+    properties?: {
+      lyrieRunId?: string;
+      generatedBy?: string;
+    };
+    results: SarifResult[];
   }>;
 }
 
+// ─── Severity → SARIF mapping ───────────────────────────────────────────────
+
+function sarifLevelFor(severity: Finding["severity"]): SarifLevel {
+  if (severity === "critical" || severity === "high") return "error";
+  if (severity === "medium") return "warning";
+  if (severity === "low" || severity === "info") return "note";
+  return "note";
+}
+
+/** GitHub Code Scanning uses 0–10 "security-severity" to drive its UI. */
+function securitySeverityFor(severity: Finding["severity"]): string {
+  switch (severity) {
+    case "critical": return "9.5";
+    case "high":     return "8.0";
+    case "medium":   return "5.5";
+    case "low":      return "3.0";
+    case "info":     return "1.0";
+    default:         return "3.0";
+  }
+}
+
+/** Heuristic source classifier so each rule advertises which Lyrie module produced it. */
+function sourceFor(f: Finding): NonNullable<SarifReportingDescriptor["properties"]>["lyrie:source"] {
+  const id = f.id.toLowerCase();
+  if (id.startsWith("lyrie-shield")) return "shield";
+  if (id.startsWith("lyrie-flow")) return "mapper";
+  if (id.startsWith("lyrie-jsts") || id.startsWith("lyrie-py") || id.startsWith("lyrie-go") ||
+      id.startsWith("lyrie-php") || id.startsWith("lyrie-rb") || id.startsWith("lyrie-cpp")) {
+    return "scanner";
+  }
+  if (f.description?.includes("Lyrie Threat-Intel")) return "intel";
+  if (id.includes("proxy")) return "proxy";
+  return "validator";
+}
+
+function tagsFor(f: Finding, source: string): string[] {
+  const tags = ["security", `lyrie:${source}`];
+  if (f.cwe) tags.push(f.cwe.toLowerCase().replace(/[^a-z0-9-]/g, "-"));
+  return tags;
+}
+
+/** Lightweight stable fingerprint so GitHub dedupes alerts across runs. */
+function fingerprintFor(f: Finding): string {
+  // We avoid running an actual hash here to keep the helpers dependency-free;
+  // the (file, line, ruleFamily) tuple is stable across PR pushes which is
+  // what GitHub Code Scanning needs for alert continuity.
+  const ruleFamily = f.id.replace(/-\d+$/, "").replace(/-[A-Za-z0-9_/.\-]+:\d+$/, "");
+  return `${ruleFamily}|${f.file ?? "-"}|${f.line ?? 0}`;
+}
+
+function extractRule(f: Finding): SarifReportingDescriptor {
+  const source = sourceFor(f) ?? "validator";
+  const cwe = f.cwe ?? "";
+  return {
+    id: f.id,
+    name: f.title,
+    shortDescription: { text: f.title },
+    fullDescription: f.description
+      ? { text: f.description.split("\n")[0] ?? f.description }
+      : undefined,
+    help: f.remediation
+      ? {
+          text: f.remediation,
+          markdown: `**Remediation:** ${f.remediation}\n\n_Surfaced by Lyrie Agent (\`${source}\`) — Lyrie.ai by **OTT Cybersecurity LLC**._`,
+        }
+      : {
+          text: `Lyrie surfaced this via the \`${source}\` module. See the report for full context.`,
+          markdown: `Lyrie surfaced this via the \`${source}\` module. _Lyrie.ai by **OTT Cybersecurity LLC**._`,
+        },
+    helpUri: `https://lyrie.ai/docs/findings/${encodeURIComponent(f.id)}`,
+    defaultConfiguration: { level: sarifLevelFor(f.severity) },
+    properties: {
+      tags: tagsFor(f, source),
+      "security-severity": securitySeverityFor(f.severity),
+      "lyrie:source": source,
+      "lyrie:cwe": cwe || undefined,
+    },
+    relationships: cwe
+      ? [{ target: { id: cwe, toolComponent: { name: "CWE" } }, kinds: ["superset"] }]
+      : undefined,
+  };
+}
+
 export function renderSarif(r: ScanResult): SarifLog {
-  const rules = new Map<string, SarifLog["runs"][0]["tool"]["driver"]["rules"][0]>();
-  const results: SarifLog["runs"][0]["results"] = [];
+  const rules = new Map<string, SarifReportingDescriptor>();
+  const results: SarifResult[] = [];
+
   for (const f of r.findings) {
-    const ruleId = f.id;
-    if (!rules.has(ruleId)) {
-      rules.set(ruleId, {
-        id: ruleId,
-        name: f.title,
-        shortDescription: { text: f.title },
-        helpUri: "https://lyrie.ai/docs/findings/" + ruleId,
-      });
-    }
-    const level = f.severity === "critical" || f.severity === "high"
-      ? "error"
-      : f.severity === "medium"
-        ? "warning"
-        : "note";
+    if (!rules.has(f.id)) rules.set(f.id, extractRule(f));
+    const source = sourceFor(f) ?? "validator";
+    const cwe = f.cwe ?? "";
+
+    // Pull "Lyrie Stages A–F: ... confidence NN%" out of description, if present.
+    const confMatch = (f.description ?? "").match(/confidence\s+(\d+)%/i);
+    const confidence = confMatch ? `${confMatch[1]}%` : undefined;
+
     results.push({
-      ruleId,
-      level,
-      message: { text: f.description },
+      ruleId: f.id,
+      level: sarifLevelFor(f.severity),
+      message: {
+        text: f.description,
+        markdown:
+          f.description.replace(/\n/g, "\n\n") +
+          "\n\n_Surfaced by Lyrie.ai by **OTT Cybersecurity LLC**._",
+      },
       locations: f.file
         ? [{
             physicalLocation: {
@@ -186,6 +314,13 @@ export function renderSarif(r: ScanResult): SarifLog {
             },
           }]
         : undefined,
+      partialFingerprints: { lyrieFingerprint: fingerprintFor(f) },
+      properties: {
+        "security-severity": securitySeverityFor(f.severity),
+        "lyrie:source": source,
+        "lyrie:confidence": confidence,
+        "lyrie:cwe": cwe || undefined,
+      },
     });
   }
 
@@ -196,10 +331,15 @@ export function renderSarif(r: ScanResult): SarifLog {
       tool: {
         driver: {
           name: "Lyrie Pentest",
+          organization: "OTT Cybersecurity LLC",
           informationUri: "https://lyrie.ai",
-          version: "0.2.0",
+          version: "0.2.6",
+          semanticVersion: "0.2.6",
           rules: Array.from(rules.values()),
         },
+      },
+      properties: {
+        generatedBy: "Lyrie.ai by OTT Cybersecurity LLC",
       },
       results,
     }],
