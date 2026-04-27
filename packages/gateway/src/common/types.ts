@@ -7,7 +7,19 @@
 
 // ─── Channel Identifiers ───────────────────────────────────────────────────────
 
-export type ChannelType = "telegram" | "whatsapp" | "discord" | "slack" | "signal" | "cli";
+export type ChannelType =
+  | "telegram"
+  | "whatsapp"
+  | "discord"
+  | "slack"
+  | "signal"
+  | "cli"
+  | "matrix"
+  | "mattermost"
+  | "irc"
+  | "feishu"
+  | "rocketchat"
+  | "webchat";
 
 // ─── Unified Inbound Message ────────────────────────────────────────────────────
 
@@ -132,6 +144,13 @@ export interface GatewayConfig {
   telegram?: TelegramConfig;
   whatsapp?: WhatsAppConfig;
   discord?: DiscordConfig;
+  slack?: SlackConfig;
+  matrix?: MatrixConfig;
+  mattermost?: MattermostConfig;
+  irc?: IrcConfig;
+  feishu?: FeishuConfig;
+  rocketchat?: RocketChatConfig;
+  webchat?: WebChatConfig;
 }
 
 /**
@@ -187,5 +206,127 @@ export interface DiscordConfig {
   /** Allowed user IDs (DM allowlist) */
   allowedUsers?: string[];
   /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
+}
+
+export interface SlackConfig {
+  enabled: boolean;
+  /** Bot User OAuth Token (xoxb-…) */
+  botToken?: string;
+  /** Signing secret for request validation */
+  signingSecret?: string;
+  /** App-level token for Socket Mode (xapp-…); enables Socket Mode when set */
+  appToken?: string;
+  /** Allowed workspace (team) IDs */
+  allowedTeams?: string[];
+  /** Allowed user IDs (DM allowlist) */
+  allowedUsers?: string[];
+  /** Allowed channel IDs */
+  allowedChannels?: string[];
+  /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
+}
+
+export interface MatrixConfig {
+  enabled: boolean;
+  /** Homeserver URL, e.g. https://matrix.org */
+  homeserverUrl?: string;
+  /** Bot user ID, e.g. @lyrie:matrix.org */
+  userId?: string;
+  /** Access token for the bot account */
+  accessToken?: string;
+  /** Device ID (optional) */
+  deviceId?: string;
+  /** Allowed user IDs (DM allowlist) */
+  allowedUsers?: string[];
+  /** Allowed room IDs */
+  allowedRooms?: string[];
+  /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
+}
+
+export interface MattermostConfig {
+  enabled: boolean;
+  /** Mattermost server URL, e.g. https://mattermost.example.com */
+  serverUrl?: string;
+  /** Bot account access token */
+  token?: string;
+  /** Team ID(s) the bot operates in */
+  allowedTeams?: string[];
+  /** Allowed user IDs (DM allowlist) */
+  allowedUsers?: string[];
+  /** Allowed channel IDs */
+  allowedChannels?: string[];
+  /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
+}
+
+export interface IrcConfig {
+  enabled: boolean;
+  /** IRC server hostname, e.g. irc.libera.chat */
+  server?: string;
+  /** IRC server port (default 6697 TLS) */
+  port?: number;
+  /** Whether to use TLS (default true) */
+  tls?: boolean;
+  /** Bot nickname */
+  nick?: string;
+  /** SASL username (optional) */
+  user?: string;
+  /** SASL password (optional) */
+  password?: string;
+  /** Channels to auto-join, e.g. ["#lyrie"] */
+  channels?: string[];
+  /** Allowed user nicks/hostmasks for DM */
+  allowedUsers?: string[];
+  /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
+}
+
+export interface FeishuConfig {
+  enabled: boolean;
+  /** App ID from Feishu Open Platform (or Lark) */
+  appId?: string;
+  /** App secret */
+  appSecret?: string;
+  /** Encryption key (optional, for event-callback decryption) */
+  encryptKey?: string;
+  /** Verification token */
+  verificationToken?: string;
+  /** Whether this is the international (Lark) edition (default false = Feishu) */
+  isLark?: boolean;
+  /** Allowed open IDs for DM */
+  allowedUsers?: string[];
+  /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
+}
+
+export interface RocketChatConfig {
+  enabled: boolean;
+  /** Rocket.Chat server URL, e.g. https://chat.example.com */
+  serverUrl?: string;
+  /** Bot user ID */
+  userId?: string;
+  /** Bot auth token */
+  authToken?: string;
+  /** Allowed user IDs for DM */
+  allowedUsers?: string[];
+  /** Allowed room IDs (channels/groups) */
+  allowedRooms?: string[];
+  /** DM access policy (default: "open") */
+  dmPolicy?: DmPolicy;
+}
+
+export interface WebChatConfig {
+  enabled: boolean;
+  /** Host the embedded WebSocket server binds to (default 127.0.0.1) */
+  host?: string;
+  /** Port (default 7777) */
+  port?: number;
+  /** Origin allowlist for CORS / Origin checking */
+  allowedOrigins?: string[];
+  /** Auth token required from clients (optional but recommended) */
+  authToken?: string;
+  /** DM access policy (default: "open"); only "closed" is meaningful for webchat */
   dmPolicy?: DmPolicy;
 }
