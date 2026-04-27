@@ -14,7 +14,7 @@ Lyrie is not just another AI assistant. It runs your operations and protects the
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
 [![CI](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-176%20passing-brightgreen.svg)](#-quality--tests)
+[![Tests](https://img.shields.io/badge/tests-219%20passing-brightgreen.svg)](#-quality--tests)
 [![Releases](https://img.shields.io/github/v/release/overthetopseo/lyrie-agent?include_prereleases&label=release)](https://github.com/overthetopseo/lyrie-agent/releases)
 
 [**Install**](#-install) · [**GitHub Action**](#-lyrie-pentest-action) · [**Architecture**](#-architecture) · [**Shield Doctrine**](docs/shield-doctrine.md) · [**Research**](https://research.lyrie.ai)
@@ -31,11 +31,13 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 
 > **Cybersecurity isn't a plugin — it's Layer 1.**
 
-### Highlights (current main, [`v0.2.1+`](CHANGELOG.md))
+### Highlights (current main, [`v0.2.3+`](CHANGELOG.md))
 
 - 🛡️ **The Shield Doctrine** — every layer of Lyrie that touches untrusted text passes a Shield gate. ([`docs/shield-doctrine.md`](docs/shield-doctrine.md))
 - 🔍 **Lyrie Attack-Surface Mapper** (`/understand`) — maps entry points, trust boundaries, tainted data flows, and ranked risk hotspots before any scanner runs.
 - 🧪 **Lyrie Stages A–F Validator** — every finding earns its severity through six validation gates. Auto-PoCs for confirmed vulns. Auto-remediation summaries. Kills false positives at the source.
+- 🌐 **Lyrie Multi-Language Vulnerability Scanners** — 8 purpose-built scanners (JS / TS / Python / Go / PHP / Ruby / C / C++) with 53 Lyrie-original detection rules covering OWASP Top 10 + CWE classics.
+- 🆓 **Lyrie OSS-Scan service** — free public scan at `research.lyrie.ai/scan`. Submit any GitHub / GitLab / Bitbucket / Codeberg repo URL, get a Lyrie report (Mapper + Scanners + Stages A–F + auto-PoC) in seconds.
 - 🚀 **Lyrie Pentest GitHub Action** — Shield-scans every PR, posts a single-comment-per-PR Markdown summary, uploads SARIF to Code Scanning, blocks merges on `fail-on` threshold.
 - 🧠 **FTS5 cross-session memory** — bm25-ranked recall + LLM-summarized session digests, every snippet Shield-gated.
 - ✏️ **Diff-view edits** with approval gates — `apply_diff` produces unified diffs, never overwrites whole files; Shield scans every patch *before* it touches disk.
@@ -207,12 +209,23 @@ Telegram · WhatsApp · Discord · Slack · Signal · iMessage · CLI · Webchat
 ```bash
 bun run doctor                    # self-diagnostic (env, channels, security, deps)
 bun run understand                # Lyrie Attack-Surface Map of any workspace
+bun run scan <repoUrl>            # free Lyrie OSS-Scan against a public repo
 bun run pairing list              # show pending DM pairing requests
 bun run pairing approve <chan> <code>
 bun run mcp list                  # list MCP-server tools available to Lyrie
 bun run edits list                # show pending diff-view edits awaiting approval
 bun run edits approve <planId>
 ```
+
+### Lyrie OSS-Scan — free public scan
+
+Any public repo, one command:
+
+```bash
+bun run scan https://github.com/<owner>/<repo>
+```
+
+Lyrie clones the repo (`--depth 1`), runs the **Attack-Surface Mapper**, all eight **Multi-Language Scanners**, then **Stages A–F Validator** — returns the confirmed findings with auto-PoCs and Lyrie remediation summaries. Allowlisted hosts: `github.com`, `gitlab.com`, `bitbucket.org`, `codeberg.org`. Loopback / private addresses refused at the URL gate.
 
 ---
 
@@ -232,7 +245,7 @@ Together: a complete digital guardian that operates **and** defends.
 
 ## ✅ Quality & tests
 
-- **176 tests passing / 0 failing** across 16 test files
+- **219 tests passing / 0 failing** across 18 test files
 - Multi-platform CI (Node 20/22/24 × Ubuntu/macOS) + Rust Shield build
 - Weekly CodeQL security analysis + Dependabot
 - Pre-commit hooks: gitleaks, codespell, hygiene
@@ -240,7 +253,7 @@ Together: a complete digital guardian that operates **and** defends.
 
 ```bash
 bun test packages/ action/
-# → 176 pass · 0 fail · 488 expect()s
+# → 219 pass · 0 fail · 583 expect()s
 ```
 
 ---

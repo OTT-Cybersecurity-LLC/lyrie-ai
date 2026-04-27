@@ -27,6 +27,7 @@ import {
   type RawFinding,
   type VulnerabilityCategory,
 } from "../packages/core/src/pentest/stages-validator";
+import { scanFiles as runMultilangScan } from "../packages/core/src/pentest/scanners";
 import {
   SEVERITY_RANK,
   countBySeverity,
@@ -159,6 +160,19 @@ async function runScan(): Promise<ScanResult> {
           "Remove the flagged content, move it out of the repo, or add a vetted exception.",
       });
     }
+  }
+
+  // Lyrie Multi-Language Vulnerability Scanners — ship every language we
+  // support against the same file set. Findings are added to the same
+  // bucket the Stages A–F validator filters at the end.
+  try {
+    const ml = await runMultilangScan({
+      root: target,
+      files: scope === "diff" ? changedFiles : await listRepoTextFiles(target),
+    });
+    for (const f of ml.findings) findings.push(f as any);
+  } catch (err: any) {
+    console.warn(`::warning::Lyrie multi-language scan failed: ${err.message}`);
   }
 
   // Attack-surface mapping (Lyrie /understand) — runs alongside the

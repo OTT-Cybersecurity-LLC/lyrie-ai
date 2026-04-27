@@ -39,6 +39,40 @@ export {
   validateBatch,
   VALIDATOR_VERSION as STAGES_VALIDATOR_VERSION,
 } from "./pentest/stages-validator";
+
+// Lyrie Pentest — OSS-Scan service (research.lyrie.ai/scan)
+export {
+  runOssScan,
+  validateRepoUrl,
+  OSS_SCAN_VERSION,
+  DEFAULT_ALLOWED_HOSTS as LYRIE_OSS_SCAN_ALLOWED_HOSTS,
+} from "./pentest/oss-scan/service";
+export type {
+  OssScanRequest,
+  OssScanResult,
+  OssScanError,
+  OssScanOptions,
+} from "./pentest/oss-scan/service";
+
+// Lyrie Pentest — multi-language vulnerability scanners
+export {
+  ALL_SCANNERS as LYRIE_LANGUAGE_SCANNERS,
+  scanFiles as runLyrieMultilangScan,
+  javascriptScanner,
+  typescriptScanner,
+  pythonScanner,
+  goScanner,
+  phpScanner,
+  rubyScanner,
+  cScanner,
+  cppScanner,
+} from "./pentest/scanners";
+export type {
+  Language,
+  LanguageScanner,
+  ScannerRule,
+  ScanReport,
+} from "./pentest/scanners";
 export type {
   Stage,
   RawFinding,
