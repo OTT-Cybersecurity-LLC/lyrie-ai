@@ -11,11 +11,18 @@
  */
 
 import type {
+  ChannelType,
   UnifiedMessage,
   UnifiedResponse,
   ChannelBot,
   MessageHandler,
 } from "./types";
+import {
+  DmPairingManager,
+  evaluateDmPolicy,
+  type DmPolicy,
+  type PolicyContext,
+} from "../security/dm-pairing";
 
 // ─── Engine Interface (matches LyrieEngine.process signature) ───────────────────
 
@@ -40,14 +47,38 @@ export type CommandHandler = (
 
 // ─── Router ─────────────────────────────────────────────────────────────────────
 
+export interface ChannelPolicyConfig {
+  dmPolicy?: DmPolicy;
+  allowedUsers?: string[];
+  allowedChats?: string[];
+}
+
 export class MessageRouter {
   private engine: EngineInterface;
   private channels: Map<string, ChannelBot> = new Map();
   private commandHandlers: Map<string, CommandHandler> = new Map();
   private messageCount = 0;
+  private channelPolicies: Map<ChannelType, ChannelPolicyConfig> = new Map();
+  private pairing: DmPairingManager | null = null;
 
   constructor(engine: EngineInterface) {
     this.engine = engine;
+  }
+
+  /**
+   * Configure DM policy for a channel. Call once per channel before start().
+   * Default behavior (no call) is back-compat: "open" with no extra gating.
+   */
+  configureChannelPolicy(channel: ChannelType, cfg: ChannelPolicyConfig): void {
+    this.channelPolicies.set(channel, cfg);
+    if (cfg.dmPolicy === "pairing" && !this.pairing) {
+      this.pairing = new DmPairingManager();
+    }
+  }
+
+  /** Expose the pairing manager so the CLI / admin tools can approve codes. */
+  getPairingManager(): DmPairingManager | null {
+    return this.pairing;
   }
 
   // ── Channel Management ──────────────────────────────────────────────────────
@@ -77,6 +108,19 @@ export class MessageRouter {
       this.messageCount++;
 
       try {
+        // 0. DM policy gate (additive — defaults to "open" / no-op)
+        const policyCfg = this.channelPolicies.get(message.channel);
+        if (policyCfg?.dmPolicy && policyCfg.dmPolicy !== "open") {
+          const policyCtx: PolicyContext = {
+            policy: policyCfg.dmPolicy,
+            allowedUsers: policyCfg.allowedUsers,
+            allowedChats: policyCfg.allowedChats,
+          };
+          const manager = this.pairing ?? (this.pairing = new DmPairingManager());
+          const gated = evaluateDmPolicy(message, policyCtx, manager);
+          if (gated) return gated;
+        }
+
         // 1. If it's a callback (inline button press), route to command system
         if (message.callbackData) {
           return await this.handleCallback(message);

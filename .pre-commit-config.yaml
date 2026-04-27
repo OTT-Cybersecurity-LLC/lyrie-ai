@@ -1,0 +1,32 @@
+default_language_version:
+  python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.next/.*|node_modules/.*|.*\.lock'
+      - id: end-of-file-fixer
+        exclude: '\.next/.*|node_modules/.*|.*\.lock|.*\.png|.*\.jpg|.*\.zip'
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+      - id: detect-private-key
+      - id: mixed-line-ending
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        name: gitleaks (secret scanner)
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+    hooks:
+      - id: codespell
+        args: [--ignore-words-list, "te,nd,fo,inout,clude,referer", --skip, "*.lock,*.json,node_modules,.next,packages/ui/public"]
