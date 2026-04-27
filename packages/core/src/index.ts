@@ -40,6 +40,29 @@ export {
   VALIDATOR_VERSION as STAGES_VALIDATOR_VERSION,
 } from "./pentest/stages-validator";
 
+// Lyrie Pentest — HTTP Proxy (request/response inspection + replay + mutators)
+export {
+  LyrieHttpProxy,
+  PROXY_VERSION,
+  classifySurface as lyrieClassifyHttpSurface,
+  detectSignals as lyrieDetectHttpSignals,
+  applyMutator as lyrieApplyHttpMutator,
+} from "./pentest/proxy";
+export type {
+  HttpExchange,
+  HttpMethod,
+  HttpRequestRecord,
+  HttpResponseRecord,
+  HttpSignal,
+  HttpSignalKind,
+  HttpSurface,
+  Mutator,
+  MutatorKind,
+  ProxyOptions,
+  ReplayOptions,
+  ReplayResult,
+} from "./pentest/proxy";
+
 // Lyrie Pentest — Threat-Intel client (research.lyrie.ai feed)
 export {
   ThreatIntelClient,

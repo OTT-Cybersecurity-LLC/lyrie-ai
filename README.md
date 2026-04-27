@@ -14,7 +14,7 @@ Lyrie is not just another AI assistant. It runs your operations and protects the
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
 [![CI](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-234%20passing-brightgreen.svg)](#-quality--tests)
+[![Tests](https://img.shields.io/badge/tests-259%20passing-brightgreen.svg)](#-quality--tests)
 [![Releases](https://img.shields.io/github/v/release/overthetopseo/lyrie-agent?include_prereleases&label=release)](https://github.com/overthetopseo/lyrie-agent/releases)
 
 [**Install**](#-install) · [**GitHub Action**](#-lyrie-pentest-action) · [**Architecture**](#-architecture) · [**Shield Doctrine**](docs/shield-doctrine.md) · [**Research**](https://research.lyrie.ai)
@@ -31,13 +31,14 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 
 > **Cybersecurity isn't a plugin — it's Layer 1.**
 
-### Highlights (current main, [`v0.2.4+`](CHANGELOG.md))
+### Highlights (current main, [`v0.2.5+`](CHANGELOG.md))
 
 - 🛡️ **The Shield Doctrine** — every layer of Lyrie that touches untrusted text passes a Shield gate. ([`docs/shield-doctrine.md`](docs/shield-doctrine.md))
 - 🔍 **Lyrie Attack-Surface Mapper** (`/understand`) — maps entry points, trust boundaries, tainted data flows, and ranked risk hotspots before any scanner runs.
 - 🧪 **Lyrie Stages A–F Validator** — every finding earns its severity through six validation gates. Auto-PoCs for confirmed vulns. Auto-remediation summaries. Kills false positives at the source.
 - 🌐 **Lyrie Multi-Language Vulnerability Scanners** — 8 purpose-built scanners (JS / TS / Python / Go / PHP / Ruby / C / C++) with 53 Lyrie-original detection rules covering OWASP Top 10 + CWE classics.
 - 📡 **Lyrie Threat-Intel feed** — every PR finding auto-attributed against [research.lyrie.ai](https://research.lyrie.ai), CISA-KEV-aligned, with Lyrie Verdict surfaced inline. Bumps severity to critical when KEV-listed.
+- 🔍 **Lyrie HTTP Proxy** — capture, classify, replay, and fuzz HTTP exchanges. 9 security-signal detectors (missing security headers, weak cookie flags, open CORS, secrets in responses, GraphQL introspection, auth tokens in URLs, verbose 5xx errors, and more). 7 structured mutators for replay-based testing.
 - 🆓 **Lyrie OSS-Scan service** — free public scan at `research.lyrie.ai/scan`. Submit any GitHub / GitLab / Bitbucket / Codeberg repo URL, get a Lyrie report (Mapper + Scanners + Stages A–F + auto-PoC) in seconds.
 - 🚀 **Lyrie Pentest GitHub Action** — Shield-scans every PR, posts a single-comment-per-PR Markdown summary, uploads SARIF to Code Scanning, blocks merges on `fail-on` threshold.
 - 🧠 **FTS5 cross-session memory** — bm25-ranked recall + LLM-summarized session digests, every snippet Shield-gated.
@@ -214,6 +215,7 @@ bun run scan <repoUrl>            # free Lyrie OSS-Scan against a public repo
 bun run intel list                # list cached Lyrie Threat-Intel advisories
 bun run intel scan-deps           # match research.lyrie.ai feed against package.json
 bun run intel lookup CVE-2024-7399
+bun run proxy scan https://target  # capture + classify + audit any HTTP target
 bun run pairing list              # show pending DM pairing requests
 bun run pairing approve <chan> <code>
 bun run mcp list                  # list MCP-server tools available to Lyrie
@@ -249,7 +251,7 @@ Together: a complete digital guardian that operates **and** defends.
 
 ## ✅ Quality & tests
 
-- **234 tests passing / 0 failing** across 19 test files
+- **259 tests passing / 0 failing** across 20 test files
 - Multi-platform CI (Node 20/22/24 × Ubuntu/macOS) + Rust Shield build
 - Weekly CodeQL security analysis + Dependabot
 - Pre-commit hooks: gitleaks, codespell, hygiene
@@ -257,7 +259,7 @@ Together: a complete digital guardian that operates **and** defends.
 
 ```bash
 bun test packages/ action/
-# → 234 pass · 0 fail · 619 expect()s
+# → 259 pass · 0 fail · 669 expect()s
 ```
 
 ---
