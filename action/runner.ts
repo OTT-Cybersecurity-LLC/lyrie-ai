@@ -113,6 +113,9 @@ async function runScan(): Promise<ScanResult> {
     /(^|\/)build\//,
     /(^|\/)target\//,
     /(^|\/)\.turbo\//,
+    /(^|\/)__pycache__\//,
+    /\.pyc$/,
+    /\.pyo$/,
     /\.lock$/,
     /-shield(-[a-z]+)?\.test\.ts$/,    // shield self-tests legitimately use injection strings
     /shield-(guard|manager)\.test\.ts$/,

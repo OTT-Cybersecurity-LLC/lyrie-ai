@@ -48,7 +48,8 @@
     "understand": "bun run scripts/understand.ts",
     "scan": "bun run scripts/scan.ts",
     "intel": "bun run scripts/intel.ts",
-    "proxy": "bun run scripts/proxy.ts"
+    "proxy": "bun run scripts/proxy.ts",
+    "tools": "bun run scripts/tools.ts"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

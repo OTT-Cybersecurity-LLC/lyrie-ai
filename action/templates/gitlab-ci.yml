@@ -1,0 +1,39 @@
+# Lyrie Pentest — GitLab CI template
+#
+# Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai — MIT License.
+#
+# Usage: copy this file to `.gitlab-ci.yml` (or include it from your existing pipeline)
+# and set ANTHROPIC_API_KEY in your project's CI/CD variables.
+
+stages:
+  - security
+
+lyrie-pentest:
+  stage: security
+  image: oven/bun:1.3
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    LYRIE_TARGET: "./"
+    LYRIE_SCAN_MODE: "quick"     # quick | full | recon | vulnscan | apiscan
+    LYRIE_SCOPE: "diff"          # diff | full
+    LYRIE_DIFF_BASE: "origin/$CI_DEFAULT_BRANCH"
+    LYRIE_FAIL_ON: "high"        # critical | high | medium | low | none
+    LYRIE_OUTPUT_DIR: "lyrie-runs"
+    LYRIE_SHIELD_MODE: "active"
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git
+    - git fetch --no-tags --depth=20 origin "$CI_DEFAULT_BRANCH"
+    - git clone --depth 1 https://github.com/overthetopseo/lyrie-agent.git /tmp/lyrie
+    - cd /tmp/lyrie && bun install --frozen-lockfile
+  script:
+    - cd "$CI_PROJECT_DIR"
+    - bun run /tmp/lyrie/action/runner.ts
+  artifacts:
+    when: always
+    paths:
+      - lyrie-runs/
+    reports:
+      sast: lyrie-runs/lyrie.sarif
+    expire_in: 30 days

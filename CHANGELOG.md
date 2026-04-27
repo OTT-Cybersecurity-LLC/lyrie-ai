@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 3 (Distribution — part 1: Lyrie Python SDK)
+- **Lyrie Agent Python SDK** (`sdk/python/`) — `pip install lyrie-agent`.
+  Pure-Python port of every Lyrie pentest primitive, fully usable from
+  any Python project. Zero runtime dependencies (httpx is opt-in via
+  `lyrie-agent[http]`).
+- **Eight modules ported with full parity:**
+    - `lyrie.Shield` — Shield Doctrine. `scan_recalled` / `scan_inbound`.
+    - `lyrie.AttackSurfaceMapper` — entry points, trust boundaries, tainted
+      data flows, dependencies, hotspots. Same detector matrix as the TS
+      mapper. `MAPPER_VERSION = lyrie-asm-py-1.0.0`.
+    - `lyrie.StagesValidator` — six gates: pattern-reality, reachability,
+      code-path, final-call, PoC, remediation. Auto-curl PoCs for shell /
+      SQL / XSS / SSRF / path-traversal. 8-category remediation summaries.
+    - `lyrie.scan_files` — multi-language scanners (JS / TS / Python / Go /
+      PHP / Ruby / C / C++) with the same `lyrie-<lang>-*` rule namespace.
+    - `lyrie.HttpProxy` — capture + classify + 7 signal detectors.
+    - `lyrie.EditEngine` — diff-view edits with approval gates,
+      Shield-on-patch, sha256 drift detection, workspace scoping.
+    - `lyrie.ThreatIntelClient` — KEV-aligned advisories from
+      research.lyrie.ai. Network-optional, in-memory TTL cache.
+    - `lyrie.run_oss_scan` — the OSS-Scan service engine.
+- **`lyrie-py` CLI** (`python -m lyrie.cli`):
+    `lyrie-py shield <text>`
+    `lyrie-py understand --root <path>`
+    `lyrie-py scan-files --root <path>`
+    `lyrie-py validate-finding --severity high --evidence "..."`
+    `lyrie-py intel [--offline]`
+  All commands honor `--json` where structured output is useful.
+- **GitHub Actions**:
+    - `sdk-python-ci.yml` — pytest matrix on Python 3.10/3.11/3.12/3.13
+      across Ubuntu + macOS + sdist/wheel build verification with twine.
+    - `sdk-python-publish.yml` — trusted-publisher PyPI release on
+      `sdk-py-v*.*.*` tags.
+- **Tests (63 new)**:
+    - `test_shield.py`        — 8 cases
+    - `test_attack_surface.py` — 8 cases
+    - `test_stages.py`         — 15 cases
+    - `test_scanners.py`       — 15 cases
+    - `test_proxy_and_misc.py` — 17 cases (proxy + edits + threat-intel + oss-scan)
+  All pass on Python 3.12. Total Lyrie suite now: **332 / 0** (269 TS + 63 Py).
+- **README updated** with PyPI badge, Python embed example, and 332-test count.
+
 ### Added — Phase 2 (Pentest — part 7 / FINAL: Deeper SARIF rule metadata)
 - **SARIF 2.1.0 rule + result metadata enriched** (`action/runner-helpers.ts`).
   Lyrie's GitHub Code Scanning output now carries the metadata GitHub

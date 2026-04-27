@@ -1,0 +1,64 @@
+// Lyrie Pentest — Jenkinsfile template
+//
+// Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai — MIT License.
+//
+// Drop this in your repo as `Jenkinsfile`, configure ANTHROPIC_API_KEY as
+// a Jenkins credential, and Lyrie scans every PR for you.
+
+pipeline {
+  agent any
+
+  environment {
+    LYRIE_TARGET      = './'
+    LYRIE_SCAN_MODE   = 'quick'        // quick | full | recon | vulnscan | apiscan
+    LYRIE_SCOPE       = 'diff'         // diff | full
+    LYRIE_DIFF_BASE   = "origin/${env.CHANGE_TARGET ?: 'main'}"
+    LYRIE_FAIL_ON     = 'high'         // critical | high | medium | low | none
+    LYRIE_OUTPUT_DIR  = 'lyrie-runs'
+    LYRIE_SHIELD_MODE = 'active'
+  }
+
+  stages {
+    stage('Install Bun') {
+      steps {
+        sh '''
+          if ! command -v bun >/dev/null; then
+            curl -fsSL https://bun.sh/install | bash
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH="$BUN_INSTALL/bin:$PATH"
+          fi
+          bun --version
+        '''
+      }
+    }
+
+    stage('Install Lyrie Agent') {
+      steps {
+        sh '''
+          rm -rf .lyrie
+          git clone --depth 1 https://github.com/overthetopseo/lyrie-agent.git .lyrie
+          cd .lyrie && bun install --frozen-lockfile
+        '''
+      }
+    }
+
+    stage('Lyrie Pentest') {
+      steps {
+        withCredentials([string(credentialsId: 'ANTHROPIC_API_KEY', variable: 'ANTHROPIC_API_KEY')]) {
+          sh '''
+            export PATH="$HOME/.bun/bin:$PATH"
+            bun run .lyrie/action/runner.ts
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'lyrie-runs/**', allowEmptyArchive: true, fingerprint: true
+      // Surface the SARIF as a Jenkins SAST report (with the warnings-ng plugin):
+      // recordIssues tools: [sarif(pattern: 'lyrie-runs/lyrie.sarif')]
+    }
+  }
+}

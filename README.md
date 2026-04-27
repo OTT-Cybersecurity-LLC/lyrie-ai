@@ -1,3 +1,5 @@
+<!-- lyrie-shield: ignore-file (this README contains code examples that demonstrate Shield detector strings; they are documentation, not vectors) -->
+
 <div align="center">
 
 # 🛡️ Lyrie Agent
@@ -5,6 +7,8 @@
 ### The world's first autonomous AI agent with built-in cybersecurity.
 
 _The agent that defends what it builds._
+
+**No Docker. No yak-shaving. Just `pip install lyrie-agent` or one curl pipe and you're scanning.**
 
 Lyrie is not just another AI assistant. It runs your operations and protects them in the same loop — every layer carries the **Lyrie Shield**, every patch passes the **Shield Doctrine**, every finding earns its severity through **Lyrie Stages A–F**.
 
@@ -193,6 +197,8 @@ You get:
 7. **Non-zero exit on threshold** — block merges when configured as a required check
 
 Full docs: [`action/README.md`](action/README.md).
+
+**Other CI/CD platforms?** Drop-in templates for GitLab CI, Jenkins, and CircleCI live in [`action/templates/`](action/templates/). Same Lyrie scan, same Shield Doctrine, same SARIF — anywhere your code builds.
 
 ---
 
