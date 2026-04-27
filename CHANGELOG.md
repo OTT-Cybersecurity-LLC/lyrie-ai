@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 2 (Pentest — part 7 / FINAL: Deeper SARIF rule metadata)
+- **SARIF 2.1.0 rule + result metadata enriched** (`action/runner-helpers.ts`).
+  Lyrie's GitHub Code Scanning output now carries the metadata GitHub
+  actually uses for its UI:
+    - `tool.driver.organization = "OTT Cybersecurity LLC"`
+    - `tool.driver.semanticVersion = "0.2.6"`
+    - `runs[].properties.generatedBy = "Lyrie.ai by OTT Cybersecurity LLC"`
+    - **Per-rule** `defaultConfiguration.level`, `properties.tags`
+      (“security” + `lyrie:<source>` + cwe), `properties["security-severity"]`
+      (0–10 float, drives GitHub’s severity sidebar), `properties["lyrie:source"]`
+      (shield/mapper/scanner/validator/intel/proxy), `help.text` + `help.markdown`,
+      `fullDescription`, and `relationships[]` linking to CWE entries.
+    - **Per-result** `partialFingerprints.lyrieFingerprint` for stable cross-run
+      dedup, `properties["security-severity"]`, `properties["lyrie:confidence"]`
+      (parsed out of the Stages A–F line), `properties["lyrie:source"]`,
+      and `message.markdown` carrying the Lyrie / OTT Cybersecurity LLC signature.
+- **Lyrie source classifier** infers which Lyrie module produced each rule
+  from the finding id prefix (`lyrie-shield-*` → shield, `lyrie-flow-*` →
+  mapper, `lyrie-jsts/py/go/php/rb/cpp-*` → scanner, threat-intel-enriched
+  descriptions → intel, otherwise → validator).
+- **`lyrie-shield: ignore-file`** annotation added to
+  `packages/core/src/pentest/proxy/proxy.ts` because the proxy module
+  contains literal credential-shape strings inside its own detector —
+  product code, not a vector.
+- **Tests**: 10 new SARIF metadata cases (driver organization, rule tags,
+  help.markdown signature, CWE relationships, result fingerprints,
+  per-result security-severity, lyrie:source inference, message.markdown
+  signature, lyrie:confidence parsing, empty-findings still emits
+  metadata). All pass. Total suite now: 269 / 0 / 706 expect()s.
+- **Phase 2 CLOSED.** Roadmap progresses to Phase 3 next — Lyrie Python SDK
+  on PyPI (`pip install lyrie-agent`) for embedding Lyrie inside any Python
+  project.
+
 ### Added — Phase 2 (Pentest — part 6: Lyrie HTTP Proxy)
 - **Lyrie HTTP Proxy** (`packages/core/src/pentest/proxy/`).
   Lyrie's purpose-built request/response inspection layer for offensive

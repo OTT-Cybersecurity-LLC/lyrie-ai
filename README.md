@@ -14,7 +14,7 @@ Lyrie is not just another AI assistant. It runs your operations and protects the
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
 [![CI](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-259%20passing-brightgreen.svg)](#-quality--tests)
+[![Tests](https://img.shields.io/badge/tests-269%20passing-brightgreen.svg)](#-quality--tests)
 [![Releases](https://img.shields.io/github/v/release/overthetopseo/lyrie-agent?include_prereleases&label=release)](https://github.com/overthetopseo/lyrie-agent/releases)
 
 [**Install**](#-install) · [**GitHub Action**](#-lyrie-pentest-action) · [**Architecture**](#-architecture) · [**Shield Doctrine**](docs/shield-doctrine.md) · [**Research**](https://research.lyrie.ai)
@@ -31,7 +31,7 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 
 > **Cybersecurity isn't a plugin — it's Layer 1.**
 
-### Highlights (current main, [`v0.2.5+`](CHANGELOG.md))
+### Highlights (current main, [`v0.2.6+`](CHANGELOG.md))
 
 - 🛡️ **The Shield Doctrine** — every layer of Lyrie that touches untrusted text passes a Shield gate. ([`docs/shield-doctrine.md`](docs/shield-doctrine.md))
 - 🔍 **Lyrie Attack-Surface Mapper** (`/understand`) — maps entry points, trust boundaries, tainted data flows, and ranked risk hotspots before any scanner runs.
@@ -308,7 +308,7 @@ Together: a complete digital guardian that operates **and** defends.
 
 ## ✅ Quality & tests
 
-- **259 tests passing / 0 failing** across 20 test files
+- **269 tests passing / 0 failing** across 20 test files
 - Multi-platform CI (Node 20/22/24 × Ubuntu/macOS) + Rust Shield build
 - Weekly CodeQL security analysis + Dependabot
 - Pre-commit hooks: gitleaks, codespell, hygiene
@@ -316,7 +316,7 @@ Together: a complete digital guardian that operates **and** defends.
 
 ```bash
 bun test packages/ action/
-# → 259 pass · 0 fail · 669 expect()s
+# → 269 pass · 0 fail · 706 expect()s
 ```
 
 ---
