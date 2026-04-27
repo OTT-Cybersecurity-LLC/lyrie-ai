@@ -9,7 +9,8 @@
  * - Signal
  * - CLI (default, always available)
  * 
- * Inspired by OpenClaw's channel system but cleaner and more secure.
+ * Lyrie's purpose-built channel system: cleaner, Shield-native, and built
+ * for the agent's autonomous operation model. Lyrie.ai by OTT Cybersecurity LLC.
  */
 
 import { LyrieEngine } from "../engine/lyrie-engine";

@@ -20,6 +20,7 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 
 import { ShieldGuard } from "../packages/core/src/engine/shield-guard";
+import { buildAttackSurface, type AttackSurface } from "../packages/core/src/pentest/attack-surface";
 import {
   SEVERITY_RANK,
   countBySeverity,
@@ -154,6 +155,38 @@ async function runScan(): Promise<ScanResult> {
     }
   }
 
+  // Attack-surface mapping (Lyrie /understand) — runs alongside the
+  // baseline Shield pass for richer PR context.
+  let attackSurface: AttackSurface | undefined;
+  try {
+    attackSurface = await buildAttackSurface({
+      root: target,
+      files: scope === "diff" ? changedFiles : undefined,
+    });
+    // Promote the highest-risk flows into the findings list so they show
+    // up in SARIF + the PR comment.
+    for (const flow of attackSurface.dataFlows.filter((f) => f.risk >= 7).slice(0, 25)) {
+      findings.push({
+        id: `lyrie-flow-${findings.length + 1}`,
+        title: `Tainted data flow: ${flow.source} → ${flow.sink}`,
+        severity: flow.risk >= 9 ? "critical" : "high",
+        description:
+          `Lyrie attack-surface mapper detected a high-risk data flow ` +
+          `from ${flow.source} into ${flow.sink}. Evidence:\n\n  ${flow.evidence}\n\n` +
+          `Validate that this path is properly sanitized, gated, or refactored ` +
+          `to remove the connection.`,
+        file: flow.file,
+        line: flow.line,
+        cwe: "CWE-20",
+        remediation:
+          "Add input validation / authorization checks at the boundary, or " +
+          "break the connection between source and sink.",
+      });
+    }
+  } catch (err: any) {
+    console.warn(`::warning::Lyrie attack-surface mapper failed: ${err.message}`);
+  }
+
   return {
     scanMode,
     target,
@@ -161,6 +194,7 @@ async function runScan(): Promise<ScanResult> {
     finishedAt: new Date().toISOString(),
     findings,
     shielded: findings.filter((f) => f.id.startsWith("lyrie-shield")).length,
+    attackSurface,
   };
 }
 

@@ -3,7 +3,9 @@
  *
  * Adds full-text search across the conversations table using SQLite's FTS5
  * virtual table. Replaces LIKE-based search for ranked, fast cross-session
- * recall — inspired by Hermes's FTS5 + LLM summarization loop.
+ * recall — Lyrie's purpose-built memory recall layer with LLM summarization.
+ *
+ * Lyrie.ai by OTT Cybersecurity LLC.
  *
  * Key design choices:
  *   - The FTS index is a SECONDARY virtual table — the canonical data still

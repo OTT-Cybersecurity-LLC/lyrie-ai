@@ -1,20 +1,21 @@
 /**
- * EditEngine — Cline-style diff-view file edits with approval gates.
+ * Lyrie EditEngine — diff-view file edits with approval gates.
  *
- * Lyrie's existing `write_file` tool blasts whole-file overwrites. That's
- * fine for new files but dangerous for in-place edits — the agent might
- * touch a single line and the diff between intent and effect is invisible.
+ * Part of Lyrie.ai by OTT Cybersecurity LLC.
  *
- * EditEngine introduces:
+ * Lyrie's `write_file` tool overwrites whole files — fine for new files
+ * but risky for in-place edits because the diff between agent intent and
+ * disk effect is invisible. EditEngine is Lyrie's purpose-built solution:
+ *
  *   - Targeted edits via exact-match `oldText` → `newText` replacements
  *   - Unified diff generation for human review
  *   - Three approval modes: auto-approve, require-approval, dry-run
  *   - Per-edit ledger (~/.lyrie/edits.json) so every applied change can be
  *     inspected and reverted
- *   - Shield Doctrine: every patch is scanned BEFORE it touches disk
- *     (planned-disk attacker payloads never land on the filesystem)
+ *   - Shield Doctrine: every patch is scanned BEFORE it touches disk so
+ *     attacker-planned content never lands on the filesystem
  *
- * © OTT Cybersecurity LLC — https://lyrie.ai
+ * © OTT Cybersecurity LLC — https://lyrie.ai — MIT License
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
@@ -117,8 +118,10 @@ function ensureDir(path: string) {
 
 /**
  * Build a small unified diff. We deliberately don't pull in a heavyweight
- * diff library — Cline-quality output is achievable with line-by-line
- * Myers-lite. For Phase 1 we render context-3 hunks.
+ * diff library — high-quality output is achievable with a line-by-line
+ * Myers-lite implementation. Lyrie renders context-3 hunks.
+ *
+ * Lyrie.ai by OTT Cybersecurity LLC.
  */
 export function buildUnifiedDiff(
   filePath: string,
