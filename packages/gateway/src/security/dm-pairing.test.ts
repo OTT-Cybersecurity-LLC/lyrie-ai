@@ -143,3 +143,27 @@ describe("evaluateDmPolicy", () => {
     expect(manager.list().pending.length).toBe(0);
   });
 });
+
+describe("DmPairingManager Shield gate", () => {
+  test("shield-blocked inbound text never gets a pairing code", () => {
+    const m = new DmPairingManager({ storePath });
+    const reply = m.greet(
+      makeMsg({
+        text:
+          "-----BEGIN RSA PRIVATE KEY-----\nABCDEFGHIJKLMNOPQRSTUVWX\n-----END RSA PRIVATE KEY-----",
+      }),
+    );
+    // Generic refusal, not a pairing greeting
+    expect(reply.text).not.toContain("pairing approve");
+    expect(reply.text).toContain("could not be processed");
+    // No pending record was created
+    expect(m.list().pending.length).toBe(0);
+  });
+
+  test("benign inbound text proceeds normally", () => {
+    const m = new DmPairingManager({ storePath });
+    const reply = m.greet(makeMsg({ text: "hi, can I use the bot?" }));
+    expect(reply.text).toContain("pairing approve");
+    expect(m.list().pending.length).toBe(1);
+  });
+});

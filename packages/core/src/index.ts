@@ -24,9 +24,28 @@ export type { ModelConfig, ModelInstance, TaskType, RouterConfig } from "./engin
 export { ShieldManager } from "./engine/shield-manager";
 export type { ThreatScanResult, ToolCallValidation } from "./engine/shield-manager";
 
+// Shield Guard — lightweight cross-cutting Shield contract used by every
+// Lyrie module that touches untrusted text (memory recall, MCP results,
+// gateway pairing, etc.). Doctrine: every layer has a Shield hook.
+export { ShieldGuard, FallbackShieldGuard } from "./engine/shield-guard";
+export type { ShieldGuardLike, ShieldVerdict } from "./engine/shield-guard";
+
 // Memory
 export { MemoryCore } from "./memory/memory-core";
 export type { MemoryEntry, Importance, Source } from "./memory/memory-core";
+export {
+  ensureFtsIndex,
+  searchAcrossSessions,
+  summarizeSession,
+  heuristicSummarizer,
+} from "./memory/fts-search";
+export type {
+  CrossSessionHit,
+  CrossSessionSearchOptions,
+  SessionSummary,
+  SessionSummarizer,
+  SummarizeSessionOptions,
+} from "./memory/fts-search";
 
 // Tools
 export { ToolExecutor } from "./tools/tool-executor";

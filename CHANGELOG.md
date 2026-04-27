@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 1 (Core Agent Absorption — part 2: Memory + Shield Doctrine)
+- **`ShieldGuard` cross-cutting Shield contract** (`packages/core/src/engine/shield-guard.ts`).
+  Lightweight, dependency-free `scanRecalled` / `scanInbound` interface used by
+  every layer that touches untrusted text. Built-in heuristic fallback so
+  Lyrie ships with a Shield on EVERY surface, even the admin CLIs.
+- **FTS5 cross-session memory search** (`packages/core/src/memory/fts-search.ts`).
+  Adds `MemoryCore.searchAcrossSessions(query, opts)` and
+  `MemoryCore.summarizeSession(opts)`. Hermes-inspired ranked recall with
+  bm25, snippet highlights, and triggers that keep the FTS index in sync.
+  Falls back to LIKE when FTS5 isn't available so memory recall keeps working
+  in any SQLite build.
+- **Shield wired through every Phase-1 layer**:
+  - `MemoryCore.searchAcrossSessions` → `scanRecalled` on every snippet, redacts
+    prompt-injection / credential-like material before it reaches the agent.
+  - `DmPairingManager.greet` → `scanInbound` on first-touch DM body; abusers
+    are refused without ever issuing a pairing code.
+  - `McpRegistry.call` → `shieldFilter` on every text/resource block returned
+    by third-party MCP servers.
+- **Schema bump v1 → v2**: additive FTS5 virtual table + triggers. Existing
+  databases are migrated idempotently on first boot. No destructive change.
+- **`docs/shield-doctrine.md`**: the engineering rule — every layer of Lyrie
+  has a Shield hook. New PRs that add untrusted-text surfaces without a
+  Shield call are incomplete.
+- **Unit tests**: 9 ShieldGuard, 9 FTS, 2 pairing-shield, 5 MCP-shield. All pass.
+
 ### Added — Phase 1 (Core Agent Absorption — part 1)
 - **DM pairing policy** (`packages/gateway/src/security/dm-pairing.ts`) inspired by
   OpenClaw `dmPolicy="pairing"`. Three modes: `open` (back-compat default),

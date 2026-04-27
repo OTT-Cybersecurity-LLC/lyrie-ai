@@ -20,6 +20,7 @@ import type {
   Tool,
   Transport,
 } from "./types";
+import { ShieldGuard, type ShieldGuardLike } from "@lyrie/core";
 
 export interface RegisteredTool {
   /** Fully-qualified name surfaced to the agent: mcp:<server>:<tool> */
@@ -32,11 +33,14 @@ export interface RegisteredTool {
 export interface McpRegistryOptions {
   configPath?: string;
   configInline?: McpConfigFile;
+  /** Shield guard used to scan tool results before they reach the agent. */
+  shield?: ShieldGuardLike;
 }
 
 export class McpRegistry {
   private clients = new Map<string, McpClient>();
   private tools: RegisteredTool[] = [];
+  private shield: ShieldGuardLike = ShieldGuard.fallback();
 
   static defaultConfigPath(): string {
     return join(homedir(), ".lyrie", "mcp.json");
@@ -76,6 +80,7 @@ export class McpRegistry {
   }
 
   async loadFrom(opts: McpRegistryOptions = {}): Promise<void> {
+    if (opts.shield) this.shield = opts.shield;
     const path = opts.configPath ?? McpRegistry.defaultConfigPath();
     const config = opts.configInline ?? McpRegistry.loadConfig(path);
     if (!config?.mcpServers) return;
@@ -121,7 +126,42 @@ export class McpRegistry {
     const [, server, tool] = match;
     const client = this.clients.get(server);
     if (!client) throw new Error(`unknown MCP server: ${server}`);
-    return await client.callTool(tool, args);
+
+    const raw = await client.callTool(tool, args);
+    return this.shieldFilter(qualifiedName, raw);
+  }
+
+  /**
+   * Shield-gate tool results. MCP servers are third-party processes — they
+   * can absolutely return prompt-injection payloads (intentionally or
+   * accidentally). Every text/resource block is scanned before it reaches
+   * the agent. Blocked content is replaced with a Shield notice; non-text
+   * content (images, binaries) passes through.
+   */
+  private shieldFilter(qualifiedName: string, result: CallToolResult): CallToolResult {
+    if (!result?.content) return result;
+    const filtered = result.content.map((block: any) => {
+      if (block?.type === "text" && typeof block.text === "string") {
+        const verdict = this.shield.scanRecalled(block.text);
+        if (verdict.blocked) {
+          return {
+            type: "text",
+            text: `⚠️ Lyrie Shield redacted MCP output from ${qualifiedName}: ${verdict.reason ?? "unsafe content"}`,
+          };
+        }
+      }
+      if (block?.type === "resource" && typeof block?.resource?.text === "string") {
+        const verdict = this.shield.scanRecalled(block.resource.text);
+        if (verdict.blocked) {
+          return {
+            type: "text",
+            text: `⚠️ Lyrie Shield redacted MCP resource from ${qualifiedName}: ${verdict.reason ?? "unsafe content"}`,
+          };
+        }
+      }
+      return block;
+    });
+    return { ...result, content: filtered };
   }
 
   async shutdown(): Promise<void> {

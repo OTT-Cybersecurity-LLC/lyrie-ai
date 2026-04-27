@@ -31,6 +31,7 @@ import { homedir } from "node:os";
 import { randomBytes } from "node:crypto";
 
 import type { ChannelType, UnifiedMessage, UnifiedResponse } from "../common/types";
+import { ShieldGuard, type ShieldGuardLike } from "@lyrie/core";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -101,17 +102,27 @@ export interface DmPairingOptions {
   storePath?: string;
   /** Operator-facing message shown when an unknown sender is gated. */
   greeting?: (record: PairingRecord) => string;
+  /**
+   * Shield guard used to scan the incoming pairing message before the
+   * pairing greeting is even returned. If a critical threat is detected the
+   * sender is silently rejected with a generic message instead of being
+   * given a pairing code (defense-in-depth: pairing codes themselves
+   * become a small attack surface for spam/abuse).
+   */
+  shield?: ShieldGuardLike;
 }
 
 export class DmPairingManager {
   private store: PairingStore;
   private path: string;
   private greeting: (record: PairingRecord) => string;
+  private shield: ShieldGuardLike;
 
   constructor(opts: DmPairingOptions = {}) {
     this.path = opts.storePath ?? defaultPath();
     this.store = loadStore(this.path);
     this.greeting = opts.greeting ?? defaultGreeting;
+    this.shield = opts.shield ?? ShieldGuard.fallback();
   }
 
   /** Returns true if the sender is already approved for this channel. */
@@ -133,8 +144,25 @@ export class DmPairingManager {
   /**
    * Idempotently produce/refresh a pairing record for an unknown sender and
    * return the operator-facing greeting (to relay back to the sender).
+   *
+   * Shield gate: the inbound message text is scanned first. Critical threats
+   * (e.g. credential exfiltration, system-prompt-override attempts) are
+   * silently rejected without issuing a pairing code, and the operator is
+   * notified via stderr.
    */
   greet(message: UnifiedMessage): UnifiedResponse {
+    const verdict = this.shield.scanInbound(message.text ?? "");
+    if (verdict.blocked) {
+      console.warn(
+        `[dm-pairing] ⚠️ shield-blocked pairing attempt channel=${message.channel} ` +
+          `sender=${message.senderId} severity=${verdict.severity ?? "high"} ` +
+          `reason="${verdict.reason ?? "unsafe"}"`,
+      );
+      return {
+        text: "🚫 This message could not be processed. Try again later.",
+      };
+    }
+
     const existing = this.pending(message.channel, message.senderId);
     if (existing) return { text: this.greeting(existing) };
 
