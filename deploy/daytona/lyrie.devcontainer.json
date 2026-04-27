@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "Lyrie Agent (Daytona)",
+  "image": "ghcr.io/overthetopseo/lyrie-agent:latest",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  },
+  "postCreateCommand": "bun install --frozen-lockfile",
+  "containerEnv": {
+    "LYRIE_BACKEND": "local",
+    "LYRIE_OUTPUT_DIR": "/workspace/lyrie-runs"
+  },
+  "customizations": {
+    "lyrie": {
+      "license": "MIT",
+      "vendor": "OTT Cybersecurity LLC",
+      "homepage": "https://lyrie.ai"
+    }
+  },
+  "forwardPorts": [],
+  "remoteUser": "node"
+}
