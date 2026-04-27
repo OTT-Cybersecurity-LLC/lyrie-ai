@@ -79,13 +79,15 @@ runs:
     - name: Install Lyrie Agent
       shell: bash
       run: |
-        # Install from npm in v0.2+; for now, clone from main.
-        if [ ! -d "$RUNNER_TEMP/lyrie" ]; then
-          git clone --depth 1 https://github.com/overthetopseo/lyrie-agent.git "$RUNNER_TEMP/lyrie"
-        fi
-        cd "$RUNNER_TEMP/lyrie"
+        # Resolve LYRIE_HOME = directory containing this action.yml.
+        # When the action is consumed via `uses: overthetopseo/lyrie-agent/action@v1`,
+        # GitHub Actions checks the action repo out into $GITHUB_ACTION_PATH.
+        # We use that directly — no second clone needed.
+        ACTION_DIR="${GITHUB_ACTION_PATH:-action}"
+        LYRIE_REPO="$(cd "${ACTION_DIR}/.." && pwd)"
+        cd "${LYRIE_REPO}"
         bun install --frozen-lockfile
-        echo "LYRIE_HOME=$RUNNER_TEMP/lyrie" >> "$GITHUB_ENV"
+        echo "LYRIE_HOME=${LYRIE_REPO}" >> "$GITHUB_ENV"
 
     - name: Run Lyrie Pentest
       id: lyrie
