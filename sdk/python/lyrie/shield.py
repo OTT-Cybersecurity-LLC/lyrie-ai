@@ -1,3 +1,4 @@
+# lyrie-shield: ignore-file (Lyrie Shield: contains attack-pattern detector strings by design)
 """
 Lyrie Shield — Python implementation of the Shield Doctrine.
 

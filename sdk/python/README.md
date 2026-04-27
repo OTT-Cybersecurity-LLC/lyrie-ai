@@ -1,3 +1,5 @@
+<!-- lyrie-shield: ignore-file (this README contains code examples that demonstrate Shield detector strings; they are documentation, not vectors) -->
+
 # Lyrie Agent — Python SDK
 
 > _Lyrie.ai by **OTT Cybersecurity LLC** — https://lyrie.ai — MIT License._

@@ -1,3 +1,4 @@
+# lyrie-shield: ignore-file (Lyrie scanner: contains attack-pattern detector strings by design)
 """
 Lyrie Multi-Language Vulnerability Scanners — Python port (subset).
 

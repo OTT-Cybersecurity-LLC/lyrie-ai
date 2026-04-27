@@ -1,0 +1,53 @@
+# Lyrie Pentest — CircleCI template
+#
+# Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai — MIT License.
+#
+# Place at `.circleci/config.yml` and add ANTHROPIC_API_KEY as a project
+# environment variable.
+
+version: 2.1
+
+jobs:
+  lyrie-pentest:
+    docker:
+      - image: cimg/base:stable
+    environment:
+      LYRIE_TARGET:      "./"
+      LYRIE_SCAN_MODE:   "quick"
+      LYRIE_SCOPE:       "diff"
+      LYRIE_DIFF_BASE:   "origin/main"
+      LYRIE_FAIL_ON:     "high"
+      LYRIE_OUTPUT_DIR:  "lyrie-runs"
+      LYRIE_SHIELD_MODE: "active"
+    steps:
+      - checkout
+
+      - run:
+          name: Install Bun
+          command: |
+            curl -fsSL https://bun.sh/install | bash
+            echo 'export PATH="$HOME/.bun/bin:$PATH"' >> "$BASH_ENV"
+
+      - run:
+          name: Install Lyrie Agent
+          command: |
+            git clone --depth 1 https://github.com/overthetopseo/lyrie-agent.git /tmp/lyrie
+            cd /tmp/lyrie && bun install --frozen-lockfile
+
+      - run:
+          name: Lyrie Pentest
+          command: bun run /tmp/lyrie/action/runner.ts
+
+      - store_artifacts:
+          path: lyrie-runs
+          destination: lyrie-runs
+
+workflows:
+  security:
+    jobs:
+      - lyrie-pentest:
+          filters:
+            branches:
+              only:
+                - main
+                - /pull\/.*/

@@ -1,3 +1,4 @@
+# lyrie-shield: ignore-file (Lyrie HTTP Proxy: contains credential-shape detector strings by design)
 """
 Lyrie HTTP Proxy — Python port (capture + classify + signal detection).
 

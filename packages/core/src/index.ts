@@ -40,6 +40,28 @@ export {
   VALIDATOR_VERSION as STAGES_VALIDATOR_VERSION,
 } from "./pentest/stages-validator";
 
+// Lyrie Tools Catalog — vetted external-tool registry + recommend-by-intent
+export {
+  ToolsCatalog,
+  CATEGORIES as LYRIE_TOOL_CATEGORIES,
+  CATEGORY_BY_ID as LYRIE_TOOL_CATEGORY_BY_ID,
+  BUILTIN_TOOLS as LYRIE_BUILTIN_TOOLS,
+  BUILTIN_TOOL_COUNT as LYRIE_BUILTIN_TOOL_COUNT,
+  CATALOG_VERSION as LYRIE_TOOLS_CATALOG_VERSION,
+  CATALOG_SIGNATURE as LYRIE_TOOLS_CATALOG_SIGNATURE,
+} from "./tools-catalog";
+export type {
+  ToolDefinition,
+  ToolCategory,
+  ToolTag,
+  ToolInstall,
+  InstallKind,
+  InstallStatus,
+  CatalogStats,
+  CategoryDescriptor,
+  SupportedOS,
+} from "./tools-catalog";
+
 // Lyrie Pentest — HTTP Proxy (request/response inspection + replay + mutators)
 export {
   LyrieHttpProxy,
