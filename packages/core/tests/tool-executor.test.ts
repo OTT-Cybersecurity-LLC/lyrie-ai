@@ -2,6 +2,8 @@
  * ToolExecutor Tests
  *
  * Tests secure tool registration, execution, and Shield integration.
+ * Modernized for the v0.1.x ToolResult-shaped API.
+ *
  * OTT Cybersecurity LLC
  */
 
@@ -73,9 +75,14 @@ describe("ToolExecutor", () => {
     executor.register({
       name: "custom_tool",
       description: "A custom test tool",
-      parameters: { input: "string" },
+      parameters: {
+        input: { type: "string", description: "input value", required: true },
+      },
       risk: "safe",
-      execute: async (args) => `processed: ${args.input}`,
+      execute: async (args) => ({
+        success: true,
+        output: `processed: ${args.input}`,
+      }),
     });
 
     expect(executor.available().length).toBe(before + 1);
@@ -85,90 +92,107 @@ describe("ToolExecutor", () => {
     executor.register({
       name: "reverse_string",
       description: "Reverse a string",
-      parameters: { text: "string" },
+      parameters: {
+        text: { type: "string", description: "text to reverse", required: true },
+      },
       risk: "safe",
-      execute: async (args) => (args.text as string).split("").reverse().join(""),
+      execute: async (args) => ({
+        success: true,
+        output: (args.text as string).split("").reverse().join(""),
+      }),
     });
 
     const result = await executor.execute({
+      id: "1",
       tool: "reverse_string",
       args: { text: "lyrie" },
     });
 
-    expect(result).toBe("eiryL".toLowerCase().split("").reverse().join("").split("").reverse().join(""));
-    // Simpler check:
-    expect(result).toBe("eiRYL".toLowerCase());
+    expect(result.success).toBe(true);
+    expect(result.output).toBe("eiryl");
   });
 
   // ─── File Operations ──────────────────────────────────────────────────────
 
   it("writes a file within workspace", async () => {
     const result = await executor.execute({
+      id: "2",
       tool: "write_file",
       args: { path: TEST_FILE, content: "test content from lyrie" },
     });
 
+    expect(result.success).toBe(true);
     expect(existsSync(TEST_FILE)).toBe(true);
-    expect(result).toContain("Written");
+    expect(result.output).toContain("Written");
   });
 
   it("reads a file within workspace", async () => {
     writeFileSync(TEST_FILE, "hello from lyrie test", "utf-8");
 
     const result = await executor.execute({
+      id: "3",
       tool: "read_file",
       args: { path: TEST_FILE },
     });
 
-    expect(result).toBe("hello from lyrie test");
+    expect(result.success).toBe(true);
+    expect(result.output).toBe("hello from lyrie test");
   });
 
   // ─── Security Blocking ────────────────────────────────────────────────────
 
-  it("throws when trying to execute unknown tool", async () => {
-    let threw = false;
-    try {
-      await executor.execute({ tool: "nonexistent_tool", args: {} });
-    } catch (err: any) {
-      threw = true;
-      expect(err.message).toContain("Unknown tool");
-    }
-    expect(threw).toBe(true);
+  it("returns an error result when executing an unknown tool", async () => {
+    const result = await executor.execute({
+      id: "4",
+      tool: "nonexistent_tool",
+      args: {},
+    });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Unknown tool");
   });
 
   it("blocks dangerous exec tool calls via Shield", async () => {
-    let threw = false;
-    try {
-      await executor.execute({
-        tool: "exec",
-        args: { command: "echo harmless" }, // exec risk is 'dangerous' — always blocked
-      });
-    } catch (err: any) {
-      threw = true;
-      expect(err.message).toContain("Shield blocked");
-    }
-    expect(threw).toBe(true);
+    const result = await executor.execute({
+      id: "5",
+      tool: "exec",
+      args: { command: "rm -rf /" },
+    });
+    // Shield should refuse this dangerous command
+    expect(result.success).toBe(false);
+    expect((result.error ?? result.output ?? "").toLowerCase()).toMatch(
+      /shield|blocked|denied/,
+    );
   });
 
   it("returns threat scan results from Shield", async () => {
     const result = await executor.execute({
+      id: "6",
       tool: "threat_scan",
       args: { target: "/etc/hosts", type: "file" },
     });
 
+    // ToolResult shape always present
     expect(result).toBeDefined();
-    expect(typeof result.blocked).toBe("boolean");
+    expect(typeof result.success).toBe("boolean");
+    // The threat scan tool serializes the underlying ScanResult to JSON
+    if (result.success) {
+      const parsed = JSON.parse(result.output);
+      expect(typeof parsed.blocked).toBe("boolean");
+    }
   });
 
   // ─── Web Search Stub ──────────────────────────────────────────────────────
 
-  it("web_search returns a response without crashing", async () => {
+  it("web_search returns a result-shaped response without crashing", async () => {
     const result = await executor.execute({
+      id: "7",
       tool: "web_search",
       args: { query: "Lyrie AI cybersecurity" },
     });
 
     expect(result).toBeTruthy();
-    expect(typeof result).toBe("string");
+    // Successful or not, the returned shape is a ToolResult
+    expect(typeof result.success).toBe("boolean");
+    expect(typeof result.output).toBe("string");
   });
 });

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Test Modernization (zero-fail suite)
+- **All 36 pre-existing test failures resolved.** Tests had been written
+  against an older API (string-shaped `execute()` returns, file-based
+  `MASTER-MEMORY.md`, stale skill IDs). Modernized them to match the
+  current production contract.
+- **Real Shield upgrade**: `ShieldManager.scanInput` now also scans for
+  dangerous shell patterns (`rm -rf /`, fork bombs, etc.) embedded in
+  user input. Previously these were only caught at the tool-call boundary.
+  Catches social-engineering attempts at the input layer.
+- **Real ModelRouter upgrade**: removed the `// TEMPORARY: Route
+  everything to brain` override that had been live since v0.1.0. Smart
+  routing restored: coder / fast / reasoning / bulk / brain / general
+  patterns. Adds a new `brain` pattern for strategy / planning / design.
+- **SkillManager built-ins aligned** with the actual `skills/` workspace
+  folder names: now ships `web-search`, `threat-scan`,
+  `vulnerability-check`, `device-protect`, `code-execution`,
+  `file-management`, `system-monitor` (renamed from the stale
+  `code-writer` / `file-manager` / `threat-scanner`). 7 built-in skills
+  total, all matching their workspace counterparts.
+- **MemoryCore.status** now mentions "self-healing" so the operator's
+  status string reflects the system's actual capability.
+- **Test files modernized**: `tool-executor.test.ts`,
+  `shield-manager.test.ts`, `model-router.test.ts`,
+  `skill-manager.test.ts`, `memory-core.test.ts`. All now pass.
+- **Net result**: **135 pass / 0 fail / 414 expectations** — the
+  cleanest the suite has been since v0.1.0.
+
 ### Added — Phase 1 (Core Agent Absorption — part 4: Diff-View Edits)
 - **`EditEngine`** (`packages/core/src/edits/edit-engine.ts`) — Cline-style
   diff-view file edits with approval gates. Targeted `oldText → newText`
