@@ -2,6 +2,9 @@
  * MCP Shield-filter tests — verifies the registry redacts unsafe tool
  * results before they reach the agent.
  *
+ * lyrie-shield: ignore-file (this file's whole purpose is to test the
+ * Shield using its own patterns; we don't scan our own self-tests).
+ *
  * © OTT Cybersecurity LLC — https://lyrie.ai
  */
 

@@ -1,3 +1,4 @@
+// lyrie-shield: ignore-file (security-feature UI describes attack types by name; this is product copy, not an injection vector)
 import {
   Settings,
   Key,

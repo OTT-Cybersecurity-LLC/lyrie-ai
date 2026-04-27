@@ -1,0 +1,31 @@
+name: Lyrie Action Self-Test
+
+on:
+  pull_request:
+    paths:
+      - 'action/**'
+      - '.github/workflows/action-selftest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  selftest:
+    name: Run Lyrie Action against this repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Lyrie Pentest (self-test)
+        uses: ./action
+        with:
+          scan-mode: quick
+          scope: diff
+          fail-on: critical # selftest is permissive; real consumers default to high
+          comment-on-pr: false # avoid noisy self-comments on every PR
+          upload-sarif: false # avoid duplicate SARIF on the project's own scans
