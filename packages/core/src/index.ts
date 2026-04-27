@@ -30,7 +30,23 @@ export type { ThreatScanResult, ToolCallValidation } from "./engine/shield-manag
 export { ShieldGuard, FallbackShieldGuard } from "./engine/shield-guard";
 export type { ShieldGuardLike, ShieldVerdict } from "./engine/shield-guard";
 
-// Edits (Cline-style diff-view + approval gates)
+// Lyrie Pentest — attack-surface mapper (`/understand`)
+export { buildAttackSurface, MAPPER_VERSION as ATTACK_SURFACE_MAPPER_VERSION } from "./pentest/attack-surface";
+export type {
+  AttackSurface,
+  EntryKind,
+  EntryPoint,
+  TrustBoundary,
+  BoundaryKind,
+  DataFlow,
+  FlowSource,
+  FlowSink,
+  DependencyEntry,
+  RiskHotspot,
+  MapperOptions,
+} from "./pentest/attack-surface";
+
+// Lyrie EditEngine — diff-view edits with approval gates
 export { EditEngine, buildUnifiedDiff } from "./edits/edit-engine";
 export type {
   EditOperation,

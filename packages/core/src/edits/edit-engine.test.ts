@@ -1,7 +1,7 @@
 /**
- * EditEngine tests — Cline-style diff-view edits with approval + Shield gate.
+ * Lyrie EditEngine tests — diff-view edits with approval + Shield gate.
  *
- * © OTT Cybersecurity LLC — https://lyrie.ai
+ * Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai — MIT License
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";

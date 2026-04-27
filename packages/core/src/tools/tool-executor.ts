@@ -579,11 +579,12 @@ export class ToolExecutor {
     });
 
     // ── apply_diff ────────────────────────────────────────────────────────
-    // Cline-style targeted edits with optional approval gate. Lyrie's
-    // existing write_file is preserved unchanged for whole-file writes;
+    // Lyrie's targeted-edit path with optional approval gate. The existing
+    // write_file tool is preserved unchanged for whole-file writes;
     // apply_diff is the recommended path for in-place edits because every
     // patch produces a unified diff and passes the Shield Doctrine before
     // touching disk.
+    // Lyrie.ai by OTT Cybersecurity LLC.
     this.register({
       name: "apply_diff",
       description:

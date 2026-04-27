@@ -7,7 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — Phase 2 (Pentest Absorption — part 1: GitHub Action)
+### Added — Phase 2 (Pentest — part 2: Attack-Surface Mapper + Lyrie-only branding)
+- **Lyrie Attack-Surface Mapper** (`packages/core/src/pentest/attack-surface.ts`).
+  Lyrie's purpose-built static security mapper. Before any vulnerability
+  scanner runs, the mapper builds a structural picture of the target:
+  entry points (HTTP routes, CLI commands, file readers, env consumers,
+  deserialization sinks, subprocess spawns, websockets, cron), trust
+  boundaries (auth gates, RBAC checks, rate limits, sandbox crossings,
+  Shield gates), tainted data flows (e.g. user-message → shell,
+  http-input → sql), full dependency catalogue across npm / cargo /
+  pip / go / ruby, and ranked risk hotspots.
+  Every emitted artifact carries the embedded signature
+  `Lyrie.ai by OTT Cybersecurity LLC` and a `mapperVersion`.
+- **`lyrie understand` CLI** (`scripts/understand.ts`): map any workspace
+  with one command. JSON + human-readable output modes.
+- **Action runner integration**: the GitHub Action now produces an
+  attack-surface summary section in every PR report and promotes the
+  highest-risk tainted flows (risk ≥ 7) into SARIF + PR-comment findings.
+- **Lyrie-only branding pass**: stripped every external-product reference
+  from source comments. Internal modules now name Lyrie's own components
+  exclusively, with `Lyrie.ai by OTT Cybersecurity LLC` signatures across
+  edit-engine, fts-search, dm-pairing, channels/gateway, mcp/README,
+  action/README, ai-pentest skill, and shield-doctrine. Migration
+  adapters and the README comparison table keep their factual
+  competitor references (those are legitimate interop / positioning).
+- **Tests (9 new for the mapper)**: HTTP-route detection, subprocess +
+  file-reader detection, env-var detection, auth + Shield boundaries,
+  rate-limit detection, taint flow risk scoring, npm dependency
+  collection, hotspot ranking + signature, ignore-file annotation.
+  All pass.
+
+### Added — Phase 2 (Pentest — part 1: GitHub Action)
 - **`overthetopseo/lyrie-agent/action@v1`** — first-class GitHub Action
   for AI-powered pentest with Shield-on-PR.
   - Composite action (`action/action.yml`) with 12 inputs and 5 outputs.

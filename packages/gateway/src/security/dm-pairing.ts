@@ -1,9 +1,11 @@
 /**
- * DM Pairing Policy
+ * Lyrie DM Pairing Policy
  *
- * Inspired by OpenClaw's `dmPolicy = "pairing"` model. When enabled, unknown
- * senders on a DM-capable channel receive a one-time pairing code instead of
- * being forwarded to the agent. An operator approves the code via:
+ * Lyrie.ai by OTT Cybersecurity LLC.
+ *
+ * When enabled, unknown senders on a DM-capable channel receive a one-time
+ * pairing code instead of being forwarded to the agent. An operator approves
+ * the code via:
  *
  *   lyrie pairing approve <channel> <code>
  *

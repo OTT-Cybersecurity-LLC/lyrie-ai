@@ -79,10 +79,9 @@ Test files live next to their modules (`*.test.ts`).
 
 Every other agent in the field is naked. They ship a clever LLM loop and
 hope nothing in their context window flips them. Lyrie is the agent that
-**defends itself while it works** — that's our entire wedge against
-OpenClaw, Hermes, Strix, Cline, Codex, Claude Code, and every clone that
-follows. If we lose the Shield, we lose the wedge.
+**defends itself while it works** — the Shield is Lyrie's entire wedge.
+If we lose the Shield, we lose the wedge.
 
 So: every layer, every PR, every time.
 
-— OTT Cybersecurity LLC.
+— _Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai_
