@@ -1,0 +1,83 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lyrie-agent"
+version = "0.3.0"
+description = "Lyrie Agent SDK — embed the Lyrie Shield, Attack-Surface Mapper, Stages A–F validator, and pentest scanners in any Python project. Lyrie.ai by OTT Cybersecurity LLC."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Guy Sheetrit", email = "guy@overthetopseo.com" },
+  { name = "Lyrie Threat Intelligence", email = "research@lyrie.ai" },
+]
+keywords = [
+  "lyrie",
+  "lyrie-agent",
+  "ai-agent",
+  "cybersecurity",
+  "pentest",
+  "sast",
+  "shield",
+  "threat-intel",
+  "agent",
+  "ott-cybersecurity",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Monitoring",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+  "pytest-cov>=4.1",
+  "ruff>=0.5",
+  "mypy>=1.10",
+]
+http = [
+  "httpx>=0.27",
+]
+
+[project.urls]
+Homepage = "https://lyrie.ai"
+Documentation = "https://docs.lyrie.ai/sdk/python"
+Repository = "https://github.com/overthetopseo/lyrie-agent"
+Issues = "https://github.com/overthetopseo/lyrie-agent/issues"
+Research = "https://research.lyrie.ai"
+
+[project.scripts]
+lyrie-py = "lyrie.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lyrie"]
+
+[tool.hatch.build.targets.sdist]
+include = ["lyrie", "README.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
