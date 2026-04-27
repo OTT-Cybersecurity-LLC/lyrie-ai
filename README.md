@@ -200,6 +200,26 @@ Full docs: [`action/README.md`](action/README.md).
 
 **Other CI/CD platforms?** Drop-in templates for GitLab CI, Jenkins, and CircleCI live in [`action/templates/`](action/templates/). Same Lyrie scan, same Shield Doctrine, same SARIF — anywhere your code builds.
 
+## 💬 Where Lyrie talks to you
+
+Lyrie ships a **multi-channel gateway** so the agent reaches you on whatever your team already uses — not just Slack-or-die.
+
+| Channel | Status | Notes |
+|---|:---:|---|
+| Telegram | ✅ production | Bot API + inline buttons + media |
+| WhatsApp | ✅ production | Business Cloud API |
+| Discord  | ✅ production | Gateway v10 + buttons |
+| **Slack**         | ✅ v0.3.2 | Events API + Socket Mode + Block Kit |
+| **Matrix**        | ✅ v0.3.2 | Federated; matrix.org / Element / Synapse |
+| **Mattermost**    | ✅ v0.3.2 | Self-hosted, Slack-compatible interactives |
+| **IRC**           | ✅ v0.3.2 | RFC 2812 + IRCv3 server-time + SASL |
+| **Feishu / Lark** | ✅ v0.3.2 | 飞书 mainland + Lark international from one adapter |
+| **Rocket.Chat**   | ✅ v0.3.2 | Self-hosted, EU/LATAM enterprise default |
+| **WebChat**       | ✅ v0.3.2 | The widget Lyrie owns end-to-end (lyrie.ai) |
+| Signal | 🔭 roadmap | |
+
+Every channel implements the same `ChannelBot` contract — unified `UnifiedMessage` in, unified `UnifiedResponse` out. Same Shield Doctrine, same DM-pairing policy, same engine.
+
 ---
 
 ## 🏛 Architecture
