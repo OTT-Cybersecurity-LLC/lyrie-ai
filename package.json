@@ -46,7 +46,8 @@
     "mcp": "bun run packages/mcp/src/index.ts",
     "edits": "bun run scripts/edits.ts",
     "understand": "bun run scripts/understand.ts",
-    "scan": "bun run scripts/scan.ts"
+    "scan": "bun run scripts/scan.ts",
+    "intel": "bun run scripts/intel.ts"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

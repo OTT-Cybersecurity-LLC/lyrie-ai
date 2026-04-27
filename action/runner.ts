@@ -28,6 +28,7 @@ import {
   type VulnerabilityCategory,
 } from "../packages/core/src/pentest/stages-validator";
 import { scanFiles as runMultilangScan } from "../packages/core/src/pentest/scanners";
+import { ThreatIntelClient } from "../packages/core/src/pentest/threat-intel";
 import {
   SEVERITY_RANK,
   countBySeverity,
@@ -207,11 +208,45 @@ async function runScan(): Promise<ScanResult> {
     console.warn(`::warning::Lyrie attack-surface mapper failed: ${err.message}`);
   }
 
+  // Lyrie Threat-Intel: enrich findings with KEV-aligned advisories from
+  // research.lyrie.ai. Network-optional — if the feed is unreachable the
+  // step is a no-op so CI is never gated on intel availability.
+  let intelEnrichedFindings: typeof findings = findings;
+  let intelMatches = 0;
+  try {
+    const intel = new ThreatIntelClient({
+      offline: process.env.LYRIE_INTEL_OFFLINE === "1",
+    });
+    const enriched = await intel.enrichFindings(
+      findings.map<RawFinding>((f) => ({
+        id: f.id,
+        title: f.title,
+        severity: f.severity,
+        description: f.description,
+        file: f.file,
+        line: f.line,
+        cwe: f.cwe,
+        category: undefined,
+        evidence: "",
+      })),
+    );
+    // Cast back to the runner's local Finding shape
+    intelEnrichedFindings = enriched as unknown as typeof findings;
+    intelMatches = enriched.filter((f) =>
+      f.description.includes("Lyrie Threat-Intel"),
+    ).length;
+    if (intelMatches > 0) {
+      console.log(`🌐 Lyrie Threat-Intel matched ${intelMatches} finding(s)`);
+    }
+  } catch (err: any) {
+    console.warn(`::warning::Lyrie Threat-Intel enrichment failed: ${err.message}`);
+  }
+
   // Stages A–F validator: kill false positives, generate PoCs, attach
   // Lyrie remediation hints. Findings the validator rejects are dropped
   // from the report — we only ship confirmed signals.
   const validated = await validateBatch(
-    findings.map<RawFinding>((f) => ({
+    intelEnrichedFindings.map<RawFinding>((f) => ({
       id: f.id,
       title: f.title,
       severity: f.severity,
