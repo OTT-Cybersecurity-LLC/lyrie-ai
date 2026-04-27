@@ -40,6 +40,35 @@ export {
   VALIDATOR_VERSION as STAGES_VALIDATOR_VERSION,
 } from "./pentest/stages-validator";
 
+// Lyrie Execution Backends — local / Daytona / Modal pluggable runner backends
+export {
+  SUPPORTED_BACKENDS as LYRIE_SUPPORTED_BACKENDS,
+  LocalBackend,
+  DaytonaBackend,
+  ModalBackend,
+  emptySarif as lyrieEmptySarif,
+  extractSarifSummary as lyrieExtractSarifSummary,
+  describeBackend as lyrieDescribeBackend,
+  getBackend as lyrieGetBackend,
+  readDaytonaConfigFromEnv as lyrieReadDaytonaConfig,
+  readLocalConfigFromEnv as lyrieReadLocalConfig,
+  readModalConfigFromEnv as lyrieReadModalConfig,
+  resolveBackendKind as lyrieResolveBackendKind,
+} from "./backends";
+export type {
+  AnyBackendConfig,
+  Backend,
+  BackendFactoryOptions,
+  BackendKind,
+  BackendResourceHints,
+  BackendRunRequest,
+  BackendRunResult,
+  DaytonaBackendConfig,
+  FetchFn as LyrieBackendFetchFn,
+  LocalBackendConfig,
+  ModalBackendConfig,
+} from "./backends";
+
 // Lyrie Tools Catalog — vetted external-tool registry + recommend-by-intent
 export {
   ToolsCatalog,
