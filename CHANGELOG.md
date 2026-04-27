@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 2 (Pentest — part 4: Multi-Language Scanners + Lyrie OSS-Scan)
+- **Lyrie Multi-Language Vulnerability Scanners**
+  (`packages/core/src/pentest/scanners/`).
+  Eight Lyrie-original scanners with 53 detection rules:
+    - `lyrie-jsts` (9 rules) — JavaScript / TypeScript: shell-injection,
+      eval / Function constructor, innerHTML XSS, template-string SQL,
+      SSRF via fetch, JWT alg=none, prototype pollution, hard-coded
+      secrets, open redirect.
+    - `lyrie-py` (9 rules) — Python: subprocess shell=True, os.system,
+      pickle.loads, yaml.load, eval/exec, Jinja2 autoescape=False,
+      f-string SQL, Flask debug=True, hard-coded credentials.
+    - `lyrie-go` (6 rules) — Go: /bin/sh -c shell, fmt.Sprintf SQL,
+      InsecureSkipVerify, filepath.Join + ../, hard-coded secrets, XXE.
+    - `lyrie-php` (7 rules) — PHP: shell-exec family, eval, unserialize,
+      $_GET/$_POST SQL, dynamic include LFI/RFI, XXE, hard-coded secrets.
+    - `lyrie-rb` (6 rules) — Ruby: backticks/system/%x{}, YAML.load,
+      Marshal.load, ActiveRecord interpolated where(), mass-assignment
+      without permit(), hard-coded secrets.
+    - `lyrie-cpp` (5 rules) — C/C++: strcpy/strcat/sprintf/gets, system,
+      printf with non-literal format, use-after-free heuristic,
+      rand() for cryptographic use.
+  Each scanner emits the `Lyrie.ai by OTT Cybersecurity LLC` signature
+  and a versioned `lyrie-<lang>-1.0.0` tag.
+- **Action runner integration**: GitHub Action runs all eight scanners
+  on every PR alongside the Shield baseline + Attack-Surface Mapper.
+  Scanner findings flow through Stages A–F validation so only
+  confirmed signals ship.
+- **Lyrie OSS-Scan service** (`packages/core/src/pentest/oss-scan/service.ts`).
+  Free public scan at `research.lyrie.ai/scan`. Submit any public repo URL
+  (GitHub / GitLab / Bitbucket / Codeberg), get a full Lyrie report
+  (Mapper + Scanners + Stages A–F + auto-PoC + remediation) in seconds.
+  Hardened URL validation: shell-injection-shaped owner/repo refused,
+  loopback + RFC1918 + link-local hosts blocked at the gate, malformed
+  refs rejected, scheme allowlist (`http`/`https` only). Total scan
+  bounded by file count + bytes-per-file + wall-clock timeout.
+- **`lyrie scan` CLI** (`scripts/scan.ts`):
+    `bun run scan <repoUrl> [--ref <branch>] [--json]`
+  Operator wrapper around the OSS-Scan service.
+- **Tests**: 43 new (29 multi-language scanners + 14 OSS-Scan service).
+  All pass. Total suite now: 219 / 0.
+- **README updated**: highlights Multi-Language Scanners + OSS-Scan,
+  test badge bumped to 219, new CLI entry for `lyrie scan`.
+
 ### Added — Phase 2 (Pentest — part 3: Stages A–F Validator)
 - **Lyrie Stages A–F Exploitation Validator**
   (`packages/core/src/pentest/stages-validator.ts`).
