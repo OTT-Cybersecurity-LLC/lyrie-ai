@@ -1,0 +1,133 @@
+name: 'Lyrie Pentest Action'
+description: 'AI-powered autonomous security pentest with native cybersecurity Shield. Finds vulns, validates with PoCs, blocks PRs that introduce them.'
+author: 'OTT Cybersecurity LLC'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  target:
+    description: 'Target URL or path. Defaults to the checked-out repo (./).'
+    required: false
+    default: './'
+  scan-mode:
+    description: 'Scan mode: quick | full | recon | vulnscan | apiscan'
+    required: false
+    default: 'quick'
+  scope:
+    description: 'Scope: full (entire target) | diff (PR-changed files only)'
+    required: false
+    default: 'diff'
+  diff-base:
+    description: 'Base ref for diff scope (default: origin/main).'
+    required: false
+    default: 'origin/main'
+  fail-on:
+    description: 'Severity that fails the build: critical | high | medium | low | none'
+    required: false
+    default: 'high'
+  anthropic-api-key:
+    description: 'Anthropic API key (Claude) for AI analysis.'
+    required: false
+  openai-api-key:
+    description: 'OpenAI API key (fallback LLM).'
+    required: false
+  brave-api-key:
+    description: 'Brave Search API key for OSINT.'
+    required: false
+  shield-mode:
+    description: 'Lyrie Shield mode: passive | active | strict'
+    required: false
+    default: 'active'
+  output-dir:
+    description: 'Directory for report artifacts.'
+    required: false
+    default: 'lyrie-runs'
+  upload-sarif:
+    description: 'Upload findings to GitHub Code Scanning as SARIF.'
+    required: false
+    default: 'true'
+  comment-on-pr:
+    description: 'Post a Markdown summary as a PR comment.'
+    required: false
+    default: 'true'
+  github-token:
+    description: 'GitHub token for PR comments + SARIF upload (defaults to GITHUB_TOKEN).'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  findings-count:
+    description: 'Total number of findings.'
+  critical-count:
+    description: 'Count of critical-severity findings.'
+  high-count:
+    description: 'Count of high-severity findings.'
+  report-path:
+    description: 'Path to the generated Markdown report.'
+  sarif-path:
+    description: 'Path to the generated SARIF file (when upload-sarif=true).'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+
+    - name: Install Lyrie Agent
+      shell: bash
+      run: |
+        # Install from npm in v0.2+; for now, clone from main.
+        if [ ! -d "$RUNNER_TEMP/lyrie" ]; then
+          git clone --depth 1 https://github.com/overthetopseo/lyrie-agent.git "$RUNNER_TEMP/lyrie"
+        fi
+        cd "$RUNNER_TEMP/lyrie"
+        bun install --frozen-lockfile
+        echo "LYRIE_HOME=$RUNNER_TEMP/lyrie" >> "$GITHUB_ENV"
+
+    - name: Run Lyrie Pentest
+      id: lyrie
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        BRAVE_API_KEY: ${{ inputs.brave-api-key }}
+        LYRIE_SHIELD_MODE: ${{ inputs.shield-mode }}
+        LYRIE_TARGET: ${{ inputs.target }}
+        LYRIE_SCAN_MODE: ${{ inputs.scan-mode }}
+        LYRIE_SCOPE: ${{ inputs.scope }}
+        LYRIE_DIFF_BASE: ${{ inputs.diff-base }}
+        LYRIE_FAIL_ON: ${{ inputs.fail-on }}
+        LYRIE_OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: |
+        bun run "$LYRIE_HOME/action/runner.ts"
+
+    - name: Upload Lyrie report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: lyrie-report
+        path: ${{ inputs.output-dir }}/
+        if-no-files-found: warn
+        retention-days: 30
+
+    - name: Upload SARIF to GitHub Code Scanning
+      if: ${{ inputs.upload-sarif == 'true' && always() }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.output-dir }}/lyrie.sarif
+        category: lyrie-pentest
+      continue-on-error: true
+
+    - name: Comment on PR
+      if: ${{ inputs.comment-on-pr == 'true' && github.event_name == 'pull_request' && always() }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        bun run "$LYRIE_HOME/action/comment-pr.ts" \
+          --report "${{ inputs.output-dir }}/report.md" \
+          --pr "${{ github.event.pull_request.number }}" \
+          --repo "${{ github.repository }}" || echo "::warning::PR comment failed (non-blocking)"

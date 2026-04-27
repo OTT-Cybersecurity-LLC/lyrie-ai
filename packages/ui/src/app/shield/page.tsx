@@ -1,3 +1,4 @@
+// lyrie-shield: ignore-file (Shield dashboard UI surfaces threat names; this is product copy)
 import {
   Shield,
   AlertTriangle,

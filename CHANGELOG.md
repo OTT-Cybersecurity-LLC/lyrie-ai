@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 2 (Pentest Absorption — part 1: GitHub Action)
+- **`overthetopseo/lyrie-agent/action@v1`** — first-class GitHub Action
+  for AI-powered pentest with Shield-on-PR.
+  - Composite action (`action/action.yml`) with 12 inputs and 5 outputs.
+  - Diff-scope by default: scans only PR-changed files.
+  - Fail-on threshold (`critical` / `high` / `medium` / `low` / `none`).
+  - SARIF upload to GitHub Code Scanning.
+  - Single-comment-per-PR Markdown summary (updates in place, no spam).
+  - Workflow artifact upload + GitHub job summary.
+  - Shield Doctrine: target input passes `scanInbound` before any work.
+- **Built-in ignore globs**: build artifacts (`.next/`, `dist/`, `target/`),
+  vendor trees (`node_modules/`), Shield self-tests (those legitimately
+  use injection patterns to verify Shield works).
+- **`lyrie-shield: ignore-file` annotation** for legitimate security-content
+  fixtures (UI strings naming attack types, documentation that quotes
+  injection payloads, etc).
+- **Self-test workflow** (`.github/workflows/action-selftest.yml`): the
+  Lyrie Action runs against the Lyrie repo itself on every PR.
+- **Tests**: 8 unit tests for the runner's Markdown + SARIF helpers.
+  All pass.
+
 ### Fixed — Test Modernization (zero-fail suite)
 - **All 36 pre-existing test failures resolved.** Tests had been written
   against an older API (string-shaped `execute()` returns, file-based
