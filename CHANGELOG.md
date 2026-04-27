@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 1 (Core Agent Absorption — part 3: Shield Doctrine Backfill)
+- **Tool Executor Shield filter**: new `Tool.untrustedOutput` flag.
+  Tools opting in have their successful output scanned through `ShieldGuard.scanRecalled`
+  post-execute and unsafe content is redacted with a clear Shield notice + metadata flags.
+  Default Built-in tools tagged `untrustedOutput: true`:
+  `exec` (shell stdout), `read_file` (file contents), `web_search` (third-party snippets),
+  `web_fetch` (scraped web content). Trusted tools (`write_file`, `list_directory`,
+  `threat_scan`) intentionally pass through.
+- **`ToolExecutor.setOutputShield(guard)`** to inject a real ShieldManager-backed guard.
+- **Skill Manager Shield filter**: every successful skill output passes through the
+  Shield before reaching the agent. Skills frequently shell out / scrape / call APIs —
+  exactly the surfaces where prompt-injection appears. Failed-call output stays raw
+  for operator debugging visibility.
+- **`SkillManager.setOutputShield(guard)`** for the same injection pattern.
+- **`docs/shield-doctrine.md` updated**: 5 layers now ✅, 3 layers tracked as planned.
+- **Unit tests (10 new)**:
+  - `tool-shield.test.ts` (5): redacts injection, redacts credentials, leaves benign
+    alone, doesn't scan trusted tools, doesn't scan failed calls.
+  - `skill-shield.test.ts` (5): same coverage for skills + non-string output handling.
+  All pass.
+
 ### Added — Phase 1 (Core Agent Absorption — part 2: Memory + Shield Doctrine)
 - **`ShieldGuard` cross-cutting Shield contract** (`packages/core/src/engine/shield-guard.ts`).
   Lightweight, dependency-free `scanRecalled` / `scanInbound` interface used by
