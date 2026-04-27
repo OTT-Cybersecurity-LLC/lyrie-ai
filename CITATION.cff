@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use Lyrie Agent in your research or production system, please cite it."
+title: "Lyrie Agent — The world's first autonomous AI agent with built-in cybersecurity"
+abstract: "Lyrie Agent is an open-source autonomous AI agent platform with native cybersecurity (the Shield), reproducible exploit labs, KEV-driven threat intelligence, and multi-channel surface, published by OTT Cybersecurity LLC."
+type: software
+authors:
+  - family-names: "Sheetrit"
+    given-names: "Guy"
+    affiliation: "OTT Cybersecurity LLC"
+    orcid: "https://orcid.org/0009-0000-0000-0000"
+  - name: "Lyrie Threat Intelligence"
+    affiliation: "OTT Cybersecurity LLC"
+repository-code: "https://github.com/overthetopseo/lyrie-agent"
+url: "https://lyrie.ai"
+license: MIT
+keywords:
+  - "autonomous-agent"
+  - "cybersecurity"
+  - "ai-agent"
+  - "pentest"
+  - "threat-intelligence"
+  - "exploit-lab"
+  - "agentic-ai"
+  - "llm"
+preferred-citation:
+  type: software
+  title: "Lyrie Agent"
+  authors:
+    - family-names: "Sheetrit"
+      given-names: "Guy"
+      affiliation: "OTT Cybersecurity LLC"
+  url: "https://github.com/overthetopseo/lyrie-agent"
+  year: 2026
