@@ -49,6 +49,63 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 
 ---
 
+## 🆚 Lyrie vs the field
+
+_Live GitHub stars as of 2026-04-27._
+
+### vs autonomous-agent platforms
+
+Lyrie is a 30K-LOC, MIT-licensed, Shield-native autonomous agent. Competitors here are general-purpose agent platforms:
+
+| Capability | OpenClaw (365k⭐) | Hermes Agent (120k⭐) | Claude Code (118k⭐) | opencode (150k⭐) | **Lyrie** (514⭐) |
+|---|---|---|---|---|---|
+| Autonomous agent loop | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Multi-channel inbox (TG/WA/Discord/Slack/Signal/iMessage) | ✅ (23+) | ✅ (6) | ❌ | ❌ | ✅ (8) |
+| Self-improving skills | Skills catalog | ✅ Learns from use | ❌ | ❌ | ✅ + skill-creator |
+| Persistent cross-session memory | LanceDB / sections | ✅ Trajectory + graph | ❌ | ❌ | ✅ SQLite + FTS5 |
+| Self-healing memory | ❌ | Partial | ❌ | ❌ | **✅ Validator + repair** |
+| Multi-model + intelligent routing | ✅ | ✅ (200+ via OpenRouter) | Anthropic only | Multiple | ✅ (auto-routed by task) |
+| Diff-view edits with approval | ❌ | ❌ | ❌ | ✅ | ✅ + Shield-on-patch |
+| MCP adapter (client + server) | ✅ client | ❌ | ✅ client | Partial | ✅ client + server |
+| **Native cybersecurity layer** | ❌ | ❌ | ❌ | ❌ | **✅ The Shield + Doctrine** |
+| **Built-in pentest commands** (`/scan /pentest /understand /apiscan`) | ❌ | ❌ | ❌ | ❌ | **✅** |
+| **GitHub Action for PR scans** | ❌ | ❌ | ❌ | ❌ | **✅ SARIF + diff-scope** |
+| **Real-time threat-intel feed (KEV-driven)** | ❌ | ❌ | ❌ | ❌ | **✅ research.lyrie.ai** |
+| **Reproducible exploit labs in-repo** | ❌ | ❌ | ❌ | ❌ | **✅ 9+ CVE labs** |
+| **HTTP proxy + replay + mutators** | ❌ | ❌ | ❌ | ❌ | **✅ 9 signal detectors** |
+| Sub-agent orchestration | ✅ | ✅ | ❌ | ❌ | ✅ + role-based fleet |
+| Cron / scheduled jobs | ✅ | ✅ | ❌ | ❌ | ✅ + heartbeat |
+| Audit-friendly footprint | 430K+ LOC | ~30K LOC | Closed | ~50K LOC | **<30K LOC, MIT, fully auditable** |
+| Built by | OpenClaw | Nous Research | Anthropic | SST | **OTT Cybersecurity LLC** |
+
+> **The headline:** OpenClaw and Hermes are great agents. Claude Code and opencode are great coding assistants. None of them was built to *defend you while it works*. Lyrie is. Cybersecurity isn't a plugin — it's Layer 1.
+
+### vs AI-pentest agents
+
+Lyrie also competes head-to-head with the AI-pentest crowd. Here we trade ecosystem maturity for **depth + Shield Doctrine + reproducibility**:
+
+| Capability | Strix (24.6k⭐) | PentestGPT (12.8k⭐) | RAPTOR (2.4k⭐) | CAI (8.3k⭐) | **Lyrie** (514⭐) |
+|---|---|---|---|---|---|
+| GitHub Action for PR scans | ✅ | ❌ | ❌ | ❌ | **✅ + SARIF + diff-scope** |
+| Attack-surface mapper (`/understand`) | ❌ | ❌ | ✅ | ❌ | **✅ Lyrie Mapper** |
+| Stages A–F validation | ❌ | ❌ | ✅ (A-D only) | ❌ | **✅ A–F + auto-PoC + auto-remediation** |
+| Multi-language scanners (JS / Py / Go / PHP / Ruby / C/C++) | Partial | Partial | Partial | Partial | **✅ 8 scanners, 53 rules** |
+| Threat-intel feed (KEV-driven) | ❌ | ❌ | ❌ | ❌ | **✅ research.lyrie.ai** |
+| HTTP proxy + replay + mutators | ✅ | ❌ | ❌ | ❌ | **✅ 9 signal detectors** |
+| Free OSS-scan service for any repo | ❌ | ❌ | ❌ | ❌ | **✅ research.lyrie.ai/scan** |
+| Reproducible exploit labs in-repo | ❌ | ❌ | ❌ | ❌ | **✅ 9+ CVE labs** |
+| Native cybersecurity Shield (defends *itself*) | ❌ | ❌ | ❌ | ❌ | **✅ The Shield Doctrine** |
+| Multi-channel inbox (TG/WA/Discord/Slack) | ❌ | ❌ | ❌ | ❌ | **✅ 8 channels** |
+| Tests passing | — | — | — | — | **259 / 0 / 669 expect()s** |
+| License | Apache 2.0 | MIT | MIT | MIT + paid | **MIT** |
+| Built by | usestrix | GreyDGL | Gadi Evron | Alias Robotics | **OTT Cybersecurity LLC** |
+
+> **The headline:** Strix is a sharp single-purpose pentest tool. Lyrie is a complete agent platform that *includes* a sharper pentest tool, a defensive Shield layer the others lack, a verified threat-intel feed, and reproducible exploit labs that prove every claim.
+
+_Want a deep comparison? See [`lyrie/research/integration/lyrie-absorption-roadmap-2026-04-27.md`](https://github.com/overthetopseo/lyrie-agent) for the 19-competitor recon matrix._
+
+---
+
 ## ⚡ Install
 
 ### One-line install
