@@ -13,6 +13,7 @@
   "workspaces": [
     "packages/core",
     "packages/gateway",
+    "packages/mcp",
     "packages/ui"
   ],
   "keywords": [
@@ -37,11 +38,16 @@
     "migrate:openclaw": "bun run scripts/migrate.ts --from openclaw",
     "migrate:hermes": "bun run scripts/migrate.ts --from hermes",
     "migrate:autogpt": "bun run scripts/migrate.ts --from autogpt",
-    "migrate:all": "bun run scripts/migrate.ts --from all"
+    "migrate:all": "bun run scripts/migrate.ts --from all",
+    "doctor": "bun run scripts/doctor.ts",
+    "doctor:json": "bun run scripts/doctor.ts --json",
+    "release:notes": "bash scripts/release/notes.sh",
+    "pairing": "bun run scripts/pairing.ts",
+    "mcp": "bun run packages/mcp/src/index.ts"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
-    "typescript": "^5.5.0",
+    "typescript": "^6.0.3",
     "bun-types": "latest"
   }
 }
