@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 2 (Pentest — part 6: Lyrie HTTP Proxy)
+- **Lyrie HTTP Proxy** (`packages/core/src/pentest/proxy/`).
+  Lyrie's purpose-built request/response inspection layer for offensive
+  testing. Captures every HTTP exchange in-memory, classifies it,
+  detects security signals, and offers structured replay with mutators.
+- **9 security-signal detectors**:
+    - missing-security-header (CSP, HSTS, X-Content-Type-Options,
+      X-Frame-Options/frame-ancestors, Referrer-Policy, Permissions-Policy)
+    - weak-cookie-flag (HttpOnly, Secure, SameSite)
+    - open-cors (wildcard ACAO)
+    - auth-token-in-url (token / api_key / access_token / etc. in query)
+    - verbose-error (stack-trace-shaped 5xx bodies)
+    - secret-in-response (PEM / AWS / api_key shapes)
+    - graphql-introspection-enabled
+    - secret-in-request (planned hook)
+    - unsafe-redirect (planned hook)
+- **9 HTTP-surface classifiers**: login, register, logout,
+  password-reset, search, upload, download, graphql, rest-list,
+  rest-item, websocket-handshake, static, api-other, unknown.
+- **7 structured Mutators**: header-add / header-set / header-remove,
+  param-set / param-fuzz, body-replace, method-swap, path-fuzz.
+- **Allow / deny host enforcement** on every `send()` and `replay()`
+  so an operator can't fat-finger a request against an unauthorised
+  host. The proxy refuses by default if either list is configured.
+- **Shield Doctrine on responses**: every response body passes
+  `scanRecalled` before the agent sees it. Captured pages are
+  attacker-controlled territory — Lyrie defends by default.
+- **`lyrie proxy` CLI** (`scripts/proxy.ts`):
+    `bun run proxy send <METHOD> <URL>`
+    `bun run proxy scan <URL>`
+    `bun run proxy headers <URL>`
+  In-memory only; nothing persisted to disk.
+- **Tests**: 25 new (surface classification on 4 corpora, 9 signal
+  detectors, 6 mutator behaviours including immutability, the full
+  send / replay / Shield-redact / allow-host / deny-host / clear /
+  signals flow). All pass. Total suite now: 259 / 0 / 669 expect()s.
+
 ### Added — Phase 2 (Pentest — part 5: Lyrie Threat-Intel)
 - **Lyrie Threat-Intel Client**
   (`packages/core/src/pentest/threat-intel/`).
