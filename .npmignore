@@ -1,0 +1,50 @@
+# Build artifacts
+.next/
+.turbo/
+dist/
+build/
+out/
+target/
+*.tsbuildinfo
+
+# Source / dev only
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+benchmarks/
+research/
+reports/
+tools/exploit-lab/
+
+# Ops / CI
+.github/
+.git/
+.gitignore
+.npmignore
+.pre-commit-config.yaml
+.editorconfig
+
+# IDE / editor
+.vscode/
+.idea/
+.cursor/
+.claude/
+
+# Env / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Lockfiles other than what we ship
+yarn.lock
+pnpm-lock.yaml
+
+# Heavy/optional content not needed downstream
+docs/_drafts/
+locales/_wip/
+*.zip
+*.tar.gz
+*.dmg
+*.exe
