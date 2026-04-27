@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 2 (Pentest — part 3: Stages A–F Validator)
+- **Lyrie Stages A–F Exploitation Validator**
+  (`packages/core/src/pentest/stages-validator.ts`).
+  Every raw finding from a scanner now passes through six validation gates
+  before it can ship as confirmed:
+    - **Stage A** — Pattern reality (filters comments, regex.exec false
+      positives, parameterized SQL, textContent XSS sinks, etc.)
+    - **Stage B** — Reachability (test/spec files filtered, trust-boundary
+      lookup against the Attack-Surface Mapper, severity bumped on
+      reachable+unprotected paths)
+    - **Stage C** — Code-path existence (build artifacts, `node_modules`,
+      `.next`, `dist`, `.min.js` filtered)
+    - **Stage D** — Final call (rolls up A–C verdicts, promotes confidence
+      when reachable+unprotected)
+    - **Stage E** — PoC generation (auto-curl PoCs for shell-injection,
+      sql-injection, xss, ssrf, path-traversal; falls back to
+      `needs-human-poc` for unsupported categories)
+    - **Stage F** — Remediation (concrete summary per category, optional
+      `oldText→newText` patch wired through the EditEngine)
+  Every validated finding carries the `Lyrie.ai by OTT Cybersecurity LLC`
+  signature and a confidence score 0–1.
+- **Action runner integration**: the GitHub Action now runs every finding
+  through `validateBatch` and only ships confirmed signals. Reports
+  include the Stages A–F verdict line + auto-generated PoCs in fenced
+  code blocks + Lyrie remediation summaries.
+- **`@lyrie/core` exports**: `validateFinding`, `validateBatch`,
+  `STAGES_VALIDATOR_VERSION`, plus all stage / verdict / category types.
+- **Tests (24 new for the validator)**: Stage A pattern-reality scenarios,
+  Stage B reachability with surface lookup, Stage C build-artifact / test
+  filtering, Stage E auto-PoC for each supported category, Stage F
+  remediation coverage, batch filtering with and without observations,
+  signature + version checks, confidence scoring bounds. All pass.
+- **README rewritten** for current state — highlights the Shield Doctrine,
+  Attack-Surface Mapper, Stages A–F validator, GitHub Action, MCP, FTS5
+  memory, diff-view edits, DM pairing, doctor; includes the doctrine
+  surface table, operator-CLI summary, and an updated test count
+  (176 pass / 0 fail).
+
 ### Added — Phase 2 (Pentest — part 2: Attack-Surface Mapper + Lyrie-only branding)
 - **Lyrie Attack-Surface Mapper** (`packages/core/src/pentest/attack-surface.ts`).
   Lyrie's purpose-built static security mapper. Before any vulnerability

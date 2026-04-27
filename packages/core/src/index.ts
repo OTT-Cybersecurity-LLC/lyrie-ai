@@ -32,6 +32,23 @@ export type { ShieldGuardLike, ShieldVerdict } from "./engine/shield-guard";
 
 // Lyrie Pentest — attack-surface mapper (`/understand`)
 export { buildAttackSurface, MAPPER_VERSION as ATTACK_SURFACE_MAPPER_VERSION } from "./pentest/attack-surface";
+
+// Lyrie Pentest — Stages A–F exploitation validator
+export {
+  validateFinding,
+  validateBatch,
+  VALIDATOR_VERSION as STAGES_VALIDATOR_VERSION,
+} from "./pentest/stages-validator";
+export type {
+  Stage,
+  RawFinding,
+  ValidatedFinding,
+  StageVerdict,
+  ValidatorOptions,
+  VulnerabilityCategory,
+  PoC,
+  Remediation,
+} from "./pentest/stages-validator";
 export type {
   AttackSurface,
   EntryKind,

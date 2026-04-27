@@ -1,8 +1,12 @@
+<div align="center">
+
 # 🛡️ Lyrie Agent
 
-**The world's first autonomous AI agent with built-in cybersecurity.**
+### The world's first autonomous AI agent with built-in cybersecurity.
 
-Lyrie is not just another AI assistant. It's a guardian that runs your operations and protects them in the same loop.
+_The agent that defends what it builds._
+
+Lyrie is not just another AI assistant. It runs your operations and protects them in the same loop — every layer carries the **Lyrie Shield**, every patch passes the **Shield Doctrine**, every finding earns its severity through **Lyrie Stages A–F**.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Security: Native](https://img.shields.io/badge/Security-Native-green.svg)](SECURITY.md)
@@ -10,143 +14,264 @@ Lyrie is not just another AI assistant. It's a guardian that runs your operation
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
 [![CI](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml)
+[![Tests](https://img.shields.io/badge/tests-176%20passing-brightgreen.svg)](#-quality--tests)
+[![Releases](https://img.shields.io/github/v/release/overthetopseo/lyrie-agent?include_prereleases&label=release)](https://github.com/overthetopseo/lyrie-agent/releases)
 
-> 🌐 **Localized READMEs** (community translations welcome): [العربية](locales/README.ar.md) · [Deutsch](locales/README.de.md) · [Español](locales/README.es.md) · [Français](locales/README.fr.md) · [日本語](locales/README.ja.md) · [Português](locales/README.pt-BR.md) · [简体中文](locales/README.zh-CN.md)
+[**Install**](#-install) · [**GitHub Action**](#-lyrie-pentest-action) · [**Architecture**](#-architecture) · [**Shield Doctrine**](docs/shield-doctrine.md) · [**Research**](https://research.lyrie.ai)
+
+🌐 **Localized:** [العربية](locales/README.ar.md) · [Deutsch](locales/README.de.md) · [Español](locales/README.es.md) · [Français](locales/README.fr.md) · [日本語](locales/README.ja.md) · [Português](locales/README.pt-BR.md) · [简体中文](locales/README.zh-CN.md)
+
+</div>
 
 ---
 
 ## Why Lyrie?
 
-Every AI agent platform treats security as an afterthought. Lyrie treats it as the foundation — and ships the receipts: every advisory we publish on [research.lyrie.ai](https://research.lyrie.ai) is backed by a reproducible exploit lab + detection rules in this repo.
+Every AI agent platform treats security as an afterthought. Lyrie treats it as the foundation — and ships the receipts. Every advisory we publish on [research.lyrie.ai](https://research.lyrie.ai) is backed by a reproducible exploit lab and detection rules in this repo.
 
-### Lyrie vs the field — head-to-head (April 2026)
+> **Cybersecurity isn't a plugin — it's Layer 1.**
 
-Compared against the **latest** releases at the time of writing:
-**OpenClaw `2026.4.23`** · **Hermes Agent `v0.10.0` (2026.4.16)** · **Claude Code `2.1.x`**
+### Highlights (current main, [`v0.2.1+`](CHANGELOG.md))
 
-| Capability | OpenClaw 2026.4.23 | Hermes 0.10.0 | Claude Code | **Lyrie** |
-|---|---|---|---|---|
-| Autonomous agent loop | ✅ | ✅ | ❌ | ✅ |
-| Multi-channel (TG/WA/Discord/Signal/Slack/iMessage) | ✅ | ✅ | ❌ | ✅ |
-| Self-improving skills | Skills catalog | ✅ Learns from use | ❌ | ✅ + skill-creator |
-| Persistent cross-session memory | Lancedb / sections | ✅ Trajectory + graph | ❌ | ✅ Sectioned + dream cycle |
-| Self-healing memory | ❌ | Partial | ❌ | **✅ Validator + repair** |
-| Multi-model + intelligent routing | ✅ | ✅ (200+ via OpenRouter) | Anthropic only | ✅ (auto-routed by task class) |
-| **Native cybersecurity layer** | ❌ | ❌ | ❌ | **✅ The Shield** |
-| **Native device protection** (iOS/Android/Mac) | ❌ paired-device only | ❌ | ❌ | **✅ Lyrie Shield apps** |
-| **Real-time threat intel feed** | ❌ | ❌ | ❌ | **✅ research.lyrie.ai (KEV-driven)** |
-| **Reproducible exploit labs in-repo** | ❌ | ❌ | ❌ | **✅ `research/CVE-XXXX/` + `tools/exploit-lab/`** |
-| **Built-in pentest/recon commands** (`/pentest /recon /vulnscan /apiscan`) | ❌ | ❌ | ❌ | **✅** |
-| Sub-agent orchestration | ✅ | ✅ | ❌ | ✅ + role-based fleet (Brain/Muscle/Coder/Scout) |
-| Browser control | Chrome DevTools MCP | ❌ | ❌ | ✅ + agent-browser skill |
-| Cron / scheduled jobs | ✅ | ✅ | ❌ | ✅ + heartbeat protocol |
-| RL training / trajectory export | ❌ | ✅ Atropos | ❌ | ✅ via OMEGA pipeline |
-| Audit-friendly footprint | 430K+ LOC | ~30K LOC | Closed | **<30K LOC, MIT, fully auditable** |
-| Built by | OpenClaw | Nous Research | Anthropic | **OTT Cybersecurity LLC** |
+- 🛡️ **The Shield Doctrine** — every layer of Lyrie that touches untrusted text passes a Shield gate. ([`docs/shield-doctrine.md`](docs/shield-doctrine.md))
+- 🔍 **Lyrie Attack-Surface Mapper** (`/understand`) — maps entry points, trust boundaries, tainted data flows, and ranked risk hotspots before any scanner runs.
+- 🧪 **Lyrie Stages A–F Validator** — every finding earns its severity through six validation gates. Auto-PoCs for confirmed vulns. Auto-remediation summaries. Kills false positives at the source.
+- 🚀 **Lyrie Pentest GitHub Action** — Shield-scans every PR, posts a single-comment-per-PR Markdown summary, uploads SARIF to Code Scanning, blocks merges on `fail-on` threshold.
+- 🧠 **FTS5 cross-session memory** — bm25-ranked recall + LLM-summarized session digests, every snippet Shield-gated.
+- ✏️ **Diff-view edits** with approval gates — `apply_diff` produces unified diffs, never overwrites whole files; Shield scans every patch *before* it touches disk.
+- 🔌 **MCP adapter** (`@lyrie/mcp`) — Lyrie speaks fluent Model Context Protocol both as client and server.
+- 🚪 **DM pairing** — unknown senders can't reach the agent without operator approval. Three modes: `open` / `pairing` / `closed`.
+- 🩺 **`lyrie doctor`** — read-only environment, channel, and security self-diagnostic with `--json` for CI.
 
-> **The headline:** OpenClaw and Hermes are great agents. Neither was built to *defend you while it works*. Lyrie is. Cybersecurity isn't a plugin — it's layer one.
+---
 
-## 📦 What's in this monorepo
+## ⚡ Install
 
-| Path | Description |
-|---|---|
-| `packages/omega-suite/` | **Lyrie OMEGA** — Autonomous Security Intelligence Platform. CVE validator, CISA KEV watcher, multi-source intel firehose, and the publisher pipeline that powers [research.lyrie.ai](https://research.lyrie.ai). |
-| `research/` | **Reproducible exploit labs.** Every published research advisory has a matching `CVE-XXXX-NNNNN/` folder with Dockerfile, working PoC, asciinema-style transcript, Sigma + YARA rules, and IOCs. See [`research/README.md`](./research/README.md). |
-| `tools/exploit-lab/` | Autonomous exploit reproduction framework — `lab.sh` orchestrator, `scaffold-cve.sh`, [LAB-PROTOCOL.md](./tools/exploit-lab/LAB-PROTOCOL.md) (methodology + ethical scope). |
-| `skills/` | Agent skills and capability modules (extensible, self-improving). |
-| `packages/*` | Core runtime packages — agent loop, memory, channels, model routing. |
-| `docs/` | Architecture, contributing, channel guides. |
-| `scripts/`, `assets/`, `reports/` | Tooling, brand assets, and operator reports. |
-
-## 🌐 Public channels
-
-- **Research blog:** [research.lyrie.ai](https://research.lyrie.ai) — verified threat intelligence, 3+ source cross-validation, KEV-driven priority
-- **X / Twitter:** [@lyrie_ai](https://x.com/lyrie_ai) — gold-verified
-- **Main site:** [lyrie.ai](https://lyrie.ai)
-- **Parent company:** [overthetop.ae](https://overthetop.ae) — OTT Cybersecurity LLC
-
-## ⚡ Quick start
+### One-line install
 
 ```bash
-curl -fsSL https://lyrie.ai/install.sh | bash
+curl -fsSL https://lyrie.ai/install.sh | bash      # macOS / Linux / WSL
+irm https://lyrie.ai/install.ps1 | iex             # Windows
 ```
 
-Or manual:
+### From source
 
 ```bash
 git clone https://github.com/overthetopseo/lyrie-agent.git
 cd lyrie-agent
-pnpm install
-pnpm start
+bun install
+bun run doctor       # self-check
+bun start            # boot the gateway
 ```
+
+Lyrie ships with a [Bun](https://bun.sh)-first toolchain (Node 20+ also supported).
+
+---
+
+## 🚀 Lyrie Pentest Action
+
+Drop Lyrie into any repo's CI:
+
+```yaml
+name: Lyrie Pentest
+on: [pull_request]
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  lyrie:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: overthetopseo/lyrie-agent/action@v1
+        with:
+          scan-mode: quick
+          scope: diff
+          fail-on: high
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+You get:
+
+1. **Diff-scoped Shield + Mapper scan** — only PR-changed files, zero noise on untouched code
+2. **Stages A–F validation** — false positives killed before they hit the report
+3. **Single PR comment** that updates in place (no spam)
+4. **SARIF** auto-uploaded to GitHub Code Scanning (findings show as PR annotations)
+5. **Workflow artifact** with full `report.md` + `report.json` + `lyrie.sarif`
+6. **Job summary** rendered into the GitHub Actions step summary tab
+7. **Non-zero exit on threshold** — block merges when configured as a required check
+
+Full docs: [`action/README.md`](action/README.md).
+
+---
 
 ## 🏛 Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│            LAYER 4: INTERFACE               │
-│  CLI · Web · Desktop · iOS · Android        │
-├─────────────────────────────────────────────┤
-│            LAYER 3: AGENT ENGINE            │
-│  Agent spawning · skills · self-improvement │
-│  Multi-model routing · sub-agent fleet      │
-├─────────────────────────────────────────────┤
-│            LAYER 2: MEMORY CORE             │
-│  Vector · graph · sectioned + dream cycle   │
-│  Self-healing, versioned, full-text search  │
-├─────────────────────────────────────────────┤
-│            LAYER 1: THE SHIELD              │
-│  Real-time threat detection · WAF           │
-│  Anti-malware · behavioral · device protect │
-│  Threat intel feed (research.lyrie.ai)      │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  LAYER 4 · INTERFACE                                         │
+│    CLI · Web · Desktop · iOS · Android · 23+ channels        │
+├─────────────────────────────────────────────────────────────┤
+│  LAYER 3 · AGENT ENGINE                                      │
+│    Multi-model routing  ·  Sub-agent fleet                   │
+│    Skill manager  ·  Self-improving loop                     │
+│    EditEngine (diff-view + approval)                         │
+│    MCP client + server  ·  Tool executor                     │
+├─────────────────────────────────────────────────────────────┤
+│  LAYER 2 · MEMORY CORE                                       │
+│    SQLite + WAL  ·  FTS5 cross-session recall                │
+│    Self-healing  ·  Hourly auto-backup                       │
+│    Sectioned dream cycle  ·  Pluggable summarizer            │
+├─────────────────────────────────────────────────────────────┤
+│  LAYER 1 · THE SHIELD                                        │
+│    Real-time threat detection  ·  Prompt-injection gate      │
+│    DM pairing  ·  Path scoping  ·  Tool-call validation      │
+│    Lyrie Attack-Surface Mapper  ·  Stages A–F Validator      │
+│    KEV-driven threat-intel feed (research.lyrie.ai)          │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+The Shield is not a wrapper. It runs underneath every other layer.
+
+---
+
+## 🛡️ The Shield Doctrine
+
+> Every Lyrie surface that touches untrusted text passes a Shield gate. **No exceptions, no carve-outs.**
+
+| Surface | Hook | Status |
+|---|---|---|
+| Channel inbound (DMs) | `evaluateDmPolicy` (router) | ✅ |
+| Pairing greeting | `DmPairingManager.greet` → `scanInbound` | ✅ |
+| Memory recall | `searchAcrossSessions` → `scanRecalled` | ✅ |
+| MCP tool results | `McpRegistry.shieldFilter` | ✅ |
+| Tool output (`untrustedOutput=true`) | `ToolExecutor.shieldFilterOutput` | ✅ |
+| Skill output | `SkillManager.shieldFilter` | ✅ |
+| Diff-view applied edits | `EditEngine.plan` → `scanRecalled` | ✅ |
+| Attack-surface evidence | `buildAttackSurface` → `sanitizeEvidence` | ✅ |
+| Pentest scan target input | `runner.ts` → `scanInbound` | ✅ |
+
+Full rule: [`docs/shield-doctrine.md`](docs/shield-doctrine.md).
+
+---
+
+## 📦 Repo layout
+
+| Path | What |
+|---|---|
+| [`packages/core/`](packages/core/) | Lyrie agent core — engine, memory, skills, tools, MCP, attack-surface mapper, Stages A–F validator, EditEngine, Shield Guard |
+| [`packages/gateway/`](packages/gateway/) | Multi-channel gateway (Telegram / WhatsApp / Discord) with DM pairing |
+| [`packages/mcp/`](packages/mcp/) | `@lyrie/mcp` — Model Context Protocol adapter |
+| [`packages/shield/`](packages/shield/) | Lyrie Shield — Rust cybersecurity engine |
+| [`packages/omega-suite/`](packages/omega-suite/) | Lyrie OMEGA — autonomous security intelligence backend powering [research.lyrie.ai](https://research.lyrie.ai) |
+| [`packages/ui/`](packages/ui/) | Lyrie war-room dashboard (Next.js) |
+| [`action/`](action/) | Lyrie Pentest GitHub Action |
+| [`research/`](research/) | Reproducible CVE exploit labs (Dockerfile + PoC + Sigma + YARA + IOCs) |
+| [`tools/exploit-lab/`](tools/exploit-lab/) | Lab orchestration framework |
+| [`skills/`](skills/) | Lyrie skills (extensible, self-improving) |
+| [`scripts/`](scripts/) | Operator CLIs: `doctor`, `pairing`, `mcp`, `edits`, `understand`, release helpers |
+| [`docs/`](docs/) | Architecture, contributing, Shield Doctrine, channel guides |
+
+---
 
 ## 🧠 Model support
 
 Model-agnostic. Lyrie routes per task class automatically:
 
-| Tier | Model | Use |
+| Tier | Default model | Use |
 |---|---|---|
 | Brain | Claude Opus 4.7 | Strategy, complex reasoning |
 | Coder | GPT-5.5 / GPT-5.4-Codex | Code generation, refactors |
+| Reasoning | o4-mini | Step-by-step deliberation |
 | Fast | Gemini 3.1 Flash / Haiku 4.5 | Quick lookups, classification |
 | Bulk | MiniMax-M2.7-HS | Mass content, parallel batches |
 | Local | Qwen / Gemma / Llama-local | Private, self-hosted |
 
-Bring any model — Anthropic, OpenAI, Google, xAI, MiniMax, Nous, or your own endpoint. No lock-in.
+Bring any model — Anthropic, OpenAI, Google, xAI, MiniMax, Ollama, or your own endpoint. No lock-in.
+
+---
 
 ## 📡 Channels
 
-Telegram · WhatsApp · Discord · Slack · Signal · iMessage · CLI · Webchat — connect Lyrie to wherever you already work.
+Telegram · WhatsApp · Discord · Slack · Signal · iMessage · CLI · Webchat — connect Lyrie to wherever you already work. **DM pairing on by default for production deployments.**
+
+---
+
+## 🛠 Operator CLIs
+
+```bash
+bun run doctor                    # self-diagnostic (env, channels, security, deps)
+bun run understand                # Lyrie Attack-Surface Map of any workspace
+bun run pairing list              # show pending DM pairing requests
+bun run pairing approve <chan> <code>
+bun run mcp list                  # list MCP-server tools available to Lyrie
+bun run edits list                # show pending diff-view edits awaiting approval
+bun run edits approve <planId>
+```
+
+---
 
 ## 🌌 The Lyrie ecosystem
 
-| Product | What it does |
-|---|---|
-| **Lyrie Agent** (this repo) | Your autonomous AI operator |
-| **Lyrie Shield** | Native cybersecurity protection across iOS, Android, Mac |
-| **Lyrie Research** | [research.lyrie.ai](https://research.lyrie.ai) — verified threat intel, reproducible exploit labs |
-| **Lyrie OMEGA** | Autonomous security intelligence backend ([packages/omega-suite/](./packages/omega-suite/)) |
+| Product | Status | What it does |
+|---|---|---|
+| **Lyrie Agent** (this repo) | OSS · MIT | Your autonomous AI operator + GitHub Action |
+| **Lyrie Shield** | Native iOS/Android/macOS | Real-time device protection, anti-malware, anti-rogue-AI |
+| **Lyrie Research** | [research.lyrie.ai](https://research.lyrie.ai) | KEV-driven verified threat intel, reproducible exploit labs |
+| **Lyrie OMEGA** | OSS · MIT (in this repo) | Autonomous security-intelligence backend |
+| **Lyrie SaaS** | [lyrie.ai](https://lyrie.ai) | Hosted Shield, WAF, scanner, breach monitoring |
 
-Together: a complete digital guardian that operates *and* defends.
+Together: a complete digital guardian that operates **and** defends.
 
-## 🔁 Migrating from OpenClaw or Hermes?
+---
+
+## ✅ Quality & tests
+
+- **176 tests passing / 0 failing** across 16 test files
+- Multi-platform CI (Node 20/22/24 × Ubuntu/macOS) + Rust Shield build
+- Weekly CodeQL security analysis + Dependabot
+- Pre-commit hooks: gitleaks, codespell, hygiene
+- Lyrie Pentest Action runs **on this repo** every PR — Lyrie is its own first user
 
 ```bash
-lyrie migrate --from openclaw   # ports memory, skills, config
-lyrie migrate --from hermes     # ports skills + trajectory
+bun test packages/ action/
+# → 176 pass · 0 fail · 488 expect()s
+```
+
+---
+
+## 🔁 Migrating from another agent?
+
+```bash
+lyrie migrate --from openclaw    # ports memory, skills, config
+lyrie migrate --from hermes      # ports skills + trajectory
+lyrie migrate --from autogpt     # ports goals + memory
 ```
 
 One command. Full memory + skills + config retained.
 
+---
+
 ## 🤝 Contributing
 
-See [docs/contributing.md](docs/contributing.md). New CVE labs follow [LAB-PROTOCOL.md](./tools/exploit-lab/LAB-PROTOCOL.md).
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). New CVE labs follow [`tools/exploit-lab/LAB-PROTOCOL.md`](tools/exploit-lab/LAB-PROTOCOL.md).
+
+Code of Conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). PRs that weaponize Lyrie tooling against unconsenting targets are rejected.
+
+---
 
 ## 🔐 Security
 
-See [SECURITY.md](SECURITY.md). Responsible disclosure goes to **security@lyrie.ai**. Cybersecurity isn't a feature here — it's the product.
+See [`SECURITY.md`](SECURITY.md). Responsible disclosure goes to **security@lyrie.ai**.
+
+Cybersecurity isn't a feature here — it's the product.
+
+---
 
 ## 📜 License
 
@@ -154,15 +279,12 @@ MIT. Use it, fork it, build on it.
 
 ---
 
-<p align="center">
-  <strong>Built by <a href="https://overthetop.ae">OTT Cybersecurity LLC</a> · Powered by <a href="https://lyrie.ai">Lyrie</a> — the AI that protects.</strong>
-  <br/>
-  <a href="https://research.lyrie.ai">Research</a> ·
-  <a href="https://x.com/lyrie_ai">@lyrie_ai</a> ·
-  <a href="https://lyrie.ai">lyrie.ai</a> ·
-  <a href="https://overthetop.ae">overthetop.ae</a>
-</p>
+<div align="center">
 
-<p align="center">
-  © 2026 <a href="https://overthetop.ae">OTT Cybersecurity LLC</a>. All rights reserved.
-</p>
+**Lyrie.ai** — _Built by [OTT Cybersecurity LLC](https://overthetop.ae)_
+
+[Research](https://research.lyrie.ai) · [@lyrie_ai](https://x.com/lyrie_ai) · [lyrie.ai](https://lyrie.ai) · [overthetop.ae](https://overthetop.ae)
+
+© 2026 OTT Cybersecurity LLC. All rights reserved.
+
+</div>
