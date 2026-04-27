@@ -220,6 +220,37 @@ Lyrie ships a **multi-channel gateway** so the agent reaches you on whatever you
 
 Every channel implements the same `ChannelBot` contract — unified `UnifiedMessage` in, unified `UnifiedResponse` out. Same Shield Doctrine, same DM-pairing policy, same engine.
 
+## ☁️ Where Lyrie runs
+
+Lyrie scans run **somewhere**. Pick where:
+
+| Backend | When | Setup |
+|---|---|---|
+| **Local** _(default)_ | Caller has Bun + repo | zero config |
+| **Daytona** | Ephemeral devboxes / sandboxed PR scans | `DAYTONA_API_KEY` |
+| **Modal**   | Pay-per-second serverless burst | `MODAL_TOKEN_ID` + `MODAL_TOKEN_SECRET` |
+
+Switch at runtime:
+
+```bash
+LYRIE_BACKEND=modal bun run action/runner.ts          # serverless
+LYRIE_BACKEND=daytona bun run action/runner.ts        # Daytona devbox
+LYRIE_BACKEND=local bun run action/runner.ts          # default — host
+```
+
+Inspect what's wired up:
+
+```bash
+bun run backend status         # which backend resolves & is configured
+bun run backend list           # all 3, side-by-side
+bun run backend show modal     # config + env vars detected
+bun run backend preflight      # cheap auth/connectivity check
+```
+
+Deployment recipes (Modal Python function + Daytona devcontainer): [`deploy/`](deploy/).
+
+**Same contract everywhere.** Every backend returns the same `BackendRunResult` shape — same SARIF, same Markdown, same Shield Doctrine — different host. **No Docker. No vendor lock-in.**
+
 ---
 
 ## 🏛 Architecture
