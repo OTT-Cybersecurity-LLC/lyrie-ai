@@ -283,9 +283,35 @@ export class ModelRouter {
    * Classify a task into the appropriate type.
    */
   private classifyTask(input: string): TaskType {
-    // TEMPORARY: Route everything to Claude Opus (brain) until all providers are tested
-    // TODO: Re-enable smart routing after Gemini/xAI/OpenAI providers are verified
-    return "brain";
+    const lower = input.toLowerCase();
+
+    // Coding patterns
+    if (/\b(code|build|implement|refactor|debug|fix bug|function|class|api|deploy|git)\b/.test(lower)) {
+      return "coder";
+    }
+
+    // Fast/simple patterns
+    if (/\b(check|status|ping|list|search|find|what is|how many)\b/.test(lower)) {
+      return "fast";
+    }
+
+    // Reasoning patterns
+    if (/\b(analyze|reason|compare|evaluate|calculate|prove|explain why|architecture)\b/.test(lower)) {
+      return "reasoning";
+    }
+
+    // Bulk patterns
+    if (/\b(generate \d+|batch|bulk|mass|all articles|every page)\b/.test(lower)) {
+      return "bulk";
+    }
+
+    // Strategy / brain patterns — high-level planning, design, system design
+    if (/\b(strategy|strategic|plan|design (a|an|the)|launch|roadmap|architect|orchestrate|decide)\b/.test(lower)) {
+      return "brain";
+    }
+
+    // Default: general
+    return "general";
   }
 
   availableModels(): ModelConfig[] {

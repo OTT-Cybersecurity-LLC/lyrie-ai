@@ -173,6 +173,7 @@ export class ShieldManager {
       return { blocked: false, severity: "none" };
     }
 
+    // 1. Prompt injection patterns
     for (const pattern of this.blockedInputPatterns) {
       if (pattern.test(input)) {
         this.logEvent({
@@ -185,6 +186,29 @@ export class ShieldManager {
         return {
           blocked: true,
           reason: "Blocked: potential prompt injection detected",
+          severity: "high",
+          details: `Pattern match: ${pattern.source}`,
+          timestamp: Date.now(),
+        };
+      }
+    }
+
+    // 2. Dangerous shell-command patterns embedded in user text. We don't
+    // wait for the tool-call boundary — if a user pastes `rm -rf /` or a
+    // fork bomb into the agent, that's a high-severity signal on its own
+    // (might be social-engineering the model into dispatching the command).
+    for (const pattern of this.blockedCommandPatterns) {
+      if (pattern.test(input)) {
+        this.logEvent({
+          type: "blocked",
+          target: input.slice(0, 100),
+          reason: `Dangerous shell pattern in input: ${pattern.source}`,
+          severity: "high",
+          timestamp: Date.now(),
+        });
+        return {
+          blocked: true,
+          reason: "Blocked: dangerous shell pattern detected in input",
           severity: "high",
           details: `Pattern match: ${pattern.source}`,
           timestamp: Date.now(),

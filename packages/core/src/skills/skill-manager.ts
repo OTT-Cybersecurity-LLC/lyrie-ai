@@ -107,9 +107,9 @@ const BUILT_IN_SKILLS: SkillDefinition[] = [
   ),
 
   createBuiltIn(
-    "code-writer",
-    "Code Writer",
-    "Generate code based on natural language description. Supports multiple languages and frameworks.",
+    "code-execution",
+    "Code Execution",
+    "Generate and run code based on natural language description. Multiple languages, sandbox-aware.",
     ["write code", "generate code", "create a function", "implement", "code for", "script that", "program to"],
     [
       { action: "analyze_request", description: "Determine language, framework, and requirements" },
@@ -122,8 +122,8 @@ const BUILT_IN_SKILLS: SkillDefinition[] = [
   ),
 
   createBuiltIn(
-    "file-manager",
-    "File Manager",
+    "file-management",
+    "File Management",
     "Read, write, list, and organize files on disk. Supports search, move, copy, and bulk operations.",
     ["read file", "write file", "list files", "find file", "create file", "delete file", "move file", "organize"],
     [
@@ -136,8 +136,8 @@ const BUILT_IN_SKILLS: SkillDefinition[] = [
   ),
 
   createBuiltIn(
-    "threat-scanner",
-    "Threat Scanner",
+    "threat-scan",
+    "Threat Scan",
     "Scan URLs, files, and IPs for security threats. Integrates with Lyrie Shield for deep analysis.",
     ["scan", "threat", "malware", "virus", "security check", "is this safe", "check url", "analyze threat"],
     [
@@ -148,6 +148,35 @@ const BUILT_IN_SKILLS: SkillDefinition[] = [
       { action: "report", description: "Return threat assessment with severity and recommendations" },
     ],
     ["security", "cybersecurity", "scanning", "threats"]
+  ),
+
+  createBuiltIn(
+    "vulnerability-check",
+    "Vulnerability Check",
+    "Check systems and dependencies for known CVEs and security vulnerabilities. KEV-driven.",
+    ["vulnerability", "vulnerabilities", "cve", "check for vulnerabilities", "vuln scan", "security audit", "audit dependencies"],
+    [
+      { action: "identify_target", description: "Determine what to audit (host / repo / image / package)" },
+      { action: "resolve_components", description: "Enumerate components and versions" },
+      { action: "lookup_kev", description: "Cross-reference CISA KEV + advisory feeds" },
+      { action: "score_findings", description: "Rank by exploitability and impact" },
+      { action: "report", description: "Return findings with remediation paths" },
+    ],
+    ["security", "cve", "vulnerabilities", "audit"]
+  ),
+
+  createBuiltIn(
+    "device-protect",
+    "Device Protect",
+    "Real-time device protection — anti-malware, anti-rogue-AI, behavioral detection. Lyrie Shield endpoint.",
+    ["protect", "defend", "guard", "protect my device", "endpoint protection", "anti-malware", "shield my"],
+    [
+      { action: "detect_platform", description: "Determine OS and capabilities" },
+      { action: "enable_realtime", description: "Enable Lyrie Shield realtime engines" },
+      { action: "baseline_behaviour", description: "Capture baseline behavior for anomaly detection" },
+      { action: "report", description: "Return active-protection summary" },
+    ],
+    ["security", "endpoint", "protection", "shield"]
   ),
 
   createBuiltIn(

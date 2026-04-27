@@ -777,7 +777,7 @@ export class MemoryCore {
 
     const dbSize = existsSync(this.dbPath) ? (statSync(this.dbPath).size / 1024).toFixed(1) : "0";
 
-    return `🟢 Active | ${memCount} memories, ${convCount} msgs, ${ruleCount} rules, ${projCount} projects, ${entCount} entities | DB: ${dbSize}KB`;
+    return `🟢 Active (self-healing) | ${memCount} memories, ${convCount} msgs, ${ruleCount} rules, ${projCount} projects, ${entCount} entities | DB: ${dbSize}KB`;
   }
 
   /** Get raw DB handle for advanced queries. */
