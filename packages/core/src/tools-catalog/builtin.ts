@@ -125,7 +125,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<ToolDefinition> = [
     tags: ["scanner", "web", "api", "dynamic"],
     install: { kind: "go", command: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest", detect: "nuclei", versionFlag: "-version" },
     supportedOS: ["linux", "macos", "windows"],
-    intents: ["scan for cves", "template-based scan", "find known vulns"],
+    intents: ["scan for cves", "template-based scan", "find known vulns", "kubernetes security"],
   },
   {
     id: "ffuf",
@@ -285,7 +285,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<ToolDefinition> = [
     tags: ["secrets", "scanner", "static"],
     install: { kind: "brew", command: "brew install trufflehog", detect: "trufflehog" },
     supportedOS: ["linux", "macos", "windows"],
-    intents: ["find verified secrets", "scan a git repo for credentials"],
+    intents: ["find verified secrets", "scan a git repo for credentials", "find hardcoded secrets mobile"],
   },
 
   // ─── Active Directory ───────────────────────────────────────────────────
@@ -349,7 +349,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<ToolDefinition> = [
     tags: ["cloud", "scanner", "iac"],
     install: { kind: "pipx", command: "pipx install prowler", detect: "prowler", versionFlag: "-v" },
     supportedOS: ["linux", "macos", "windows"],
-    intents: ["audit aws", "cloud posture review", "cspm scan"],
+    intents: ["audit aws", "cloud posture review", "cspm scan", "scan s3 bucket permissions", "check iam misconfiguration", "audit gcp roles", "azure security scan"],
   },
   {
     id: "scoutsuite",
@@ -361,7 +361,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<ToolDefinition> = [
     tags: ["cloud", "scanner"],
     install: { kind: "pipx", command: "pipx install scoutsuite", detect: "scout" },
     supportedOS: ["any"],
-    intents: ["multi-cloud audit"],
+    intents: ["multi-cloud audit", "enumerate cloud resources", "check iam misconfiguration", "audit gcp roles", "azure security scan"],
   },
   {
     id: "trivy",
@@ -373,7 +373,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<ToolDefinition> = [
     tags: ["container", "iac", "scanner", "static"],
     install: { kind: "brew", command: "brew install trivy", detect: "trivy", versionFlag: "--version" },
     supportedOS: ["linux", "macos", "windows"],
-    intents: ["scan a container", "iac scan", "supply-chain audit"],
+    intents: ["scan a container", "iac scan", "supply-chain audit", "kubernetes security"],
   },
 
   // ─── Mobile ──────────────────────────────────────────────────────────────
@@ -387,7 +387,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<ToolDefinition> = [
     tags: ["mobile", "static", "dynamic"],
     install: { kind: "docker", command: "docker pull opensecurity/mobile-security-framework-mobsf", detect: "mobsf" },
     supportedOS: ["linux", "macos", "windows"],
-    intents: ["scan android app", "ios app analysis", "mobile pentest"],
+    intents: ["scan android app", "ios app analysis", "mobile pentest", "mobile app security", "find hardcoded secrets mobile"],
   },
   {
     id: "frida",
@@ -399,7 +399,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<ToolDefinition> = [
     tags: ["mobile", "rev-eng", "dynamic"],
     install: { kind: "pipx", command: "pipx install frida-tools", detect: "frida" },
     supportedOS: ["linux", "macos", "windows"],
-    intents: ["instrument a mobile app", "runtime hooking"],
+    intents: ["instrument a mobile app", "runtime hooking", "analyze ios ipa", "hook mobile app", "mobile app security"],
   },
   {
     id: "objection",
@@ -411,7 +411,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<ToolDefinition> = [
     tags: ["mobile", "dynamic"],
     install: { kind: "pipx", command: "pipx install objection", detect: "objection" },
     supportedOS: ["linux", "macos", "windows"],
-    intents: ["bypass ios pinning", "android runtime exploration"],
+    intents: ["bypass ios pinning", "android runtime exploration", "analyze ios ipa", "hook mobile app"],
   },
 
   // ─── Reverse Engineering ────────────────────────────────────────────────
@@ -449,7 +449,19 @@ export const BUILTIN_TOOLS: ReadonlyArray<ToolDefinition> = [
     tags: ["rev-eng", "mobile"],
     install: { kind: "brew", command: "brew install jadx", detect: "jadx" },
     supportedOS: ["linux", "macos", "windows"],
-    intents: ["decompile apk", "android source recovery"],
+    intents: ["decompile apk", "android source recovery", "analyze android app"],
+  },
+  {
+    id: "apktool",
+    name: "Apktool",
+    description: "Tool for reverse engineering Android APK files — decode, rebuild, and resign.",
+    homepage: "https://github.com/iBotPeaches/Apktool",
+    license: "Apache-2.0",
+    category: "reverse-engineering",
+    tags: ["rev-eng", "mobile"],
+    install: { kind: "brew", command: "brew install apktool", detect: "apktool" },
+    supportedOS: ["linux", "macos", "windows"],
+    intents: ["decompile apk", "repack apk", "android apk analysis"],
   },
 
   // ─── Forensics ──────────────────────────────────────────────────────────

@@ -198,6 +198,26 @@ describe("ToolsCatalog.recommend", () => {
     expect(cat.recommend("")).toEqual([]);
     expect(cat.recommend("   ")).toEqual([]);
   });
+
+  // ─── New cloud + mobile phrases (#43) ──────────────────────────────────
+
+  test("'scan s3 bucket permissions' surfaces prowler/scoutsuite", () => {
+    const r = cat.recommend("scan s3 bucket permissions");
+    const ids = r.map((t) => t.id);
+    expect(ids.some((id) => ["prowler", "scoutsuite"].includes(id))).toBe(true);
+  });
+
+  test("'kubernetes security' surfaces trivy/nuclei", () => {
+    const r = cat.recommend("kubernetes security audit");
+    const ids = r.map((t) => t.id);
+    expect(ids.some((id) => ["trivy", "nuclei"].includes(id))).toBe(true);
+  });
+
+  test("'hook mobile app' surfaces frida/objection", () => {
+    const r = cat.recommend("hook mobile app at runtime");
+    const ids = r.map((t) => t.id);
+    expect(ids.some((id) => ["frida", "objection"].includes(id))).toBe(true);
+  });
 });
 
 // ─── Install detection (limited — depends on the test host) ────────────────
