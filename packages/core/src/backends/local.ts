@@ -36,6 +36,9 @@ export class LocalBackend implements Backend {
 
   async run(request: BackendRunRequest): Promise<BackendRunResult> {
     const start = Date.now();
+    const costPerSecond = parseFloat(
+      process.env["LYRIE_LOCAL_COST_PER_SECOND"] ?? "0",
+    ) || 0;
 
     if (this.config.dryRun) {
       return {
@@ -47,6 +50,7 @@ export class LocalBackend implements Backend {
         markdown: "_Lyrie LocalBackend dry-run — no scan performed._",
         runId: `local-dryrun-${start}`,
         durationMs: Date.now() - start,
+        costUsd: 0,
         provider: { mode: "dry-run" },
       };
     }
@@ -65,6 +69,12 @@ export class LocalBackend implements Backend {
       ...(request.env ?? {}),
     };
 
+    const durationMs = Date.now() - start;
+    const costUsd = (durationMs / 1000) * costPerSecond;
+    if (costPerSecond > 0) {
+      console.log(`[local] estimated cost: $${costUsd.toFixed(4)}`);
+    }
+
     return {
       backend: "local",
       status: "pass",
@@ -73,7 +83,8 @@ export class LocalBackend implements Backend {
       sarif: emptySarif(),
       markdown: "_LocalBackend prepared environment (in-process orchestrator dispatch)._",
       runId: `local-${start}`,
-      durationMs: Date.now() - start,
+      durationMs,
+      costUsd,
       provider: {
         cwd: this.config.cwd,
         envKeysPrepared: Object.keys(env),

@@ -185,6 +185,27 @@ describe("LocalBackend", () => {
     expect(keys).toContain("LYRIE_DIFF_BASE");
     expect(keys).toContain("CUSTOM");
   });
+
+  it("costUsd is 0 by default (no LYRIE_LOCAL_COST_PER_SECOND)", async () => {
+    delete process.env["LYRIE_LOCAL_COST_PER_SECOND"];
+    const result = await new LocalBackend().run(req());
+    expect(result.costUsd).toBe(0);
+  });
+
+  it("costUsd is non-zero when LYRIE_LOCAL_COST_PER_SECOND is set", async () => {
+    process.env["LYRIE_LOCAL_COST_PER_SECOND"] = "1.0";
+    const result = await new LocalBackend().run(req());
+    // durationMs ≥ 0, cost = duration/1000 * 1.0 ≥ 0
+    expect(result.costUsd).toBeGreaterThanOrEqual(0);
+    delete process.env["LYRIE_LOCAL_COST_PER_SECOND"];
+  });
+
+  it("dryRun always returns costUsd 0", async () => {
+    process.env["LYRIE_LOCAL_COST_PER_SECOND"] = "999";
+    const result = await new LocalBackend({ dryRun: true }).run(req());
+    expect(result.costUsd).toBe(0);
+    delete process.env["LYRIE_LOCAL_COST_PER_SECOND"];
+  });
 });
 
 // ─── DaytonaBackend ────────────────────────────────────────────────────────────
@@ -221,6 +242,22 @@ describe("DaytonaBackend", () => {
   it("ttlSeconds defaults to 1800", () => {
     expect(new DaytonaBackend({ apiKey: "k" }).ttlSeconds()).toBe(1800);
     expect(new DaytonaBackend({ apiKey: "k", ttlSeconds: 60 }).ttlSeconds()).toBe(60);
+  });
+
+  it("costUsd calculated from durationMs", async () => {
+    const sarif = emptySarif();
+    const { fetcher } = fakeFetcher({
+      "/workspaces/ws-cost/files/lyrie-runs/lyrie.sarif": async () => ({
+        ok: true, status: 200, body: sarif,
+      }),
+      "/workspaces/ws-cost/exec": async () => ({ ok: true, status: 200, body: {} }),
+      "/workspaces/ws-cost": async () => ({ ok: true, status: 200, body: {} }),
+      "/workspaces": async () => ({ ok: true, status: 201, body: { id: "ws-cost" } }),
+    });
+    process.env["LYRIE_DAYTONA_COST_PER_SECOND"] = "0.01";
+    const r = await new DaytonaBackend({ apiKey: "k" }, fetcher).run(req());
+    expect(r.costUsd).toBeGreaterThanOrEqual(0);
+    delete process.env["LYRIE_DAYTONA_COST_PER_SECOND"];
   });
 
   it("happy path: create → exec → fetch SARIF → delete", async () => {
@@ -317,6 +354,30 @@ describe("ModalBackend", () => {
   it("returns error when not configured", async () => {
     const r = await new ModalBackend().run(req());
     expect(r.status).toBe("error");
+  });
+
+  it("costUsd defaults to 0 when Modal API does not return it", async () => {
+    const sarif = emptySarif();
+    const { fetcher } = fakeFetcher({
+      "/functions/invoke": async () => ({
+        ok: true, status: 200,
+        body: { callId: "fc_no_cost", sarif },
+      }),
+    });
+    const r = await new ModalBackend({ tokenId: "i", tokenSecret: "s" }, fetcher).run(req());
+    expect(r.costUsd).toBe(0);
+  });
+
+  it("costUsd from API response takes precedence", async () => {
+    const sarif = emptySarif();
+    const { fetcher } = fakeFetcher({
+      "/functions/invoke": async () => ({
+        ok: true, status: 200,
+        body: { callId: "fc_cost", sarif, costUsd: 0.0077 },
+      }),
+    });
+    const r = await new ModalBackend({ tokenId: "i", tokenSecret: "s" }, fetcher).run(req());
+    expect(r.costUsd).toBe(0.0077);
   });
 });
 

@@ -138,11 +138,14 @@ switch (cmd) {
       process.exit(1);
     }
     const result = await b.run(request);
+    const durationSec = (result.durationMs / 1000).toFixed(1);
+    console.log(
+      `[LYRIE] Scan complete in ${durationSec}s | cost: $${result.costUsd.toFixed(4)} (${result.backend}) | ${result.findingCount} finding${result.findingCount === 1 ? "" : "s"}`,
+    );
     console.log(`  status:        ${result.status}`);
     console.log(`  findings:      ${result.findingCount}  (highest=${result.highestSeverity})`);
     console.log(`  durationMs:    ${result.durationMs}`);
     if (result.runId) console.log(`  runId:         ${result.runId}`);
-    if (result.costUsd !== undefined) console.log(`  costUsd:       $${result.costUsd}`);
     if (result.error) console.log(`  error:         ${result.error}`);
     console.log("");
     process.exit(result.status === "error" ? 1 : 0);

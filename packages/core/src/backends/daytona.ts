@@ -122,6 +122,7 @@ export class DaytonaBackend implements Backend {
         highestSeverity: "none",
         findingCount: 0,
         durationMs: Date.now() - start,
+        costUsd: 0,
         error: "daytona backend not configured (missing apiKey)",
       };
     }
@@ -165,6 +166,14 @@ export class DaytonaBackend implements Backend {
       );
       const sarif = sarifRes.ok ? await sarifRes.text() : emptySarif();
 
+      const durationMs = Date.now() - start;
+      const rate = parseFloat(
+        process.env["LYRIE_DAYTONA_COST_PER_SECOND"] ?? "0",
+      ) || 0;
+      const costUsd = (durationMs / 1000) * rate;
+      console.log(
+        `[daytona] workspace ${workspaceId} cost: $${costUsd.toFixed(4)} (${durationMs}ms @ $${rate}/sec)`,
+      );
       const summary = extractSarifSummary(sarif);
       return {
         backend: "daytona",
@@ -174,7 +183,8 @@ export class DaytonaBackend implements Backend {
         sarif,
         markdown: `_Lyrie Daytona run · workspace=${workspaceId}_`,
         runId: workspaceId,
-        durationMs: Date.now() - start,
+        durationMs,
+        costUsd,
         provider: {
           image: this.image(),
           region: this.config.region,
@@ -214,6 +224,7 @@ export class DaytonaBackend implements Backend {
       findingCount: 0,
       runId: workspaceId,
       durationMs: Date.now() - start,
+      costUsd: 0,
       error,
     };
   }

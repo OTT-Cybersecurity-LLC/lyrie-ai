@@ -78,8 +78,8 @@ export interface BackendRunResult {
   runId?: string;
   /** Wall-clock duration in milliseconds. */
   durationMs: number;
-  /** Optional: cost estimate in USD when the backend reports it. */
-  costUsd?: number;
+  /** Cost estimate in USD. Always present; 0 when free or unknown. */
+  costUsd: number;
   /** Free-form provider details (region, image, container id, …). */
   provider?: Record<string, unknown>;
   /** Error message when status="error". */

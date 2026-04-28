@@ -99,6 +99,7 @@ export class ModalBackend implements Backend {
         highestSeverity: "none",
         findingCount: 0,
         durationMs: Date.now() - start,
+        costUsd: 0,
         error: "modal backend not configured (missing tokenId/tokenSecret)",
       };
     }
@@ -115,6 +116,7 @@ export class ModalBackend implements Backend {
           highestSeverity: "none",
           findingCount: 0,
           durationMs: Date.now() - start,
+          costUsd: 0,
           error: `modal invoke HTTP ${res.status}`,
         };
       }
@@ -130,7 +132,7 @@ export class ModalBackend implements Backend {
         markdown: body.markdown,
         runId: body.callId,
         durationMs: Date.now() - start,
-        costUsd: body.costUsd,
+        costUsd: body.costUsd ?? 0,
         provider: {
           app: this.app(),
           function: this.functionName(),
@@ -145,6 +147,7 @@ export class ModalBackend implements Backend {
         highestSeverity: "none",
         findingCount: 0,
         durationMs: Date.now() - start,
+        costUsd: 0,
         error: (err as Error).message,
       };
     }
