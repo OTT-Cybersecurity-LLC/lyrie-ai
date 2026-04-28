@@ -565,3 +565,12 @@ Total Lyrie suite: **346 / 0 / 1470** TS + 63 Py = **409 / 0**
 
 _Releases prior to v0.1.1 are documented in git history. Phase 0 lands as a single PR
 on `feat/phase-0-upgrades` and will ship as `v0.1.1` once merged._
+
+## [0.3.7] — 2026-04-28
+
+### Added — npm package publication
+- **lyrie-agent is now on npm** — `npm install lyrie-agent` works globally
+- Fixed release CI pipeline: turbo build filter (skip Next.js UI package), npm provenance, 2FA bypass token
+- Fixed `package.json` repository URL to match actual GitHub repo for sigstore provenance
+- **npmjs.com/package/lyrie-agent** — 0 dependencies, MIT, 3.0 MB, 408 files
+
