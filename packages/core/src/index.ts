@@ -12,6 +12,10 @@
 
 // ─── Re-exports for cross-package consumption ────────────────────────────────
 
+// Report command (lyrie report)
+export { runReportCommand, printReportHint } from "./report/report-command";
+export type { ReportCommandOptions } from "./report/report-command";
+
 // Engine
 export { LyrieEngine } from "./engine/lyrie-engine";
 export type { LyrieEngineConfig, Message, ParsedToolCall, ProcessResult } from "./engine/lyrie-engine";
@@ -354,8 +358,28 @@ const isDirectRun =
     : process.argv[1]?.endsWith("core/src/index.ts");
 
 if (isDirectRun) {
-  main().catch((err) => {
-    console.error("❌ Lyrie Agent failed to start:", err);
-    process.exit(1);
-  });
+  // Check for sub-commands before starting the full agent
+  const subCommand = process.argv[2];
+
+  if (subCommand === "report") {
+    // `lyrie report [--open] [--url] [--local] [<path.sarif>]`
+    import("./report/report-command")
+      .then(({ runReportCommand }) => {
+        const args = process.argv.slice(3);
+        const urlOnly = args.includes("--url");
+        const local = args.includes("--local");
+        const sarifPath = args.find((a) => !a.startsWith("--"));
+        return runReportCommand({ urlOnly, local, sarifPath });
+      })
+      .then(() => process.exit(0))
+      .catch((err: unknown) => {
+        console.error("❌", err instanceof Error ? err.message : err);
+        process.exit(1);
+      });
+  } else {
+    main().catch((err) => {
+      console.error("❌ Lyrie Agent failed to start:", err);
+      process.exit(1);
+    });
+  }
 }

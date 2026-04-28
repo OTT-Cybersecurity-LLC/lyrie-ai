@@ -6,7 +6,8 @@
     "dev": "next dev --port 3100",
     "build": "next build",
     "start": "next start --port 3100",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "bun test src/sarif-viewer/__tests__"
   },
   "dependencies": {
     "clsx": "^2.1.1",
