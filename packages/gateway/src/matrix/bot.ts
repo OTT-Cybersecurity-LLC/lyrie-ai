@@ -282,8 +282,8 @@ export class MatrixBot implements ChannelBot {
     //     );
     //     return txnId;
     //   }
-    if (this.e2ee?.ready && response.raw?.encrypted === true) {
-      const encryptedContent = { msgtype: "m.room.encrypted", ...unifiedResponseToMatrixContent(response) };
+    if (this.e2ee?.ready && response.extra?.["encrypted"] === true) {
+      const encryptedContent = { ...unifiedResponseToMatrixContent(response), msgtype: "m.room.encrypted" };
       console.log(`[matrix] E2EE send to ${chatId} (device ${this.e2ee.deviceId})`);
       return JSON.stringify(encryptedContent);
     }
