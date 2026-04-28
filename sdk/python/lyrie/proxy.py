@@ -22,6 +22,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Final, Literal, Optional
 
+try:
+    import httpx as _httpx  # optional dep: lyrie-agent[async]
+except ImportError:  # pragma: no cover
+    _httpx = None  # type: ignore[assignment]
+
 from lyrie.shield import Shield
 
 PROXY_VERSION: Final[str] = "lyrie-http-proxy-py-1.0.0"
@@ -186,6 +191,118 @@ class HttpProxy:
 
     def signals(self) -> list[tuple[str, HttpSignal]]:
         return [(e.request.id, s) for e in self._exchanges for s in e.signals]
+
+    # ── Async API (requires httpx; install lyrie-agent[async]) ────────────
+
+    async def async_send(
+        self,
+        method: HttpMethod,
+        url: str,
+        *,
+        headers: Optional[dict[str, str]] = None,
+        body: Optional[str] = None,
+        timeout: float = 30.0,
+    ) -> HttpExchange:
+        """Async version of :meth:`send` backed by ``httpx.AsyncClient``.
+
+        Requires the ``async`` extra (``pip install lyrie-agent[async]``).
+        Raises ``RuntimeError`` if ``httpx`` is not installed.
+        """
+        if _httpx is None:  # pragma: no cover
+            raise RuntimeError(
+                "httpx is required for async proxy support. "
+                "Install it with: pip install 'lyrie-agent[async]'"
+            )
+
+        self._assert_host_allowed(url)
+
+        rid = str(uuid.uuid4())
+        req = HttpRequest(
+            id=rid, method=method, url=url,
+            headers={k.lower(): v for k, v in (headers or {}).items()},
+            body=body[: self._max_body] if body else None,
+            captured_at=datetime.now(tz=timezone.utc).isoformat(),
+            surface=classify_surface(method, url, body),
+        )
+
+        start = time.monotonic()
+        status = 0
+        body_text = ""
+        response_headers: dict[str, str] = {}
+        try:
+            async with _httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.request(
+                    method,
+                    url,
+                    headers=headers or {},
+                    content=(body.encode("utf-8") if body else None),
+                )
+                raw = resp.content[: self._max_body + 1]
+                body_text = raw.decode("utf-8", errors="replace")
+                if len(body_text) > self._max_body:
+                    body_text = body_text[: self._max_body] + "\n[truncated]"
+                response_headers = {k.lower(): v for k, v in resp.headers.items()}
+                status = resp.status_code
+        except Exception as exc:
+            body_text = f"network-error: {exc}"
+            response_headers = {}
+            status = 0
+
+        verdict = self._shield.scan_recalled(body_text) if self._shield_responses else None
+        if verdict and verdict.blocked:
+            shielded = True
+            body_text = f"\u27e6SHIELDED\u27e7 {verdict.reason or 'unsafe response body'}"
+        else:
+            shielded = False
+
+        resp_obj = HttpResponse(
+            id=rid, status=status, headers=response_headers,
+            body=body_text,
+            duration_ms=int((time.monotonic() - start) * 1000),
+            received_at=datetime.now(tz=timezone.utc).isoformat(),
+            shielded=shielded,
+            shield_reason=verdict.reason if verdict and verdict.blocked else None,
+        )
+
+        exchange = HttpExchange(
+            request=req, response=resp_obj,
+            signals=detect_signals(req, resp_obj),
+        )
+        self._record(exchange)
+        return exchange
+
+    async def async_replay(
+        self,
+        exchange: HttpExchange,
+        *,
+        mutators: Optional[list[Mutator]] = None,
+        timeout: float = 30.0,
+    ) -> HttpExchange:
+        """Async replay of a captured :class:`HttpExchange`, with optional mutators.
+
+        Requires the ``async`` extra (``pip install lyrie-agent[async]``).
+        """
+        req = exchange.request
+        method: HttpMethod = req.method
+        url = req.url
+        headers = dict(req.headers)
+        body = req.body
+
+        for mut in mutators or []:
+            if mut.kind == "header-add" and mut.target and mut.value:
+                headers.setdefault(mut.target.lower(), mut.value)
+            elif mut.kind == "header-set" and mut.target and mut.value:
+                headers[mut.target.lower()] = mut.value
+            elif mut.kind == "header-remove" and mut.target:
+                headers.pop(mut.target.lower(), None)
+            elif mut.kind == "body-replace" and mut.value is not None:
+                body = mut.value
+            elif mut.kind == "method-swap" and mut.value:
+                method = mut.value  # type: ignore[assignment]
+
+        return await self.async_send(method, url, headers=headers, body=body, timeout=timeout)
+
+    # ── Internal ────────────────────────────────────────────────────────────
 
     def clear(self) -> None:
         self._exchanges.clear()
