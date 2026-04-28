@@ -29,7 +29,8 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - run: bun run build --if-present
+      # Build only publishable packages (skip Next.js UI which is not on npm)
+      - run: bun run build --filter=./packages/core --filter=./packages/gateway --filter=./packages/mcp --if-present
       - name: Publish (provenance)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
