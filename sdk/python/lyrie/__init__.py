@@ -44,9 +44,15 @@ __all__ = [
     # OSS-Scan
     "run_oss_scan",
     "OssScanResult",
+    # LyrieEvolve
+    "LyrieEvolve",
+    "TaskOutcome",
+    "SkillContext",
+    "TrainingEntry",
+    "ExtractionResult",
 ]
 
-__version__ = "0.3.0"
+__version__ = "0.5.0"
 SIGNATURE: str = "Lyrie.ai by OTT Cybersecurity LLC"
 
 from lyrie.shield import Shield, ShieldVerdict
@@ -69,3 +75,4 @@ from lyrie.proxy import HttpProxy, HttpExchange, Mutator
 from lyrie.edits import EditEngine, EditPlan
 from lyrie.threat_intel import ThreatIntelClient, ThreatAdvisory
 from lyrie.oss_scan import run_oss_scan, OssScanResult
+from lyrie.evolve import LyrieEvolve, TaskOutcome, SkillContext, TrainingEntry, ExtractionResult
