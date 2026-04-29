@@ -160,6 +160,17 @@ class StubEngine implements EngineInterface {
   }
 }
 
+// ─── StartupResult ─────────────────────────────────────────────────────────────
+
+export interface StartupResult {
+  /** Whether the gateway booted with all plugins healthy. */
+  mode: "normal" | "degraded";
+  /** Channels that started successfully. */
+  activeChannels: string[];
+  /** Plugins that failed to start (degraded mode). */
+  degradedPlugins: Array<{ channel: string; error: string }>;
+}
+
 // ─── Gateway Startup ────────────────────────────────────────────────────────────
 
 export class LyrieGateway {
@@ -177,18 +188,28 @@ export class LyrieGateway {
     | WebChatBot
   > = [];
   private config: GatewayConfig;
+  /** Result of the last start() call — used by lyrie doctor. */
+  private _lastStartupResult: StartupResult | null = null;
 
   constructor(engine?: EngineInterface, config?: GatewayConfig) {
     this.config = config || loadConfig();
     this.router = new MessageRouter(engine || new StubEngine());
   }
 
-  async start(): Promise<void> {
-    console.log("\n🛡️  Lyrie Gateway v0.1.0");
+  /** Return the last startup result for lyrie doctor diagnostics. */
+  get startupResult(): StartupResult | null {
+    return this._lastStartupResult;
+  }
+
+  async start(): Promise<StartupResult> {
+    console.log("\n🛡️  Lyrie Gateway v0.7.0");
     console.log("   OTT Cybersecurity LLC — https://lyrie.ai\n");
 
     // Register command handlers
     registerHandlers(this.router);
+
+    const degradedPlugins: Array<{ channel: string; error: string }> = [];
+    const activeChannels: string[] = [];
 
     // Start enabled channels
     let channelCount = 0;
@@ -209,8 +230,11 @@ export class LyrieGateway {
         this.router.registerChannel(tgBot);
         this.bots.push(tgBot);
         channelCount++;
+        activeChannels.push("telegram");
       } catch (err) {
-        console.error("  ✗ Failed to start Telegram:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`  ⚠️  Telegram plugin failed (degraded mode): ${msg}`);
+        degradedPlugins.push({ channel: "telegram", error: msg });
       }
     }
 
@@ -229,8 +253,11 @@ export class LyrieGateway {
         this.router.registerChannel(waBot);
         this.bots.push(waBot);
         channelCount++;
+        activeChannels.push("whatsapp");
       } catch (err) {
-        console.error("  ✗ Failed to start WhatsApp:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`  ⚠️  WhatsApp plugin failed (degraded mode): ${msg}`);
+        degradedPlugins.push({ channel: "whatsapp", error: msg });
       }
     }
 
@@ -249,8 +276,11 @@ export class LyrieGateway {
         this.router.registerChannel(dcBot);
         this.bots.push(dcBot);
         channelCount++;
+        activeChannels.push("discord");
       } catch (err) {
-        console.error("  ✗ Failed to start Discord:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`  ⚠️  Discord plugin failed (degraded mode): ${msg}`);
+        degradedPlugins.push({ channel: "discord", error: msg });
       }
     }
 
@@ -279,8 +309,11 @@ export class LyrieGateway {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.bots.push(bot as any);
         channelCount++;
+        activeChannels.push(channelType);
       } catch (err) {
-        console.error(`  ✗ Failed to start ${label}:`, err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`  ⚠️  ${label} plugin failed (degraded mode): ${msg}`);
+        degradedPlugins.push({ channel: channelType, error: msg });
       }
     };
 
@@ -299,6 +332,21 @@ export class LyrieGateway {
       console.log(`\n  ✅ Gateway running with ${channelCount} channel(s)\n`);
     }
 
+    if (degradedPlugins.length > 0) {
+      console.warn(`  ⚠️  Gateway in DEGRADED mode — ${degradedPlugins.length} plugin(s) failed:`);
+      for (const dp of degradedPlugins) {
+        console.warn(`     • ${dp.channel}: ${dp.error}`);
+      }
+      console.warn("  Run \`lyrie doctor\` for details.\n");
+    }
+
+    const result: StartupResult = {
+      mode: degradedPlugins.length > 0 ? "degraded" : "normal",
+      activeChannels,
+      degradedPlugins,
+    };
+    this._lastStartupResult = result;
+
     // Graceful shutdown
     const shutdown = async () => {
       console.log("\n🛑 Shutting down gateway...");
@@ -308,6 +356,8 @@ export class LyrieGateway {
 
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
+
+    return result;
   }
 
   async stop(): Promise<void> {
@@ -332,7 +382,11 @@ const isDirectRun =
 
 if (isDirectRun) {
   const gateway = new LyrieGateway();
-  gateway.start().catch((err) => {
+  gateway.start().then((result) => {
+    if (result.mode === "degraded") {
+      process.exitCode = 2; // Non-fatal degraded exit code
+    }
+  }).catch((err) => {
     console.error("Fatal error starting gateway:", err);
     process.exit(1);
   });
