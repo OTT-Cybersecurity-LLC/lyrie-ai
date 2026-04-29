@@ -25,6 +25,8 @@ export { migrateFromDify } from "./dify";
 export { migrateFromSuperAGI } from "./superagi";
 export { migrateFromNanobot } from "./nanobot";
 export { migrateFromGripAI } from "./grip-ai";
+export { migrateFromClaudeCode } from "./claude-code";
+export { migrateFromCursor } from "./cursor";
 export type { MigrationResult, MigratorPlatform, MigrationContext } from "./types";
 
 // ─────────────────────────────────────────────
@@ -58,6 +60,8 @@ async function buildRegistry(): Promise<PlatformEntry[]> {
     { migrateFromSuperAGI, detectSuperAGI },
     { migrateFromNanobot, detectNanobot },
     { migrateFromGripAI, detectGripAI },
+    { migrateFromClaudeCode, detectClaudeCode },
+    { migrateFromCursor, detectCursor },
   ] = await Promise.all([
     import("./openclaw"),
     import("./hermes"),
@@ -68,62 +72,76 @@ async function buildRegistry(): Promise<PlatformEntry[]> {
     import("./superagi"),
     import("./nanobot"),
     import("./grip-ai"),
+    import("./claude-code"),
+    import("./cursor"),
   ]);
 
   return [
     {
-      name: "openclaw",
+      name: "openclaw" as MigratorPlatform,
       label: "OpenClaw",
       detect: detectOpenClaw,
       migrate: (ctx) => migrateFromOpenClaw(ctx),
     },
     {
-      name: "hermes",
+      name: "hermes" as MigratorPlatform,
       label: "Hermes Agent",
       detect: detectHermes,
       migrate: (ctx) => migrateFromHermes(ctx),
     },
     {
-      name: "autogpt",
+      name: "autogpt" as MigratorPlatform,
       label: "AutoGPT",
       detect: detectAutoGPT,
       migrate: (ctx) => migrateFromAutoGPT(ctx),
     },
     {
-      name: "nanoclaw",
+      name: "nanoclaw" as MigratorPlatform,
       label: "NanoClaw",
       detect: detectNanoClaw,
       migrate: (ctx) => migrateFromNanoClaw(ctx),
     },
     {
-      name: "zeroclaw",
+      name: "zeroclaw" as MigratorPlatform,
       label: "ZeroClaw",
       detect: detectZeroClaw,
       migrate: (ctx) => migrateFromZeroClaw(ctx),
     },
     {
-      name: "dify",
+      name: "dify" as MigratorPlatform,
       label: "Dify",
       detect: detectDify,
       migrate: (ctx) => migrateFromDify(ctx),
     },
     {
-      name: "superagi",
+      name: "superagi" as MigratorPlatform,
       label: "SuperAGI",
       detect: detectSuperAGI,
       migrate: (ctx) => migrateFromSuperAGI(ctx),
     },
     {
-      name: "nanobot",
+      name: "nanobot" as MigratorPlatform,
       label: "Nanobot",
       detect: detectNanobot,
       migrate: (ctx) => migrateFromNanobot(ctx),
     },
     {
-      name: "grip-ai",
+      name: "grip-ai" as MigratorPlatform,
       label: "grip-ai",
       detect: detectGripAI,
       migrate: (ctx) => migrateFromGripAI(ctx),
+    },
+    {
+      name: "claude-code" as MigratorPlatform,
+      label: "Claude Code",
+      detect: detectClaudeCode,
+      migrate: (ctx) => migrateFromClaudeCode(ctx),
+    },
+    {
+      name: "cursor" as MigratorPlatform,
+      label: "Cursor",
+      detect: detectCursor,
+      migrate: (ctx) => migrateFromCursor(ctx),
     },
   ];
 }
@@ -284,4 +302,6 @@ export const SUPPORTED_PLATFORMS: MigratorPlatform[] = [
   "superagi",
   "nanobot",
   "grip-ai",
+  "claude-code",
+  "cursor",
 ];

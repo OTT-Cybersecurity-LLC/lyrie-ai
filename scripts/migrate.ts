@@ -25,6 +25,7 @@ import {
   type MigrationRunContext,
 } from "../packages/core/src/migrate/index";
 import type { MigratorPlatform, MigrationResult } from "../packages/core/src/migrate/types";
+import { LyrieProviderValidator } from "../packages/core/src/security/provider-validator";
 
 // ─── ANSI colors ──────────────────────────────────────────────────────────────
 const C = {
@@ -63,6 +64,7 @@ function parseArgs(argv: string[]): {
   list: boolean;
   lyrieDir: string;
   help: boolean;
+  secure: boolean;
 } {
   const args = argv.slice(2);
   const result = {
@@ -73,6 +75,7 @@ function parseArgs(argv: string[]): {
     list: false,
     lyrieDir: join(homedir(), ".lyrie"),
     help: false,
+    secure: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -101,6 +104,10 @@ function parseArgs(argv: string[]): {
       case "--dir":
         result.lyrieDir = args[++i] ?? result.lyrieDir;
         break;
+      case "--secure":
+      case "-s":
+        result.secure = true;
+        break;
       case "--help":
       case "-h":
         result.help = true;
@@ -123,6 +130,7 @@ ${color("OPTIONS", C.bold, C.white)}
   ${color("--list", C.cyan)}               List all supported platforms
   ${color("--dry-run", C.cyan)}            Preview what would be migrated (no writes)
   ${color("--verbose", C.cyan)}            Show detailed progress
+  ${color("--secure", C.cyan)}             Post-import Shield scan: API key scan + CVE-2026-7314/7315/7319 check
   ${color("--dir <path>", C.cyan)}         Output directory (default: ~/.lyrie)
   ${color("--help", C.cyan)}               Show this help
 
@@ -133,6 +141,12 @@ ${color("EXAMPLES", C.bold, C.white)}
   ${color("# Migrate from OpenClaw", C.dim)}
   bun run scripts/migrate.ts --from openclaw
 
+  ${color("# Migrate from Claude Code with security scan", C.dim)}
+  bun run scripts/migrate.ts --from claude-code --secure
+
+  ${color("# Migrate from Cursor", C.dim)}
+  bun run scripts/migrate.ts --from cursor --dry-run
+
   ${color("# Migrate from everything detected", C.dim)}
   bun run scripts/migrate.ts --from all
 
@@ -141,6 +155,9 @@ ${color("EXAMPLES", C.bold, C.white)}
 
   ${color("# Verbose migration to custom dir", C.dim)}
   bun run scripts/migrate.ts --from autogpt --verbose --dir /opt/lyrie
+
+  ${color("# Post-import Shield scan (CVE check + API key scan)", C.dim)}
+  bun run scripts/migrate.ts --from openclaw --secure
 `);
 }
 
@@ -208,6 +225,73 @@ function printSummary(results: Map<MigratorPlatform, MigrationResult>): void {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Secure post-import scan ─────────────────────────────────────────────────────
+
+async function runSecureScan(lyrieDir: string): Promise<void> {
+  console.log(color("\n🛡️  Running post-import security scan...", C.magenta, C.bold));
+
+  // 1. Scan for API keys in migrated configs
+  const configDir = join(lyrieDir, "config");
+  const validator = new LyrieProviderValidator();
+  let totalIssues = 0;
+  let totalWarnings = 0;
+
+  // Try to read any migration JSON files
+  const { existsSync, readdirSync, readFileSync } = await import("fs");
+  if (existsSync(configDir)) {
+    const files = readdirSync(configDir).filter((f: string) => f.endsWith(".json"));
+    for (const file of files) {
+      try {
+        const raw = JSON.parse(readFileSync(join(configDir, file), "utf-8"));
+
+        // Check providers
+        const providers = raw.providers ?? [];
+        for (const p of providers) {
+          const result = await validator.validateProvider(p);
+          totalIssues += result.issues.length;
+          totalWarnings += result.warnings.length;
+          if (result.issues.length > 0) {
+            console.log(color(`  ✗ ${p.name}: ${result.issues.length} security issue(s)`, C.red));
+            for (const issue of result.issues) {
+              console.log(`    [${issue.cve}] ${issue.message}`);
+              console.log(`    Fix: ${issue.remediation}`);
+            }
+          }
+        }
+
+        // Check MCP servers against CVE-2026-7314/7315/7319
+        const mcpServers = raw.mcpServers ?? [];
+        for (const server of mcpServers) {
+          const result = await validator.validateMcpServer(server);
+          totalIssues += result.issues.length;
+          totalWarnings += result.warnings.length;
+          if (result.issues.length > 0) {
+            console.log(color(`  ✗ MCP:${server.name}: ${result.issues.length} issue(s)`, C.red));
+            for (const issue of result.issues) {
+              console.log(`    [${issue.cve}] ${issue.message}`);
+            }
+          }
+        }
+      } catch {
+        // Skip unreadable files
+      }
+    }
+  }
+
+  console.log();
+  if (totalIssues === 0 && totalWarnings === 0) {
+    console.log(color("  ✅ Security scan passed — no issues found.", C.green, C.bold));
+  } else {
+    if (totalIssues > 0) {
+      console.log(color(`  ⚠️  ${totalIssues} security issue(s) found. Review above.", C.yellow, C.bold));
+    }
+    if (totalWarnings > 0) {
+      console.log(color(`  ℹ️  ${totalWarnings} warning(s). Run with --verbose for details.`, C.dim));
+    }
+  }
+  console.log();
+}
+
 async function main(): Promise<void> {
   const opts = parseArgs(process.argv);
 
@@ -232,6 +316,10 @@ async function main(): Promise<void> {
     dryRun: opts.dryRun,
     verbose: opts.verbose,
   };
+
+  if (opts.secure) {
+    console.log(color("  [SECURE] Post-import Shield scan enabled\n", C.magenta, C.bold));
+  }
 
   if (opts.dryRun) {
     console.log(color("  [DRY RUN] — No files will be written\n", C.yellow, C.bold));
@@ -297,6 +385,11 @@ async function main(): Promise<void> {
         `  Your data is in: ${color(opts.lyrieDir, C.white)}\n` +
         `  Start Lyrie: ${color("bun run start", C.cyan)}\n`
       );
+
+      // --secure: run post-import CVE + API key scan
+      if (opts.secure) {
+        await runSecureScan(opts.lyrieDir);
+      }
     } else {
       console.log(color("  ⚠ Migration completed with errors.", C.yellow));
       console.log("  Check the errors above and re-run with --verbose for details.\n");
