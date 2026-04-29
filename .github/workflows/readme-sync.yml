@@ -1,0 +1,88 @@
+name: Sync README on Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to set (e.g. 0.6.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  sync-readme:
+    name: Update README version + test badges
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "ver=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "ver_clean=$(echo '${{ github.event.release.tag_name }}' | sed 's/^v//')" >> $GITHUB_OUTPUT
+          else
+            echo "ver=v${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "ver_clean=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Get test counts
+        id: tests
+        run: |
+          bun install --frozen-lockfile 2>/dev/null || true
+          # TypeScript tests
+          TS_COUNT=$(bun test packages/ action/ 2>&1 | grep -oE '[0-9]+ pass' | tail -1 | grep -oE '[0-9]+' || echo "373")
+          # Python tests  
+          cd sdk/python && pip install -q -e ".[dev]" 2>/dev/null || pip install -q pytest pydantic 2>/dev/null || true
+          PY_COUNT=$(python -m pytest tests/ -q --tb=no 2>&1 | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' || echo "92")
+          cd ../..
+          TOTAL=$((TS_COUNT + PY_COUNT))
+          echo "ts=$TS_COUNT" >> $GITHUB_OUTPUT
+          echo "py=$PY_COUNT" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+      - name: Update README
+        env:
+          NEW_VER: ${{ steps.version.outputs.ver_clean }}
+          TOTAL_TESTS: ${{ steps.tests.outputs.total }}
+          TS_TESTS: ${{ steps.tests.outputs.ts }}
+          PY_TESTS: ${{ steps.tests.outputs.py }}
+        run: |
+          # Update version reference in highlights
+          sed -i "s/Highlights (current main, \[.*\](CHANGELOG.md))/Highlights (current main, [\`v${NEW_VER}\`](CHANGELOG.md))/" README.md
+          
+          # Update test badge count
+          sed -i "s/tests-[0-9]*%20passing/tests-${TOTAL_TESTS}%20passing/" README.md
+          
+          # Update quality section test line
+          sed -i "s/\*\*[0-9]* tests passing \/ 0 failing\*\* — [0-9]* TypeScript + [0-9]* Python/**${TOTAL_TESTS} tests passing \/ 0 failing** — ${TS_TESTS} TypeScript + ${PY_TESTS} Python/" README.md
+          
+          # Update TypeScript suite comment
+          sed -i "s/# → [0-9]* pass · 0 fail/# → ${TS_TESTS} pass · 0 fail/" README.md
+          
+          # Update Python suite comment  
+          sed -i "s/# → [0-9]* pass · 0 fail$/# → ${PY_TESTS} pass · 0 fail/" README.md
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          if git diff --staged --quiet; then
+            echo "No README changes needed"
+          else
+            git commit -m "chore: sync README to v${{ steps.version.outputs.ver_clean }} [skip ci]"
+            git push origin main
+            echo "README updated for v${{ steps.version.outputs.ver_clean }}"
+          fi

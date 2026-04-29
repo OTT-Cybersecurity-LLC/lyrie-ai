@@ -18,7 +18,7 @@ Lyrie is not just another AI assistant. It runs your operations and protects the
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
 [![CI](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-332%20passing-brightgreen.svg)](#-quality--tests)
+[![Tests](https://img.shields.io/badge/tests-465%20passing-brightgreen.svg)](#-quality--tests)
 [![PyPI](https://img.shields.io/badge/pypi-lyrie--agent-3776AB.svg?logo=pypi&logoColor=white)](https://pypi.org/project/lyrie-agent/)
 [![Releases](https://img.shields.io/github/v/release/overthetopseo/lyrie-agent?include_prereleases&label=release)](https://github.com/overthetopseo/lyrie-agent/releases)
 
@@ -36,7 +36,7 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 
 > **Cybersecurity isn't a plugin — it's Layer 1.**
 
-### Highlights (current main, [`v0.3.0+`](CHANGELOG.md))
+### Highlights (current main, [`v0.5.0`](CHANGELOG.md))
 
 - 🛡️ **The Shield Doctrine** — every layer of Lyrie that touches untrusted text passes a Shield gate. ([`docs/shield-doctrine.md`](docs/shield-doctrine.md))
 - 🔍 **Lyrie Attack-Surface Mapper** (`/understand`) — maps entry points, trust boundaries, tainted data flows, and ranked risk hotspots before any scanner runs.
@@ -51,6 +51,32 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 - 🔌 **MCP adapter** (`@lyrie/mcp`) — Lyrie speaks fluent Model Context Protocol both as client and server.
 - 🚪 **DM pairing** — unknown senders can't reach the agent without operator approval. Three modes: `open` / `pairing` / `closed`.
 - 🩺 **`lyrie doctor`** — read-only environment, channel, and security self-diagnostic with `--json` for CI.
+- 🧬 **LyrieEvolve** — the agent scores every task, auto-generates reusable skills from wins, retrieves top-3 past successes as context before each new task, and runs nightly GRPO fine-tuning on your own GPU. Domain-specific rewards for cyber, SEO, trading, and code. ([`docs/evolve.md`](docs/evolve.md))
+- ☁️ **Pluggable execution backends** — run Lyrie scans locally, in a Daytona devbox, or as a Modal serverless function. Same Shield Doctrine, same SARIF, different host.
+- 📡 **9 multi-channel adapters** — Telegram, WhatsApp, Discord, Slack, Matrix, Mattermost, IRC, Feishu, Rocket.Chat, WebChat — one inbox, all secured.
+
+---
+
+## 🧬 LyrieEvolve — Self-Improving Agent
+
+Lyrie is the only autonomous agent that gets **measurably better** at your specific workloads over time.
+
+```bash
+lyrie evolve status          # skill library stats + last dream cycle
+lyrie evolve extract         # manually extract skills from latest sessions
+lyrie evolve dream           # run full nightly cycle (score -> extract -> prune)
+lyrie evolve stats           # domain breakdown: cyber / seo / trading / code
+lyrie evolve train           # trigger H200 GRPO fine-tuning job
+```
+
+**How it works:**
+1. **Task Scorer** — scores every completed task: `0` (fail) / `0.5` (partial) / `1.0` (success). CI pass for code, threat confirmed for cyber, P&L positive for trading.
+2. **Skill Auto-Generation** — sessions scoring >= 0.5 are distilled into reusable skill files (`skills/auto-generated/`). Cosine-similarity dedup prevents redundant entries.
+3. **Contexture Layer** — before each new task, retrieves top-3 most relevant past wins (MMR-diverse) from LanceDB and injects them into the prompt.
+4. **Dream Cycle** — 4 AM batch: score outcomes, extract new skills, prune dead ones (score < 0.3 after 5+ uses), generate evolution report.
+5. **H200 GRPO Training** — accumulated conversations become LoRA fine-tuning data. Domain-specific reward functions train on owned hardware — no third-party APIs required.
+
+> MetaClaw trains on rented cloud APIs. Lyrie trains on owned hardware with domain-specific rewards. That's the moat.
 
 ---
 
@@ -66,8 +92,8 @@ Lyrie is a 30K-LOC, MIT-licensed, Shield-native autonomous agent. Competitors he
 |---|---|---|---|---|---|
 | Autonomous agent loop | ✅ | ✅ | ❌ | ✅ | ✅ |
 | Multi-channel inbox (TG/WA/Discord/Slack/Signal/iMessage) | ✅ (23+) | ✅ (6) | ❌ | ❌ | ✅ (8) |
-| Self-improving skills | Skills catalog | ✅ Learns from use | ❌ | ❌ | ✅ + skill-creator |
-| Persistent cross-session memory | LanceDB / sections | ✅ Trajectory + graph | ❌ | ❌ | ✅ SQLite + FTS5 |
+| Self-improving skills | Skills catalog | ✅ Learns from use | ❌ | ❌ | **✅ LyrieEvolve + skill-creator** |
+| Persistent cross-session memory | LanceDB / sections | ✅ Trajectory + graph | ❌ | ❌ | ✅ SQLite + FTS5 + Contexture |
 | Self-healing memory | ❌ | Partial | ❌ | ❌ | **✅ Validator + repair** |
 | Multi-model + intelligent routing | ✅ | ✅ (200+ via OpenRouter) | Anthropic only | Multiple | ✅ (auto-routed by task) |
 | Diff-view edits with approval | ❌ | ❌ | ❌ | ✅ | ✅ + Shield-on-patch |
@@ -418,7 +444,7 @@ Together: a complete digital guardian that operates **and** defends.
 
 ## ✅ Quality & tests
 
-- **332 tests passing / 0 failing** — 269 TypeScript + 63 Python
+- **465 tests passing / 0 failing** — 373 TypeScript + 92 Python
 - Multi-platform CI (Node 20/22/24 × Ubuntu/macOS) + Rust Shield build
 - Weekly CodeQL security analysis + Dependabot
 - Pre-commit hooks: gitleaks, codespell, hygiene
@@ -427,11 +453,11 @@ Together: a complete digital guardian that operates **and** defends.
 ```bash
 # TypeScript suite
 bun test packages/ action/
-# → 269 pass · 0 fail · 706 expect()s
+# → 373 pass · 0 fail
 
 # Python SDK
 cd sdk/python && PYTHONPATH=. python -m pytest tests/
-# → 63 pass · 0 fail
+# → 92 pass · 0 fail
 ```
 
 ---
