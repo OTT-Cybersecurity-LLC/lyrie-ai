@@ -18,6 +18,10 @@ export { GoogleProvider } from "./google";
 export { XAIProvider } from "./xai";
 export { MiniMaxProvider } from "./minimax";
 export { OllamaProvider } from "./ollama";
+export { CerebrasProvider, CEREBRAS_MODELS } from "./cerebras";
+export { OpenRouterProvider } from "./openrouter";
+export type { CerebrasConfig, CerebrasResponse, CerebrasModel } from "./cerebras";
+export type { OpenRouterConfig, OpenRouterResponse, OpenRouterModel } from "./openrouter";
 
 export interface Provider {
   name: string;
