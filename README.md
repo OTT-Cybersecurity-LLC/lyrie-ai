@@ -193,14 +193,26 @@ Lyrie is a 30K-LOC, MIT-licensed, Shield-native autonomous agent. Competitors he
 | Capability | OpenClaw (365k⭐) | Hermes Agent (120k⭐) | Claude Code (118k⭐) | opencode (150k⭐) | **Lyrie** (514⭐) |
 |---|---|---|---|---|---|
 | Autonomous agent loop | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Multi-channel inbox (TG/WA/Discord/Slack/Signal/iMessage) | ✅ (23+) | ✅ (6) | ❌ | ❌ | ✅ (8) |
+| Multi-channel inbox (TG/WA/Discord/Slack/Signal/iMessage) | ✅ (23+) | ✅ (6) | ❌ | ❌ | ✅ (8+) |
 | Self-improving skills | Skills catalog | ✅ Learns from use | ❌ | ❌ | **✅ LyrieEvolve + skill-creator** |
 | Persistent cross-session memory | LanceDB / sections | ✅ Trajectory + graph | ❌ | ❌ | ✅ SQLite + FTS5 + Contexture |
 | Self-healing memory | ❌ | Partial | ❌ | ❌ | **✅ Validator + repair** |
+| Incremental memory ingestion | ❌ | ❌ | ❌ | ❌ | **✅ Auto-ingest every N turns (#69)** |
+| Asymmetric embedding (nomic/qwen3/mxbai) | ❌ | ❌ | ❌ | ❌ | **✅ Model-specific prefixes** |
 | Multi-model + intelligent routing | ✅ | ✅ (200+ via OpenRouter) | Anthropic only | Multiple | ✅ (auto-routed by task) |
+| OpenRouter provider (100+ models) | ❌ | ✅ | ❌ | ❌ | **✅ v0.7.0 native** |
+| Cerebras provider (ultra-fast inference) | ❌ | ❌ | ❌ | ❌ | **✅ v0.7.0 native** |
 | Diff-view edits with approval | ❌ | ❌ | ❌ | ✅ | ✅ + Shield-on-patch |
 | MCP adapter (client + server) | ✅ client | ❌ | ✅ client | Partial | ✅ client + server |
+| **One-command migration** | ❌ | ❌ | ❌ | ❌ | **✅ `lyrie migrate` (11 platforms)** |
+| **Migrate from Claude Code** | — | ❌ | — | ❌ | **✅ MCP servers + providers** |
+| **Migrate from Cursor** | ❌ | ❌ | ❌ | — | **✅ Settings + extensions** |
+| **Post-import Shield scan** | ❌ | ❌ | ❌ | ❌ | **✅ `--secure` flag** |
 | **Native cybersecurity layer** | ❌ | ❌ | ❌ | ❌ | **✅ The Shield + Doctrine** |
+| **CVE-aware provider validation** | ❌ | ❌ | ❌ | ❌ | **✅ 41391/42428/7314 class checks** |
+| **Tool-loop detection** | ❌ | ❌ | ❌ | ❌ | **✅ Per-run fingerprint + threshold** |
+| **Degraded gateway boot** | ❌ | ❌ | ❌ | ❌ | **✅ No crash on plugin fail** |
+| **Multi-group chat** | ✅ | ❌ | ❌ | ❌ | **✅ FIFO queue + thread sessions** |
 | **Built-in pentest commands** (`/scan /pentest /understand /apiscan`) | ❌ | ❌ | ❌ | ❌ | **✅** |
 | **GitHub Action for PR scans** | ❌ | ❌ | ❌ | ❌ | **✅ SARIF + diff-scope** |
 | **Real-time threat-intel feed (KEV-driven)** | ❌ | ❌ | ❌ | ❌ | **✅ research.lyrie.ai** |
@@ -439,6 +451,37 @@ python3 -c "from lyrie.evolve import LyrieEvolve; print('LyrieEvolve ready')"
 
 ---
 
+## 🛡️ Security-First Features
+
+> Things only Lyrie does. Not add-ons — baked in from day one.
+
+### CVE-Aware Provider Validation
+```bash
+lyrie security validate            # scan all providers + MCP servers
+lyrie security validate --json     # machine-readable output
+lyrie security validate --fail-on critical  # CI/CD gate
+```
+Checks for:
+- **CVE-2026-41391 class**: `PIP_INDEX_URL`/`UV_INDEX_URL` env poisoning in providers/MCP servers
+- **CVE-2026-7314/7315/7319 class**: MCP tools with unsanitized file path parameters (`filepath`, `document_name`, `path`, `context`, etc.)
+- **CVE-2026-42428 class**: Downloads without integrity verification (no checksums/SRI)
+
+### Shield Scan on Migration
+```bash
+lyrie migrate --from openclaw --secure      # import + scan imported config
+lyrie migrate --from claude-code --secure   # import MCP servers + CVE check
+lyrie migrate --from cursor --secure        # import settings + API key scan
+```
+After migration, `--secure` automatically runs `LyrieProviderValidator` on all imported providers and MCP server configs.
+
+### Tool-Loop Detection
+Every agent run automatically tracks tool call fingerprints. If the same normalized call appears 3+ times in a single run, it’s flagged as a loop and the router triggers fallback classification.
+
+### Gateway Degraded Mode
+If a channel plugin (e.g., Discord token expired) fails to start, Lyrie boots in **degraded mode** instead of crashing. The remaining channels stay online. `lyrie doctor` shows which plugins degraded and why.
+
+---
+
 ## 🛡️ The Shield Doctrine
 
 > Every Lyrie surface that touches untrusted text passes a Shield gate. **No exceptions, no carve-outs.**
@@ -567,12 +610,21 @@ cd sdk/python && PYTHONPATH=. python -m pytest tests/
 ## 🔁 Migrating from another agent?
 
 ```bash
-lyrie migrate --from openclaw    # ports memory, skills, config
-lyrie migrate --from hermes      # ports skills + trajectory
-lyrie migrate --from autogpt     # ports goals + memory
+lyrie migrate --from openclaw      # ports memory, skills, config
+lyrie migrate --from claude-code   # imports MCP servers + provider keys
+lyrie migrate --from cursor        # imports model config + extensions
+lyrie migrate --from hermes        # ports skills + trajectory
+lyrie migrate --from autogpt       # ports goals + memory
+lyrie migrate --from all           # auto-detect all installed platforms
+
+# With security scan (recommended)
+lyrie migrate --from claude-code --secure  # import + CVE check MCP servers
+lyrie migrate --detect --dry-run           # preview what would be imported
 ```
 
-One command. Full memory + skills + config retained.
+One command. 11 supported platforms. Full memory + skills + config retained.
+
+Supported: `openclaw`, `claude-code`, `cursor`, `hermes`, `autogpt`, `nanoclaw`, `zeroclaw`, `dify`, `superagi`, `nanobot`, `grip-ai`
 
 ---
 

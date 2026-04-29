@@ -5,6 +5,67 @@ All notable changes to Lyrie Agent will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-04-29
+
+### Added — Feature Parity + Better (8 Issues)
+
+#### feat(migrate): Claude Code + Cursor importers + `--secure` flag (#72)
+- **`packages/core/src/migrate/claude-code.ts`** — reads `~/.claude/claude_desktop_config.json` for MCP servers + provider API keys.
+- **`packages/core/src/migrate/cursor.ts`** — reads `~/.cursor/settings.json` for model config, API keys, and installed extensions.
+- **`scripts/migrate.ts`**: Added `--secure` flag: post-import Shield scan on API keys + CVE-2026-7314/7315/7319 MCP path-traversal check.
+- Both platforms added to `SUPPORTED_PLATFORMS` and auto-detect registry.
+- Usage: `lyrie migrate --from claude-code --secure` or `lyrie migrate --from cursor --dry-run`.
+
+#### feat(agents): Run-scoped tool-loop detection + fallback classification (#70)
+- **`packages/core/src/agents/loop-detector.ts`** — `ToolLoopDetector` class with `onRunStart/onRunEnd/isLoop/normalizeExecCall`. Detects repeated tool calls (threshold=3) within a run. Strips volatile fields (PID, duration, timestamp) during normalization.
+- **`packages/core/src/agents/fallback-classifier.ts`** — `classifyFallback(error, response)` returns `FallbackReason`. `strategyForReason(reason)` returns actionable retry/switch/reduce strategy.
+- 7 `FallbackReason` types: `empty_response`, `no_error_details`, `provider_overload`, `context_too_large`, `model_not_available`, `live_session_conflict`, `unclassified`.
+
+#### feat(memory): Incremental ingestion + asymmetric embedding (#69)
+- **`packages/core/src/memory/memory-core.ts`**:
+  - `ingestIntervalTurns: number` config (default 5) — triggers `ingestTurnsIncremental()` every N assistant turns automatically.
+  - `ingestTurnsIncremental()` — promotes recent high-value conversation turns to memories table; deduplicates via content hash prefix.
+  - `MemorySearchConfig` interface with `queryInputType` and `documentInputType` for asymmetric embedding.
+  - `applyEmbeddingPrefix(text, model, inputType)` — model-specific prefixes for nomic-embed-text, qwen3-embedding, mxbai-embed-large.
+  - `EMBEDDING_PREFIXES` constant exported.
+
+#### feat(gateway): Degraded mode + plugin profile scoping (#64)
+- **`packages/gateway/src/index.ts`**:
+  - `StartupResult` type: `{ mode: 'normal'|'degraded', activeChannels: string[], degradedPlugins: Array<{channel, error}> }`.
+  - `start()` now returns `Promise<StartupResult>` instead of `Promise<void>`.
+  - Individual plugin failures are caught and logged as warnings — gateway continues booting with remaining channels.
+  - `gateway.startupResult` getter for `lyrie doctor` diagnostics.
+  - Non-fatal exit code 2 when running in degraded mode.
+
+#### feat(providers): Cerebras + OpenRouter (#73)
+- **`packages/core/src/engine/providers/cerebras.ts`** — `CerebrasProvider` with `CEREBRAS_MODELS` (`llama-4-scout-17b-16e-instruct`, `llama-3.3-70b`). OpenAI-compatible.
+- **`packages/core/src/engine/providers/openrouter.ts`** — `OpenRouterProvider` with `dynamicModels=true`, fetches model list from `/models` with 5-minute cache, falls back to static list on network error.
+- Both exported from `packages/core/src/engine/providers/index.ts`.
+
+#### feat(security): CVE-aware provider validator (#74)
+- **`packages/core/src/security/provider-validator.ts`** — `LyrieProviderValidator` class:
+  - `validateProvider(config)` — checks for CVE-2026-41391-class (PIP/UV index poisoning) and CVE-2026-42428-class (missing integrity verification).
+  - `validateMcpServer(config)` — checks for CVE-2026-7314/7315/7319-class (unsanitized path parameter names: `filepath`, `document_name`, `path`, `context`, etc.).
+  - `validateAll(config)` — full config scan returning `ValidationReport` with issue/warning counts.
+- **`scripts/security-validate.ts`** — `lyrie security validate` CLI: human-readable + JSON output, `--fail-on <severity>` flag.
+- `security:validate` npm script added.
+
+#### feat(channels): Multi-group chat (#75)
+- **`packages/gateway/src/channels/group-chat.ts`**:
+  - `GroupChatConfig` type with `activationMode` (all/mention/command), `mentionGating`, `historyTracking`, `fifoQueue`, `debounceMs`, `maxQueueSize`.
+  - `FifoGroupQueue` — FIFO message queue with configurable 500ms debounce and capacity management.
+  - `ThreadSessionManager` — thread sessions inherit parent model override only (no transcript carryover).
+  - `parseTarget(str)` — parses `user:<id>` and `channel:<id>` target syntax for Telegram/Discord/Slack routing.
+  - `shouldActivate(text, botUsername, config)` — activation gating logic.
+
+#### feat(docs): CHANGELOG + README + version bump (#76)
+- All `package.json` files: `0.6.0` → `0.7.0`.
+- README: comparison table updated with migrate, degraded mode, CVE validation, OpenRouter, Cerebras.
+- README: "🛡️ Security-First Features" section added.
+- **762 tests pass** (up from 627 in v0.6.0, +135 new tests).
+
+---
+
 ## [Unreleased]
 
 ### Added — 4 Security Upgrades (feat: Lyrie Product Threats)
