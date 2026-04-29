@@ -12,7 +12,9 @@ export type MigratorPlatform =
   | "dify"
   | "superagi"
   | "nanobot"
-  | "grip-ai";
+  | "grip-ai"
+  | "claude-code"
+  | "cursor";
 
 export interface MigrationResult {
   platform: MigratorPlatform;
