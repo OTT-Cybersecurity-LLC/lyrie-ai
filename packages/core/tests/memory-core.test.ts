@@ -123,6 +123,45 @@ describe("MemoryCore", () => {
 
   // ─── Cross-session search (Phase 1 surface) ───────────────────────────────
 
+  // ─── Incremental ingestion (Issue #69) ─────────────────────────────────
+
+  it("ingestIntervalTurns defaults to 5", () => {
+    expect(memory.ingestIntervalTurns).toBe(5);
+  });
+
+  it("ingestIntervalTurns is configurable", () => {
+    memory.ingestIntervalTurns = 3;
+    expect(memory.ingestIntervalTurns).toBe(3);
+  });
+
+  it("ingestTurnsIncremental runs without error on empty DB", async () => {
+    const result = await memory.ingestTurnsIncremental();
+    expect(typeof result.ingested).toBe("number");
+    expect(result.ingested).toBe(0);
+  });
+
+  it("ingestTurnsIncremental ingests long assistant turns", async () => {
+    // Store a long assistant message (> 100 chars) in the last 10 min
+    const longContent = "A".repeat(200);
+    await memory.storeMessage("u1", "assistant", longContent, "telegram");
+    const result = await memory.ingestTurnsIncremental();
+    expect(result.ingested).toBeGreaterThanOrEqual(1);
+  });
+
+  it("ingestTurnsIncremental skips short messages", async () => {
+    await memory.storeMessage("u1", "assistant", "hi", "telegram");
+    const result = await memory.ingestTurnsIncremental();
+    expect(result.ingested).toBe(0);
+  });
+
+  it("ingestTurnsIncremental deduplicates on second call", async () => {
+    const longContent = "B".repeat(200);
+    await memory.storeMessage("u1", "assistant", longContent, "telegram");
+    const first = await memory.ingestTurnsIncremental();
+    const second = await memory.ingestTurnsIncremental();
+    expect(second.ingested).toBe(0); // already ingested
+  });
+
   it("searchAcrossSessions returns shielded snippets when content carries injection", async () => {
     // storeMessage -> conversations table feeds the FTS5 index
     await memory.storeMessage(
