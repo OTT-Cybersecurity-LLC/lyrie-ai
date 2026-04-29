@@ -1,6 +1,6 @@
 {
   "name": "@lyrie/mcp",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Model Context Protocol (MCP) adapter for Lyrie Agent — connect to and host MCP servers",
   "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
   "license": "MIT",
