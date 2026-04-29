@@ -23,7 +23,8 @@ import { dirname } from "node:path";
 import { LyrieRedTeam } from "../packages/core/src/aav/red-team";
 import { LyrieBlueTeam } from "../packages/core/src/aav/blue-team";
 import { AavReporter } from "../packages/core/src/aav/reporter";
-import type { OwaspLlmCategory, AttackSeverity } from "../packages/core/src/aav/corpus/index";
+import type { OwaspLlmCategory, AttackSeverity, AttackPreset } from "../packages/core/src/aav/corpus/index";
+import { getPreset } from "../packages/core/src/aav/corpus/index";
 
 // ─── Arg parsing ──────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ Arguments:
 Options:
   --api-key <key>       API key for the target endpoint
   --model <model>       Model name to test (default: gpt-3.5-turbo)
+  --preset <name>       Attack preset: entra|state-actor|critical|all (overrides --categories)
   --categories <cats>   Comma-separated OWASP categories (e.g. LLM01,LLM06)
   --severity <level>    Minimum severity: critical|high|medium|low (default: low)
   --mode <mode>         Test mode: blackbox|greybox|whitebox (default: blackbox)
@@ -65,8 +67,16 @@ Options:
   --dry-run             Simulate probes without making HTTP requests
   --help                Show this help
 
+Presets:
+  entra                 Microsoft Entra AI agent privilege escalation vectors (ENTRA-001..004)
+  state-actor           Nation-state-grade dual-use attack vectors (STATE-001..006)
+  critical              All critical severity vectors across all categories
+  all                   Full corpus (50+ vectors, default)
+
 Examples:
   lyrie redteam http://localhost:11434/v1 --model llama3 --dry-run
+  lyrie redteam https://api.openai.com/v1 --api-key $KEY --preset entra --dry-run
+  lyrie redteam http://myapp.com/v1 --preset state-actor --output sarif --out scan.sarif
   lyrie redteam https://api.openai.com/v1 --api-key $KEY --categories LLM01,LLM06
   lyrie redteam http://myapp.com/v1 --output sarif --out scan.sarif --fail-on high
 `);
@@ -84,10 +94,14 @@ const failOn = getFlag("--fail-on") as AttackSeverity | undefined;
 const isDryRun = hasFlag("--dry-run");
 const minSeverity = (getFlag("--severity") ?? "low") as AttackSeverity;
 
+const preset = getFlag("--preset") as AttackPreset | undefined;
 const categoriesRaw = getFlag("--categories");
 const categories = categoriesRaw
   ? (categoriesRaw.split(",").map((c) => c.trim()) as OwaspLlmCategory[])
   : [];
+
+// Resolve preset vectors (preset overrides categories)
+const presetVectors = preset ? getPreset(preset) : undefined;
 
 // ─── Run scan ─────────────────────────────────────────────────────────────────
 
@@ -98,6 +112,7 @@ console.error("─────────────────────�
 console.error(`   Endpoint:     ${endpoint}`);
 console.error(`   Model:        ${model}`);
 console.error(`   Mode:         ${mode}`);
+if (preset) console.error(`   Preset:       ${preset} (${presetVectors?.length ?? 0} vectors)`);
 console.error(`   Min severity: ${minSeverity}`);
 console.error(`   Categories:   ${categories.length > 0 ? categories.join(", ") : "all"}`);
 console.error(`   Concurrency:  ${concurrency}`);
@@ -114,7 +129,8 @@ const rt = new LyrieRedTeam(
     systemPrompt,
   },
   {
-    categories,
+    categories: presetVectors ? [] : categories,
+    vectors: presetVectors,
     minSeverity,
     concurrency,
     dryRun: isDryRun,

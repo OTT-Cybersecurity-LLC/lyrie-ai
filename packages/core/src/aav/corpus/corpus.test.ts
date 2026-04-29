@@ -46,9 +46,14 @@ describe("Attack Corpus — loading", () => {
     expect(unique.size).toBe(ids.length);
   });
 
-  it("all IDs match category prefix", () => {
+  it("all IDs match category prefix (or use named-corpus prefix)", () => {
+    // Named corpus vectors (ENTRA-*, STATE-*) use descriptive prefixes by design
+    const NAMED_PREFIXES = ["ENTRA-", "STATE-"];
     for (const v of ATTACK_CORPUS) {
-      expect(v.id.startsWith(v.category)).toBe(true);
+      const isNamedCorpus = NAMED_PREFIXES.some((p) => v.id.startsWith(p));
+      if (!isNamedCorpus) {
+        expect(v.id.startsWith(v.category)).toBe(true);
+      }
     }
   });
 

@@ -58,6 +58,8 @@ export interface RedTeamOptions {
   dryRun?: boolean;
   /** Timeout per probe in ms (default: 30000) */
   timeoutMs?: number;
+  /** Explicit vector list (overrides categories, used by presets) */
+  vectors?: AttackVector[];
 }
 
 export interface RedTeamScanResult {
@@ -208,7 +210,7 @@ async function sendProbe(
 
 export class LyrieRedTeam {
   private target: RedTeamTarget;
-  private opts: Required<RedTeamOptions>;
+  private opts: Required<Omit<RedTeamOptions, 'vectors'>> & { vectors?: AttackVector[] };
 
   constructor(target: RedTeamTarget, options: RedTeamOptions = {}) {
     this.target = target;
@@ -219,6 +221,7 @@ export class LyrieRedTeam {
       maxAttempts: options.maxAttempts ?? 3,
       dryRun: options.dryRun ?? false,
       timeoutMs: options.timeoutMs ?? 30_000,
+      vectors: options.vectors,
     };
   }
 
@@ -226,7 +229,10 @@ export class LyrieRedTeam {
   private selectVectors(): AttackVector[] {
     let vectors: AttackVector[];
 
-    if (this.opts.categories.length > 0) {
+    // Preset/explicit vectors take priority
+    if (this.opts.vectors && this.opts.vectors.length > 0) {
+      vectors = this.opts.vectors;
+    } else if (this.opts.categories.length > 0) {
       vectors = this.opts.categories.flatMap((cat) => getByCategory(cat));
     } else {
       vectors = [...ATTACK_CORPUS];

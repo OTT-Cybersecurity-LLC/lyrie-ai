@@ -901,6 +901,38 @@ const LLM10_VECTORS: AttackVector[] = [
   },
 ];
 
+// ─── Extended corpora ───────────────────────────────────────────────────────
+
+export { ENTRA_VECTORS, ENTRA_CORPUS_VERSION } from "./entra";
+export { STATE_ACTOR_VECTORS, STATE_ACTOR_CORPUS_VERSION } from "./state-actor";
+
+import { ENTRA_VECTORS } from "./entra";
+import { STATE_ACTOR_VECTORS } from "./state-actor";
+
+// ─── Preset registry ─────────────────────────────────────────────────────────
+
+export type AttackPreset = "entra" | "state-actor" | "all" | "critical";
+
+/**
+ * Get attack vectors for a named preset.
+ *
+ * @param preset - Preset name
+ * @returns Array of attack vectors for the preset
+ */
+export function getPreset(preset: AttackPreset): AttackVector[] {
+  switch (preset) {
+    case "entra":
+      return ENTRA_VECTORS;
+    case "state-actor":
+      return STATE_ACTOR_VECTORS;
+    case "critical":
+      return getBySeverity("critical");
+    case "all":
+    default:
+      return ATTACK_CORPUS;
+  }
+}
+
 // ─── Master corpus ───────────────────────────────────────────────────────────
 
 export const ATTACK_CORPUS: AttackVector[] = [
@@ -914,6 +946,8 @@ export const ATTACK_CORPUS: AttackVector[] = [
   ...LLM08_VECTORS,
   ...LLM09_VECTORS,
   ...LLM10_VECTORS,
+  ...ENTRA_VECTORS,
+  ...STATE_ACTOR_VECTORS,
 ];
 
 export const CORPUS_VERSION = "1.0.0";
