@@ -283,10 +283,10 @@ async function runSecureScan(lyrieDir: string): Promise<void> {
     console.log(color("  ✅ Security scan passed — no issues found.", C.green, C.bold));
   } else {
     if (totalIssues > 0) {
-      console.log(color(`  ⚠️  ${totalIssues} security issue(s) found. Review above.", C.yellow, C.bold));
+      console.log(color(`  ${totalIssues} security issue(s) found. Review above.`, C.yellow, C.bold));
     }
     if (totalWarnings > 0) {
-      console.log(color(`  ℹ️  ${totalWarnings} warning(s). Run with --verbose for details.`, C.dim));
+      console.log(color(`  ${totalWarnings} warning(s). Run with --verbose for details.`, C.dim));
     }
   }
   console.log();
