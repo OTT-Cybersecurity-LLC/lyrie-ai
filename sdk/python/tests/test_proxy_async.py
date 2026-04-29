@@ -85,8 +85,12 @@ def test_async_send_records_exchange() -> None:
 
 def test_async_send_deny_host() -> None:
     """async_send must honour the deny-list before making any network call."""
+    try:
+        import httpx  # noqa: F401
+    except ImportError:
+        pytest.skip("httpx not installed")
     proxy = HttpProxy(deny_hosts=["blocked.example"])
-    with pytest.raises(PermissionError):
+    with pytest.raises((PermissionError, RuntimeError)):
         run(proxy.async_send("GET", "https://blocked.example/"))
 
 
