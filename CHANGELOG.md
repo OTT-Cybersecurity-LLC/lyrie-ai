@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 4 Security Upgrades (feat: Lyrie Product Threats)
+
+#### feat(aav): Microsoft Entra AI Agent Priv-Esc Detection
+- **`packages/core/src/aav/corpus/entra.ts`** — 4 critical attack vectors for Entra AI agent privilege escalation.
+  - `ENTRA-001`: AI Agent Admin Role Abuse (Global Administrator assignment without PIM)
+  - `ENTRA-002`: Copilot token exfiltration via indirect prompt injection in documents
+  - `ENTRA-003`: Cross-tenant agent permission escalation (B2B boundary bypass)
+  - `ENTRA-004`: Service principal hijack via AI agent context (credential injection)
+- New preset: `lyrie redteam --preset entra` — runs only Entra-specific vectors.
+- All vectors: LLM08 (Excessive Agency), critical severity, GOVERN-1.1, Article 9.
+- 10+ unit tests in `entra.test.ts`.
+
+#### feat(aav): Dual-Use LLM Attack Corpus (State-Actor Grade)
+- **`packages/core/src/aav/corpus/state-actor.ts`** — 6 critical attack vectors representing nation-state APT capabilities.
+  - `STATE-001`: Automated spear-phishing via agent context theft
+  - `STATE-002`: Multi-step indirect prompt injection chain (APT-style persistence)
+  - `STATE-003`: AI-assisted reconnaissance via tool chaining
+  - `STATE-004`: Deepfake voice social engineering script generation
+  - `STATE-005`: Supply chain prompt injection via ingested vendor documents
+  - `STATE-006`: Federated identity abuse via agent delegation (OBO flow)
+- New preset: `lyrie redteam --preset state-actor`.
+- Categories: LLM01 (Prompt Injection) + LLM08 (Excessive Agency).
+- 12+ unit tests in `state-actor.test.ts`.
+
+#### feat(governance): AI Governance Scorecard
+- **`packages/core/src/governance/scorecard.ts`** — NIST AI RMF + EU AI Act assessment engine.
+  - `AiGovernanceScorecard.assess(target)` — produces `GovernanceReport` (0–100 score, maturity level, gaps, recommendations).
+  - 8 governance questions covering GOVERN-1.1, GOVERN-2.2, MANAGE-1.1, MEASURE-2.5, MANAGE-4.1, MAP-5.1, MEASURE-2.9, MAP-3.5.
+  - Interactive questionnaire mode: `AiGovernanceScorecard.runInteractive()`.
+  - Config auto-inference: heuristic analysis of agent config files.
+  - EU AI Act risk classification: High-Risk / Limited-Risk / Minimal-Risk.
+  - CLI: `lyrie governance assess [--config <path>] [--interactive] [--out report.json]`.
+- 15 unit tests in `scorecard.test.ts`.
+
+#### feat(governance): Agent Permission Analyzer
+- **`packages/core/src/governance/permissions.ts`** — tool manifest risk scanner.
+  - `AgentPermissionAnalyzer.analyze(manifest)` — produces `PermissionReport` (risk score 0–100, excessive permissions, missing controls).
+  - 8 tool risk rules covering: file write, email/messaging, database write, external APIs, PII access, code execution, financial transactions, identity management.
+  - Parses OpenAI tool format, Lyrie config format, and heuristic extraction from arbitrary files.
+  - All findings include NIST AI RMF + EU AI Act references.
+  - CLI: `lyrie governance permissions <path-to-agent-config>`.
+- 13 unit tests in `permissions.test.ts`.
+
+#### Shared: Corpus Index + Exports
+- `packages/core/src/aav/corpus/index.ts`: Added `getPreset()`, `AttackPreset` type, preset registry (entra, state-actor, critical, all).
+- ENTRA and STATE-ACTOR vectors included in `ATTACK_CORPUS` (corpus now 60+ vectors).
+- `scripts/redteam.ts`: Added `--preset <name>` flag.
+- `scripts/governance.ts`: New CLI script with `assess` and `permissions` subcommands.
+- All new types/classes exported from `packages/core/src/index.ts`.
+- **All 627 tests pass.**
+
 ## [0.6.0] — 2026-04-29
 
 ### Added — Phase 5 (LyrieAAV — Autonomous Adversarial Validation)

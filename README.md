@@ -92,6 +92,7 @@ Usage: lyrie redteam <endpoint> [options]
 
   --api-key <key>       API key for the target endpoint
   --model <model>       Model name (default: gpt-3.5-turbo)
+  --preset <name>       Attack preset: entra|state-actor|critical|all
   --categories <cats>   OWASP categories (e.g. LLM01,LLM06)
   --severity <level>    Min severity: critical|high|medium|low
   --mode <mode>         blackbox|greybox|whitebox
@@ -101,9 +102,60 @@ Usage: lyrie redteam <endpoint> [options]
   --out <path>          Write to file
   --fail-on <sev>       Exit 1 on findings >= severity
   --dry-run             Simulate without HTTP requests
+
+Preset examples:
+  lyrie redteam <endpoint> --preset entra --dry-run       # Entra priv-esc (4 vectors)
+  lyrie redteam <endpoint> --preset state-actor --dry-run  # Nation-state attacks (6 vectors)
 ```
 
 Full architecture: [`docs/aav.md`](docs/aav.md)
+
+---
+
+## 🏙️ AI Governance
+
+Assess your AI deployment against **NIST AI RMF** and **EU AI Act** requirements.
+
+```bash
+# Interactive NIST AI RMF assessment (8 governance questions)
+lyrie governance assess --interactive
+
+# Auto-infer from agent config file
+lyrie governance assess --config ./agent-config.json --out report.json
+
+# Analyze an agent's tool permissions for risk
+lyrie governance permissions ./tools-manifest.json
+
+# Get JSON output
+lyrie governance permissions ./agent.config.json --json --out perms.json
+```
+
+### Governance Scorecard
+
+Scores your AI deployment 0–100 across 4 NIST AI RMF functions:
+
+| Function | Covers |
+|----------|--------|
+| **GOVERN** | AI inventory, permission scoping |
+| **MAP** | Vendor assessment, data governance |
+| **MEASURE** | Audit logging, model drift monitoring |
+| **MANAGE** | Human oversight, incident response |
+
+Maturity levels: `None` → `Initial` → `Developing` → `Defined` → `Managed` → `Optimizing`
+
+EU AI Act classification: `High-Risk` / `Limited-Risk` / `Minimal-Risk`
+
+### Agent Permission Analyzer
+
+Scans your agent's tool manifest and flags permission risks:
+
+| Risk Level | Example Tools | Issue |
+|-----------|---------------|-------|
+| 🔴 CRITICAL | `execute_code`, `assign_role`, `process_payment` | Must have human approval + audit log |
+| 🟠 HIGH | `write_file`, `user_data` | Needs scoping + audit log |
+| 🟡 MEDIUM | `send_email`, `http_request` | Needs rate limiting + allowlist |
+
+All findings include NIST AI RMF and EU AI Act references.
 
 ---
 
