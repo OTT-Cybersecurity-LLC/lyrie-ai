@@ -39,7 +39,7 @@ jobs:
             echo "::warning::NPM_TOKEN secret not set; skipping publish."
             exit 0
           fi
-          npm publish --provenance --access public
+          npm publish --provenance --access public || { code=$?; if npm view $(node -p "require('./package.json').name")@$(node -p "require('./package.json').version") version > /dev/null 2>&1; then echo "::notice::Version already published, skipping."; else exit $code; fi; }
 
   build-binaries:
     name: Build Binary (${{ matrix.os }} / ${{ matrix.target }})
@@ -51,7 +51,7 @@ jobs:
           - os: macos-14
             target: aarch64-apple-darwin
             artifact: lyrie-aarch64-apple-darwin.tar.gz
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
             artifact: lyrie-x86_64-apple-darwin.tar.gz
           - os: ubuntu-latest
