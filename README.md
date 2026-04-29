@@ -36,7 +36,7 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 
 > **Cybersecurity isn't a plugin — it's Layer 1.**
 
-### Highlights (current main, [`v0.5.0`](CHANGELOG.md))
+### Highlights (current main, [`v0.6.0`](CHANGELOG.md))
 
 - 🛡️ **The Shield Doctrine** — every layer of Lyrie that touches untrusted text passes a Shield gate. ([`docs/shield-doctrine.md`](docs/shield-doctrine.md))
 - 🔍 **Lyrie Attack-Surface Mapper** (`/understand`) — maps entry points, trust boundaries, tainted data flows, and ranked risk hotspots before any scanner runs.
@@ -54,6 +54,56 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 - 🧬 **LyrieEvolve** — the agent scores every task, auto-generates reusable skills from wins, retrieves top-3 past successes as context before each new task, and runs nightly GRPO fine-tuning on your own GPU. Domain-specific rewards for cyber, SEO, trading, and code. ([`docs/evolve.md`](docs/evolve.md))
 - ☁️ **Pluggable execution backends** — run Lyrie scans locally, in a Daytona devbox, or as a Modal serverless function. Same Shield Doctrine, same SARIF, different host.
 - 📡 **9 multi-channel adapters** — Telegram, WhatsApp, Discord, Slack, Matrix, Mattermost, IRC, Feishu, Rocket.Chat, WebChat — one inbox, all secured.
+- 🔴 **LyrieAAV** — Autonomous Adversarial Validation: 50+ attack vectors across all OWASP LLM Top 10 categories, automated verdict scoring, SARIF output, Python + TypeScript SDKs. Beats Audn.AI at its own game. ([`docs/aav.md`](docs/aav.md))
+
+---
+
+## 🔴 LyrieAAV — Autonomous Adversarial Validation
+
+LyrieAAV is Lyrie's AI red-teaming engine. It attacks deployed AI agents and LLMs to find
+security vulnerabilities before adversaries do.
+
+```bash
+# Attack any OpenAI-compatible endpoint
+bun run scripts/redteam.ts http://localhost:11434/v1 --model llama3 --dry-run
+bun run scripts/redteam.ts https://api.openai.com/v1 --api-key $KEY --fail-on high
+bun run scripts/redteam.ts http://myapp.com/v1 --output sarif --out scan.sarif
+```
+
+### vs Audn.AI (Pingu Unchained / PenClaw)
+
+| Feature | LyrieAAV | Audn.AI |
+|---|---|---|
+| Attack vectors | **50+** | ~20 |
+| OWASP LLM Top 10 | **All 10** | Partial |
+| Auto verdict scoring | **✅ Regex-based** | Manual review |
+| NIST AI RMF refs | **✅ Every vector** | ❌ |
+| EU AI Act refs | **✅ Every vector** | ❌ |
+| TypeScript SDK | **✅** | ❌ |
+| Streaming API | **✅ `scanStream()`** | ❌ |
+| Retry variants | **✅ 3 per vector** | ❌ |
+| Open source | **✅ MIT** | Proprietary |
+| Price | **Free** | Paid |
+
+### CLI Reference
+
+```
+Usage: lyrie redteam <endpoint> [options]
+
+  --api-key <key>       API key for the target endpoint
+  --model <model>       Model name (default: gpt-3.5-turbo)
+  --categories <cats>   OWASP categories (e.g. LLM01,LLM06)
+  --severity <level>    Min severity: critical|high|medium|low
+  --mode <mode>         blackbox|greybox|whitebox
+  --system-prompt <sp>  Inject system prompt
+  --concurrency <n>     Parallel probes (default: 3)
+  --output <fmt>        markdown|sarif|json
+  --out <path>          Write to file
+  --fail-on <sev>       Exit 1 on findings >= severity
+  --dry-run             Simulate without HTTP requests
+```
+
+Full architecture: [`docs/aav.md`](docs/aav.md)
 
 ---
 

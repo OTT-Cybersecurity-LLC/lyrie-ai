@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-04-29
+
+### Added — Phase 5 (LyrieAAV — Autonomous Adversarial Validation)
+
+#### Issue #57 — Attack Corpus (`packages/core/src/aav/corpus/`)
+- **`packages/core/src/aav/corpus/index.ts`** — 50+ attack vectors across all 10 OWASP LLM Top 10 categories (5+ per category).
+- `AttackVector` and `OwaspLlmCategory` types with full MITRE ATT&CK, NIST AI RMF, and EU AI Act references.
+- Per-vector regex `successIndicators` and `failIndicators` for automated verdict scoring.
+- Corpus helpers: `getByCategory`, `getBySeverity`, `getById`, `getCategories`.
+- 8 unit tests covering corpus loading, category filter, and severity sort.
+- Full exports from `packages/core/src/index.ts`.
+
+#### Issue #58 — LyrieRedTeam Engine (`packages/core/src/aav/red-team.ts`)
+- **`LyrieRedTeam`** class with `scan()`, `probe()`, `scanStream()` methods.
+- `RedTeamTarget` type: endpoint (OpenAI-compatible URL), apiKey, systemPrompt, model, mode (blackbox/whitebox/greybox).
+- `ProbeResult` type: vector, prompt, response, verdict (success/partial/defended/error), confidence, evidence, latencyMs.
+- Real HTTP calls to OpenAI-compatible endpoints using fetch (chat completions format).
+- Automatic verdict scoring via `scoreVerdict()` using success/fail indicator regex matching.
+- Retry logic: up to 3 attempts with payload variants (original + 2 framing variants).
+- Configurable concurrency (default 3 parallel probes).
+- 15 unit tests covering verdict scoring, retry, dry-run, streaming, and filtering.
+
+#### Issue #59 — Blue Team Scorer (`packages/core/src/aav/blue-team.ts`)
+- **`LyrieBlueTeam`** class with `score()`, `scoreProbe()`, `remediate()` methods.
+- `DefenseReport` type: overallScore (0-100), grade (A-F), categoryScores, criticalVulns, highVulns, defended, attackSuccessRate, remediations.
+- Grade thresholds: A≥90, B≥75, C≥60, D≥45, F<45.
+- Per-probe scoring: defended critical +10, defended high +5, breached critical -15, breached high -8, breached medium -5, breached low -3.
+- Remediation generator for all 10 OWASP categories with NIST AI RMF + EU AI Act refs.
+- 10 unit tests covering grades, scoring, and remediations.
+
+#### Issue #60 — AAV Reporter (`packages/core/src/aav/reporter.ts`)
+- **`AavReporter`** class with `toSarif()`, `toMarkdown()`, `toJson()` methods.
+- SARIF 2.1.0 output compatible with GitHub Code Scanning (each successful attack = SARIF result, ruleId = OWASP vector ID, severity mapped to CVSS-like numeric).
+- Markdown: grade header, critical vulns table, OWASP coverage table, recommended actions with emoji severity.
+- JSON: full structured report with all probe results.
+- 8 unit tests.
+
+#### Issue #61 — CLI (`scripts/redteam.ts`)
+- `lyrie redteam <endpoint>` with full option set: `--api-key`, `--model`, `--categories`, `--severity`, `--mode`, `--system-prompt`, `--concurrency`, `--output`, `--out`, `--fail-on`, `--dry-run`.
+- Action inputs added to `action/action.yml`: `redteam-endpoint`, `redteam-api-key`, `redteam-categories`, `redteam-fail-on`.
+- Action outputs: `aav-grade`, `aav-score`, `aav-critical-count`.
+- 8 CLI integration tests.
+
+#### Issue #62 — Python SDK (`sdk/python/lyrie/redteam.py`)
+- **`LyrieRedTeam`** async Python client.
+- Methods: `scan()`, `probe()`, `scan_stream()`, `build_report()`, `to_sarif()`, `to_markdown()`.
+- Pydantic models: `RedTeamConfig`, `ProbeResult`, `DefenseReport`.
+- Embedded 10-vector mini-corpus covering all critical attack categories.
+- 10 pytest tests in `sdk/python/tests/test_redteam.py`.
+
+#### Issue #63 — Docs + Version
+- `README.md`: new `🔴 LyrieAAV` section with Audn.AI comparison table and CLI reference.
+- `docs/aav.md`: full architecture documentation.
+- `CHANGELOG.md`: this entry.
+- All `package.json` versions bumped from `0.5.0` → `0.6.0`.
+
 ## [0.5.0] — 2026-04-29
 
 ### Added — Phase 4 (LyrieEvolve — Autonomous Self-Improvement)

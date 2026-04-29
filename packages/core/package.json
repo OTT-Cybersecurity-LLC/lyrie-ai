@@ -1,6 +1,6 @@
 {
   "name": "@lyrie/core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Lyrie Agent Core — The brain",
   "main": "src/index.ts",
   "scripts": {
