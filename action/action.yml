@@ -55,6 +55,20 @@ inputs:
     description: 'GitHub token for PR comments + SARIF upload (defaults to GITHUB_TOKEN).'
     required: false
     default: ${{ github.token }}
+  # ─── AAV (Autonomous Adversarial Validation) inputs ─────────────────────────────────────────
+  redteam-endpoint:
+    description: 'OpenAI-compatible endpoint to red-team (e.g. http://localhost:11434/v1). Enables AAV when set.'
+    required: false
+  redteam-api-key:
+    description: 'API key for the red-team target endpoint.'
+    required: false
+  redteam-categories:
+    description: 'Comma-separated OWASP LLM categories to test (e.g. LLM01,LLM06). Default: all.'
+    required: false
+  redteam-fail-on:
+    description: 'Exit non-zero if any AAV finding is at or above this severity: critical|high|medium|low|none.'
+    required: false
+    default: 'none'
 
 outputs:
   findings-count:
@@ -67,6 +81,14 @@ outputs:
     description: 'Path to the generated Markdown report.'
   sarif-path:
     description: 'Path to the generated SARIF file (when upload-sarif=true).'
+  # AAV outputs
+  aav-grade:
+    description: 'LyrieAAV defense grade (A-F). Only set when redteam-endpoint is provided.'
+  aav-score:
+    description: 'LyrieAAV overall defense score (0-100). Only set when redteam-endpoint is provided.'
+  aav-critical-count:
+    description: 'Number of critical vulnerabilities found by LyrieAAV.'
+
 
 runs:
   using: 'composite'

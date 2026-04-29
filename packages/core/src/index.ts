@@ -37,6 +37,28 @@ export type { ShieldGuardLike, ShieldVerdict } from "./engine/shield-guard";
 // Lyrie Pentest — attack-surface mapper (`/understand`)
 export { buildAttackSurface, MAPPER_VERSION as ATTACK_SURFACE_MAPPER_VERSION } from "./pentest/attack-surface";
 
+// Lyrie AAV — Autonomous Adversarial Validation (red-team engine)
+export { LyrieRedTeam, scoreVerdict } from "./aav/red-team";
+export type { RedTeamTarget, RedTeamOptions, RedTeamScanResult, ProbeResult, ProbeVerdict, RedTeamMode } from "./aav/red-team";
+
+// Lyrie AAV — Blue Team Scorer
+export { LyrieBlueTeam } from "./aav/blue-team";
+export type { DefenseReport, DefenseGrade, CategoryScore, Remediation } from "./aav/blue-team";
+
+// Lyrie AAV — Reporter (SARIF, Markdown, JSON)
+export { AavReporter } from "./aav/reporter";
+
+// Lyrie AAV — Attack Corpus
+export {
+  ATTACK_CORPUS,
+  CORPUS_VERSION,
+  getByCategory,
+  getBySeverity,
+  getById,
+  getCategories,
+} from "./aav/corpus/index";
+export type { AttackVector, OwaspLlmCategory, AttackSeverity } from "./aav/corpus/index";
+
 // Lyrie Pentest — Stages A–F exploitation validator
 export {
   validateFinding,
