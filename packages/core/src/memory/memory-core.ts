@@ -82,6 +82,16 @@ export interface EntityEntry {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function hashPrefix(text: string): string {
+  // Simple deterministic 8-char hex from content for dedup
+  let h = 0x811c9dc5;
+  for (let i = 0; i < Math.min(text.length, 256); i++) {
+    h ^= text.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+
 function generateId(): string {
   return `lyrie_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -187,6 +197,69 @@ const SCHEMA_SQL = `
 
 // ─── MemoryCore ──────────────────────────────────────────────────────────────
 
+// ─── Memory Search Config ───────────────────────────────────────────────────
+
+/**
+ * Asymmetric embedding config: query-side and document-side input types
+ * allow models like nomic-embed-text to use different prefixes for search
+ * queries vs. indexed documents, improving retrieval quality.
+ */
+export interface MemorySearchConfig {
+  limit?: number;
+  importance?: Importance;
+  source?: Source;
+  /** Input type for the query embedding (e.g. "search_query" for nomic-embed-text). */
+  queryInputType?: EmbeddingInputType;
+  /** Input type for document embeddings (e.g. "search_document" for nomic-embed-text). */
+  documentInputType?: EmbeddingInputType;
+}
+
+export type EmbeddingInputType =
+  | "search_query"      // nomic-embed-text, mxbai-embed-large
+  | "search_document"   // nomic-embed-text, mxbai-embed-large
+  | "classification"    // nomic-embed-text
+  | "clustering"        // nomic-embed-text
+  | "query"             // qwen3-embedding
+  | "passage"           // qwen3-embedding
+  | string;             // future/custom
+
+/**
+ * Model-specific embedding prefixes for asymmetric retrieval.
+ * Applied when queryInputType / documentInputType are set.
+ */
+export const EMBEDDING_PREFIXES: Record<string, Record<string, string>> = {
+  "nomic-embed-text": {
+    search_query:    "search_query: ",
+    search_document: "search_document: ",
+    classification:  "classification: ",
+    clustering:      "clustering: ",
+  },
+  "qwen3-embedding": {
+    query:   "Instruct: Represent this sentence for searching relevant passages.\nQuery: ",
+    passage: "",  // no prefix for passages
+  },
+  "mxbai-embed-large": {
+    search_query:    "Represent this sentence for searching relevant passages: ",
+    search_document: "",
+  },
+};
+
+/**
+ * Apply an asymmetric prefix to text based on model + input type.
+ * Returns the text unchanged if no prefix is configured.
+ */
+export function applyEmbeddingPrefix(
+  text: string,
+  model: string,
+  inputType: EmbeddingInputType
+): string {
+  const prefixes = EMBEDDING_PREFIXES[model];
+  if (!prefixes) return text;
+  const prefix = prefixes[inputType];
+  if (!prefix) return text;
+  return prefix + text;
+}
+
 export class MemoryCore {
   private basePath: string;
   private dbPath: string;
@@ -194,6 +267,11 @@ export class MemoryCore {
   private db!: Database;
   private initialized = false;
   private backupIntervalId: ReturnType<typeof setInterval> | null = null;
+
+  /** Number of assistant turns between incremental ingestion cycles. */
+  ingestIntervalTurns: number = 5;
+  /** Counter for assistant turns since last ingest. */
+  private _assistantTurnCount = 0;
 
   constructor(basePath?: string) {
     this.basePath = basePath || join(process.env.HOME || "~", ".lyrie", "memory");
@@ -452,7 +530,7 @@ export class MemoryCore {
    * Search memories with keyword + fuzzy matching.
    * Ranked by relevance score (importance + match quality).
    */
-  async recall(query: string, options: { limit?: number; importance?: Importance; source?: Source } = {}): Promise<MemoryEntry[]> {
+  async recall(query: string, options: MemorySearchConfig = {}): Promise<MemoryEntry[]> {
     const limit = options.limit || 10;
 
     let sql = "SELECT * FROM memories WHERE 1=1";
@@ -494,7 +572,58 @@ export class MemoryCore {
     const result = this.db.prepare(
       "INSERT INTO conversations (user_id, role, content, channel, timestamp) VALUES (?, ?, ?, ?, ?)"
     ).run(userId, role, content, channel, nowISO());
+
+    // Incremental ingestion: trigger every N assistant turns
+    if (role === "assistant") {
+      this._assistantTurnCount++;
+      if (this._assistantTurnCount % this.ingestIntervalTurns === 0) {
+        // Fire-and-forget to avoid blocking the message store
+        this.ingestTurnsIncremental().catch((err) => {
+          console.warn("[memory] incremental ingest error:", err instanceof Error ? err.message : err);
+        });
+      }
+    }
+
     return Number(result.lastInsertRowid);
+  }
+
+  /**
+   * Incremental ingestion: promote recent high-value conversation turns
+   * to the memories table so they survive context window pruning.
+   *
+   * Called automatically every `ingestIntervalTurns` assistant turns.
+   * Safe to call manually at any time.
+   */
+  async ingestTurnsIncremental(): Promise<{ ingested: number }> {
+    // Find assistant turns from the last ingestIntervalTurns * 2 messages
+    // that look important (long, or contain key phrases)
+    const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // last 10 min
+    const recentTurns = this.db.query(
+      `SELECT * FROM conversations
+       WHERE role = 'assistant' AND timestamp >= ?
+       ORDER BY timestamp DESC LIMIT ?`
+    ).all(cutoff, this.ingestIntervalTurns * 2) as ConversationMessage[];
+
+    let ingested = 0;
+    for (const turn of recentTurns) {
+      if (!turn.content || turn.content.length < 100) continue; // skip trivial
+
+      // Only ingest if not already stored (check by content hash prefix)
+      const key = `auto:turn:${hashPrefix(turn.content)}`;
+      const existing = this.db.query("SELECT id FROM memories WHERE key = ?").get(key) as any;
+      if (existing) continue;
+
+      await this.store(
+        key,
+        turn.content.slice(0, 2000), // cap at 2000 chars
+        turn.content.length > 500 ? "medium" : "low",
+        "agent",
+        ["auto-ingested", `channel:${turn.channel}`],
+      );
+      ingested++;
+    }
+
+    return { ingested };
   }
 
   async getConversationHistory(
