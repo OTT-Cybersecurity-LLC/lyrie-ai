@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-04-29
+
+### Added — Phase 4 (LyrieEvolve — Autonomous Self-Improvement)
+
+#### Issue #49 — Task Outcome Scoring System
+- **`packages/core/src/evolve/scorer.ts`** — TaskOutcome type with domain, score (0/0.5/1),
+  and domain-specific signals (cyber/seo/trading/code/general).
+- **Scorer class** with domain-specific scoring rules: `scoreCyber`, `scoreSeo`,
+  `scoreTrading`, `scoreCode`, `scoreGeneral`.
+- Outcomes appended to `~/.lyrie/evolve/outcomes.jsonl` (Shield-scanned before write).
+- 32 unit tests in `packages/core/src/evolve/scorer.test.ts`.
+- Full TypeScript exports from `packages/core/src/index.ts`.
+
+#### Issue #50 — Skill Auto-Generation
+- **`packages/core/src/evolve/skill-extractor.ts`** — Reads outcomes.jsonl, finds
+  score >= 0.5 sessions, synthesizes 1-3 skill patterns per domain.
+- **`HeuristicExtractorLLM`** — Built-in heuristic extractor (no LLM dependency);
+  injectable `ExtractorLLM` interface for real LLM integration.
+- Writes OpenClaw-compatible SKILL.md files to `skills/auto-generated/`.
+- **Cosine similarity dedup** — skips patterns with similarity > 0.85 to existing skills.
+- 22 unit tests in `packages/core/src/evolve/skill-extractor.test.ts`.
+- CLI: `lyrie evolve extract` (`scripts/evolve.ts`).
+
+#### Issue #51 — Contexture Layer
+- **`packages/core/src/evolve/contexture.ts`** — In-memory skill context store.
+  - `retrieve(query, domain?, topK=3)` → `RetrievalResult[]` via cosine similarity.
+  - `buildInjection(contexts)` → structured prompt injection string.
+  - **MMR (Maximal Marginal Relevance)** diversity in retrieval (λ=0.7 default).
+  - Shield-scanned on store; evicts lowest-score entries at capacity.
+- 16 unit tests in `packages/core/src/evolve/contexture.test.ts`.
+- Constants: `CONTEXTURE_TABLE = "lyrie_contexture"`.
+
+#### Issue #52 — Dream Cycle Pipeline
+- **`packages/core/src/evolve/dream-cycle.ts`** — Full batch pipeline:
+  1. Count unprocessed outcomes
+  2. Extract skills via `SkillExtractor`
+  3. Prune skills (avgScore < 0.3 after 5+ uses) with `findPruneCandidates` + `pruneSkills`
+  4. Return `DreamReport` with full stats
+- **`scripts/dream-evolve.ts`** — CLI: `bun run scripts/dream-evolve.ts [--dry-run]`.
+- 11 unit tests in `packages/core/src/evolve/dream-cycle.test.ts`.
+- CLI: `lyrie evolve dream [--dry-run]`.
+
+#### Issue #54 — Evolve CLI
+- **`scripts/evolve.ts`** — Full `lyrie evolve` command:
+  - `status` — version info + outcome/skill counts
+  - `extract` — trigger skill extraction
+  - `dream [--dry-run]` — run Dream Cycle
+  - `stats` — outcome statistics by domain and score
+  - `skills list` — list auto-generated skills
+  - `skills show <id>` — show skill file content
+  - `skills prune` — identify and remove stale skills
+  - `train` — export high-quality outcomes as training batch
+
+#### Issue #55 — Python SDK evolve bindings
+- **`sdk/python/lyrie/evolve.py`** — `LyrieEvolve` async client:
+  - `score(task_id, domain, signals, summary?)` → `TaskOutcome`
+  - `get_context(query, domain?, top_k=3)` → `List[SkillContext]`
+  - `extract_skills(dry_run?)` → `ExtractionResult`
+  - `get_training_batch(domain?, min_score?, limit=100)` → `List[TrainingEntry]`
+- **Pydantic models**: `TaskOutcome`, `SkillContext`, `TrainingEntry`, `ExtractionResult`
+  (fallback to dataclasses when pydantic not installed).
+- Scoring rules ported from TypeScript (all 5 domains).
+- 23 unit tests in `sdk/python/tests/test_evolve.py`. All pass.
+- Exported from `lyrie/__init__.py`.
+
+#### Issue #56 — Docs + CHANGELOG
+- This CHANGELOG section.
+- `docs/evolve.md` — Full LyrieEvolve documentation.
+- `README.md` — Added LyrieEvolve section.
+- Version bumped to 0.5.0 in all package.json files.
+
+**Total test suite (0.5.0): 442 TS + 86 Py = 528 / 0**
+(was 379 TS + 63 Py = 442 / 0; added 63 TS + 23 Py = 86 new tests)
+
+---
+
 ### Added — Phase 3 (Distribution — part 4: Pluggable execution backends)
 - **Lyrie execution-backend abstraction** (`packages/core/src/backends/`).
   Pluggable runner for Lyrie scans — same Shield Doctrine, same SARIF,
