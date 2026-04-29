@@ -56,8 +56,34 @@ export {
   getBySeverity,
   getById,
   getCategories,
+  getPreset,
+  ENTRA_VECTORS,
+  ENTRA_CORPUS_VERSION,
+  STATE_ACTOR_VECTORS,
+  STATE_ACTOR_CORPUS_VERSION,
 } from "./aav/corpus/index";
-export type { AttackVector, OwaspLlmCategory, AttackSeverity } from "./aav/corpus/index";
+export type { AttackVector, OwaspLlmCategory, AttackSeverity, AttackPreset } from "./aav/corpus/index";
+
+// Lyrie Governance — AI Governance Scorecard
+export { AiGovernanceScorecard, GOVERNANCE_QUESTIONS } from "./governance/scorecard";
+export type {
+  GovernanceTarget,
+  GovernanceReport,
+  GovernanceAnswers,
+  GovernanceGap,
+  MaturityLevel,
+  EuAiActRisk,
+  CategoryScore as GovernanceCategoryScore,
+} from "./governance/scorecard";
+
+// Lyrie Governance — Agent Permission Analyzer
+export { AgentPermissionAnalyzer, parseToolManifest } from "./governance/permissions";
+export type {
+  ToolManifest,
+  ToolDefinitionEntry,
+  PermissionReport,
+  PermissionFinding,
+} from "./governance/permissions";
 
 // Lyrie Pentest — Stages A–F exploitation validator
 export {
