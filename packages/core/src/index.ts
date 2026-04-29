@@ -273,7 +273,28 @@ export type { MigrationResult, MigratorPlatform } from "./migrate/types";
 
 // ─── Version ─────────────────────────────────────────────────────────────────
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.5.0";
+
+// LyrieEvolve — Autonomous Self-Improvement
+export { Scorer, SCORER_VERSION } from "./evolve/scorer";
+export type { TaskOutcome, Domain, Score, DomainSignals, ScorerOptions } from "./evolve/scorer";
+export type { CyberSignals, SeoSignals, TradingSignals, CodeSignals, GeneralSignals } from "./evolve/scorer";
+
+export {
+  SkillExtractor,
+  HeuristicExtractorLLM,
+  tokenize,
+  cosineSimilarity,
+  renderSkillMd,
+  EXTRACTOR_VERSION,
+} from "./evolve/skill-extractor";
+export type { SkillPattern, ExtractionResult, ExtractorLLM, SkillExtractorOptions } from "./evolve/skill-extractor";
+
+export { Contexture, mmrSelect, CONTEXTURE_VERSION, CONTEXTURE_TABLE } from "./evolve/contexture";
+export type { SkillContext, RetrievalResult, ContextureOptions } from "./evolve/contexture";
+
+export { runDreamCycle, findPruneCandidates, pruneSkills, DREAM_VERSION } from "./evolve/dream-cycle";
+export type { DreamReport, DreamCycleOptions, PruneCandidate } from "./evolve/dream-cycle";
 
 // ─── Boot ────────────────────────────────────────────────────────────────────
 

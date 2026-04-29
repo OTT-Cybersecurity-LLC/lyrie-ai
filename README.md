@@ -283,6 +283,34 @@ The Shield is not a wrapper. It runs underneath every other layer.
 
 ---
 
+## 🧬 LyrieEvolve — Autonomous Self-Improvement
+
+> Lyrie gets better the more it works. Every task outcome is scored, patterns are extracted, and the Dream Cycle prunes what doesn't work.
+
+| Component | Description |
+|-----------|-------------|
+| **Scorer** | Records task outcomes (score 0/0.5/1) across 5 domains: cyber, seo, trading, code, general |
+| **SkillExtractor** | Reads `outcomes.jsonl`, synthesizes OpenClaw-compatible SKILL.md files with cosine dedup |
+| **Contexture** | MMR-diverse retrieval of relevant skill contexts → prompt injection for active tasks |
+| **Dream Cycle** | Batch pipeline: score → extract → prune → report (runs at 4AM cron) |
+
+**Quick start:**
+
+```bash
+# Check evolve status
+bun run scripts/evolve.ts status
+
+# Run the Dream Cycle (preview)
+bun run scripts/evolve.ts dream --dry-run
+
+# Python SDK
+python3 -c "from lyrie.evolve import LyrieEvolve; print('LyrieEvolve ready')"
+```
+
+**Full docs:** [`docs/evolve.md`](docs/evolve.md)
+
+---
+
 ## 🛡️ The Shield Doctrine
 
 > Every Lyrie surface that touches untrusted text passes a Shield gate. **No exceptions, no carve-outs.**
