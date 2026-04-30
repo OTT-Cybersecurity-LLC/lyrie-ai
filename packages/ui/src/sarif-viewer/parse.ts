@@ -1,139 +1,55 @@
-/**
- * Lyrie SARIF Viewer — Parser
- *
- * Converts a SARIF 2.1.0 document into ParsedSarif (enriched flat view).
- * Handles missing/malformed fields gracefully — never throws.
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
-import type {
-  SarifDocument,
-  SarifResult,
-  SarifRule,
-  ParsedFinding,
-  ParsedSarif,
-  SeverityLevel,
-} from "./types";
-
-const SEVERITY_ORDER: SeverityLevel[] = ["error", "warning", "note", "none"];
-
-/** Normalise any level string to one of our four buckets. */
-function normLevel(raw?: string): SeverityLevel {
-  const s = (raw ?? "none").toLowerCase();
-  if (s === "error") return "error";
-  if (s === "warning") return "warning";
-  if (s === "note" || s === "informational" || s === "open" || s === "review") return "note";
-  return "none";
-}
-
-/** Extract a human-readable location string + line from a SARIF result. */
-function extractLocation(result: SarifResult): {
-  location?: string;
-  line?: number;
-  locationIsUrl: boolean;
-} {
-  const loc = result.locations?.[0];
-  if (!loc) return { locationIsUrl: false };
-
-  const phys = loc.physicalLocation;
-  const uri = phys?.artifactLocation?.uri;
-  const line = phys?.region?.startLine;
-
-  if (!uri) return { locationIsUrl: false };
-
-  const isUrl = uri.startsWith("https://") || uri.startsWith("http://");
-  return { location: uri, line, locationIsUrl: isUrl };
-}
+import type { SarifLog, SarifRun, FindingGroup, SarifLevel } from "./types";
 
 /**
- * Parse a SarifDocument into a flat, enriched ParsedSarif.
- * Never throws — returns empty ParsedSarif on bad input.
+ * Parse a raw SARIF JSON string or object into runs.
  */
-export function parseSarif(doc: SarifDocument): ParsedSarif {
-  const findings: ParsedFinding[] = [];
-  const toolNamesSet = new Set<string>();
-  const runIdsSet = new Set<string>();
-
-  const bySeverity: Record<SeverityLevel, number> = {
-    error: 0,
-    warning: 0,
-    note: 0,
-    none: 0,
-  };
-
-  if (!doc || !Array.isArray(doc.runs)) {
-    return { findings, toolNames: [], runIds: [], totalCount: 0, bySeverity };
+export function parseSarif(input: string | object): SarifLog {
+  const raw = typeof input === "string" ? JSON.parse(input) : input;
+  if (!raw || raw.version !== "2.1.0") {
+    throw new Error(`Unsupported SARIF version: ${raw?.version ?? "unknown"}`);
   }
+  return raw as SarifLog;
+}
 
-  for (const run of doc.runs) {
-    if (!run) continue;
+/**
+ * Group results by rule for display, sorted by severity (error → warning → note → none).
+ */
+export function groupByRule(run: SarifRun): FindingGroup[] {
+  const ruleMap = new Map<string, FindingGroup>();
 
-    const toolName = run.tool?.driver?.name ?? "Unknown Tool";
-    toolNamesSet.add(toolName);
+  const rulesById = new Map(
+    (run.tool.driver.rules ?? []).map((r) => [r.id, r])
+  );
 
-    const runId = run.automationDetails?.id;
-    if (runId) runIdsSet.add(runId);
+  for (const result of run.results ?? []) {
+    const rule = rulesById.get(result.ruleId);
+    const level: SarifLevel =
+      result.level ?? rule?.defaultConfiguration?.level ?? "warning";
 
-    // Build rule map for quick lookup
-    const ruleMap = new Map<string, SarifRule>();
-    for (const rule of run.tool?.driver?.rules ?? []) {
-      if (rule?.id) ruleMap.set(rule.id, rule);
-    }
-
-    for (let i = 0; i < (run.results?.length ?? 0); i++) {
-      const result = run.results![i];
-      if (!result) continue;
-
-      const ruleId = result.ruleId ?? "unknown";
-      const level = normLevel(result.level);
-      const message =
-        result.message?.text ?? result.message?.markdown ?? "(no message)";
-
-      const { location, line, locationIsUrl } = extractLocation(result);
-
-      bySeverity[level]++;
-
-      findings.push({
-        ruleId,
+    if (!ruleMap.has(result.ruleId)) {
+      ruleMap.set(result.ruleId, {
+        ruleId: result.ruleId,
+        ruleName: rule?.name ?? result.ruleId,
+        ruleDescription:
+          rule?.shortDescription?.text ??
+          rule?.fullDescription?.text ??
+          "",
         level,
-        message,
-        location,
-        line,
-        locationIsUrl,
-        rule: ruleMap.get(ruleId),
-        index: i,
-        toolName,
-        runId,
+        helpUri: rule?.helpUri,
+        results: [],
       });
     }
+    ruleMap.get(result.ruleId)!.results.push(result);
   }
 
-  // Sort: errors first, then warning, note, none — then alphabetical ruleId
-  findings.sort((a, b) => {
-    const orderA = SEVERITY_ORDER.indexOf(a.level);
-    const orderB = SEVERITY_ORDER.indexOf(b.level);
-    if (orderA !== orderB) return orderA - orderB;
-    return a.ruleId.localeCompare(b.ruleId);
-  });
-
-  return {
-    findings,
-    toolNames: [...toolNamesSet],
-    runIds: [...runIdsSet],
-    totalCount: findings.length,
-    bySeverity,
+  const severityOrder: Record<SarifLevel, number> = {
+    error: 0,
+    warning: 1,
+    note: 2,
+    none: 3,
   };
-}
 
-/**
- * Parse a SARIF JSON string. Returns null on parse failure.
- */
-export function parseSarifJson(json: string): ParsedSarif | null {
-  try {
-    const doc = JSON.parse(json) as SarifDocument;
-    return parseSarif(doc);
-  } catch {
-    return null;
-  }
+  return [...ruleMap.values()].sort(
+    (a, b) => severityOrder[a.level] - severityOrder[b.level]
+  );
 }
