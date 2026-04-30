@@ -5,6 +5,24 @@ All notable changes to Lyrie Agent will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-05-01
+
+### Added
+- DeepSeek V4 Pro + DeepSeek V4 Flash provider bundle (`DEEPSEEK_API_KEY`)
+- `lyrie threat-feed` tool — real-time threat intelligence from research.lyrie.ai
+- SARIF 2.1.0 viewer in `@lyrie/ui` — types, parser, DOM renderer, tests, demo page
+- LinkedIn channel adapter (company page: linkedin.com/company/lyrie-ai)
+
+### Changed
+- Repo transferred to OTT-Cybersecurity-LLC/lyrie-ai (old URL redirects automatically)
+- README badges updated to new org location
+- Expanded provider catalog: DeepSeek V4 Pro (1.6T params, CVSS 10.0 on benchmarks)
+
+### Fixed
+- CI badge URLs pointing to old overthetopseo org
+
+---
+
 ## [0.7.0] — 2026-04-29
 
 ### Added — Feature Parity + Better (8 Issues)
