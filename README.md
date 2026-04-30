@@ -16,11 +16,12 @@ Lyrie is not just another AI assistant. It runs your operations and protects the
 [![Security: Native](https://img.shields.io/badge/Security-Native-green.svg)](SECURITY.md)
 [![Research](https://img.shields.io/badge/research-research.lyrie.ai-7c3aed.svg)](https://research.lyrie.ai)
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
-[![CI](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/overthetopseo/lyrie-agent/actions/workflows/codeql.yml)
+[![CI](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/codeql.yml)
 [![Tests](https://img.shields.io/badge/tests-465%20passing-brightgreen.svg)](#-quality--tests)
 [![PyPI](https://img.shields.io/badge/pypi-lyrie--agent-3776AB.svg?logo=pypi&logoColor=white)](https://pypi.org/project/lyrie-agent/)
-[![Releases](https://img.shields.io/github/v/release/overthetopseo/lyrie-agent?include_prereleases&label=release)](https://github.com/overthetopseo/lyrie-agent/releases)
+[![Releases](https://img.shields.io/github/v/release/OTT-Cybersecurity-LLC/lyrie-ai?include_prereleases&label=release)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/releases)
+[![LinkedIn](https://img.shields.io/badge/linkedin-lyrie--ai-0077b5.svg)](https://www.linkedin.com/company/lyrie-ai/)
 
 [**Install**](#-install) · [**GitHub Action**](#-lyrie-pentest-action) · [**Architecture**](#-architecture) · [**Shield Doctrine**](docs/shield-doctrine.md) · [**Research**](https://research.lyrie.ai)
 
@@ -36,7 +37,15 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 
 > **Cybersecurity isn't a plugin — it's Layer 1.**
 
-### Highlights (current main, [`v0.6.0`](CHANGELOG.md))
+### Highlights (current main, [`v0.8.0`](CHANGELOG.md))
+
+### What's New in v0.8.0
+- 🌊 **DeepSeek V4 Pro + Flash** — 1.6T-parameter models, 1M context, Thinking/Non-Thinking modes. `DEEPSEEK_API_KEY` to enable.
+- 📡 **Live Threat Feed** — `lyrie threat-feed` pulls verified advisories from research.lyrie.ai in real time. CVE-aware, CVSS-filtered, Shield-attributed.
+- 🔍 **SARIF Viewer** — framework-free DOM renderer for SARIF 2.1.0 results. Severity badges, file:line refs, groupByRule. Included in `@lyrie/ui`.
+- 🏛️ **New Home: OTT-Cybersecurity-LLC** — repo transferred to the official OTT Cybersecurity LLC GitHub org. Old URL auto-redirects.
+- 🔗 **LinkedIn Channel** — official Lyrie.ai LinkedIn presence live at linkedin.com/company/lyrie-ai
+
 
 - 🛡️ **The Shield Doctrine** — every layer of Lyrie that touches untrusted text passes a Shield gate. ([`docs/shield-doctrine.md`](docs/shield-doctrine.md))
 - 🔍 **Lyrie Attack-Surface Mapper** (`/understand`) — maps entry points, trust boundaries, tainted data flows, and ranked risk hotspots before any scanner runs.
@@ -82,6 +91,7 @@ bun run scripts/redteam.ts http://myapp.com/v1 --output sarif --out scan.sarif
 | TypeScript SDK | **✅** | ❌ |
 | Streaming API | **✅ `scanStream()`** | ❌ |
 | Retry variants | **✅ 3 per vector** | ❌ |
+| DeepSeek V4 Pro support | **✅ 1.6T params** | ❌ |
 | Open source | **✅ MIT** | Proprietary |
 | Price | **Free** | Paid |
 
@@ -247,7 +257,7 @@ Lyrie also competes head-to-head with the AI-pentest crowd. Here we trade ecosys
 
 > **The headline:** Strix is a sharp single-purpose pentest tool. Lyrie is a complete agent platform that *includes* a sharper pentest tool, a defensive Shield layer the others lack, a verified threat-intel feed, and reproducible exploit labs that prove every claim.
 
-_Want a deep comparison? See [`lyrie/research/integration/lyrie-absorption-roadmap-2026-04-27.md`](https://github.com/overthetopseo/lyrie-agent) for the 19-competitor recon matrix._
+_Want a deep comparison? See [`lyrie/research/integration/lyrie-absorption-roadmap-2026-04-27.md`](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai) for the 19-competitor recon matrix._
 
 ---
 
@@ -287,7 +297,7 @@ Full SDK docs: [`sdk/python/README.md`](sdk/python/README.md).
 ### From source
 
 ```bash
-git clone https://github.com/overthetopseo/lyrie-agent.git
+git clone https://github.com/OTT-Cybersecurity-LLC/lyrie-ai.git
 cd lyrie-agent
 bun install
 bun run doctor       # self-check
@@ -318,7 +328,7 @@ jobs:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
-      - uses: overthetopseo/lyrie-agent/action@v1
+      - uses: OTT-Cybersecurity-LLC/lyrie-ai/action@v1
         with:
           scan-mode: quick
           scope: diff
@@ -579,9 +589,10 @@ Lyrie clones the repo (`--depth 1`), runs the **Attack-Surface Mapper**, all eig
 |---|---|---|
 | **Lyrie Agent** (this repo) | OSS · MIT | Your autonomous AI operator + GitHub Action |
 | **Lyrie Shield** | Native iOS/Android/macOS | Real-time device protection, anti-malware, anti-rogue-AI |
-| **Lyrie Research** | [research.lyrie.ai](https://research.lyrie.ai) | KEV-driven verified threat intel, reproducible exploit labs |
+| **Lyrie Research** | [research.lyrie.ai](https://research.lyrie.ai) | KEV-driven verified threat intel, 2100+ advisories, live threat feed |
 | **Lyrie OMEGA** | OSS · MIT (in this repo) | Autonomous security-intelligence backend |
 | **Lyrie SaaS** | [lyrie.ai](https://lyrie.ai) | Hosted Shield, WAF, scanner, breach monitoring |
+| **Lyrie LinkedIn** | [linkedin.com/company/lyrie-ai](https://www.linkedin.com/company/lyrie-ai/) | Official company channel — news, research highlights, updates |
 
 Together: a complete digital guardian that operates **and** defends.
 
@@ -654,7 +665,7 @@ MIT. Use it, fork it, build on it.
 
 **Lyrie.ai** — _Built by [OTT Cybersecurity LLC](https://overthetop.ae)_
 
-[Research](https://research.lyrie.ai) · [@lyrie_ai](https://x.com/lyrie_ai) · [lyrie.ai](https://lyrie.ai) · [overthetop.ae](https://overthetop.ae)
+[Research](https://research.lyrie.ai) · [@lyrie_ai](https://x.com/lyrie_ai) · [LinkedIn](https://www.linkedin.com/company/lyrie-ai/) · [lyrie.ai](https://lyrie.ai) · [overthetop.ae](https://overthetop.ae)
 
 © 2026 OTT Cybersecurity LLC. All rights reserved.
 
