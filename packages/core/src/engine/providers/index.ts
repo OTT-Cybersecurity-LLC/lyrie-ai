@@ -9,6 +9,7 @@
  * - Google (Gemini 3.1 Pro, Gemini 3.1 Flash)
  * - xAI (Grok 4.20, Grok 4.1 Fast)
  * - MiniMax (M2.7, M2.7 HighSpeed)
+ * - DeepSeek (V4 Pro 1.6T, V4 Flash — 1M context, Thinking mode)
  * - Local (Ollama — Qwen, Gemma, Llama, DeepSeek)
  */
 
@@ -20,8 +21,10 @@ export { MiniMaxProvider } from "./minimax";
 export { OllamaProvider } from "./ollama";
 export { CerebrasProvider, CEREBRAS_MODELS } from "./cerebras";
 export { OpenRouterProvider } from "./openrouter";
+export { DeepSeekProvider, DEEPSEEK_MODELS } from "./deepseek";
 export type { CerebrasConfig, CerebrasResponse, CerebrasModel } from "./cerebras";
 export type { OpenRouterConfig, OpenRouterResponse, OpenRouterModel } from "./openrouter";
+export type { DeepSeekConfig, DeepSeekResponse, DeepSeekModel } from "./deepseek";
 
 export interface Provider {
   name: string;
