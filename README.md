@@ -18,7 +18,7 @@ Lyrie is not just another AI assistant. It runs your operations and protects the
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
 [![CI](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-465%20passing-brightgreen.svg)](#-quality--tests)
+[![Tests](https://img.shields.io/badge/tests-854%20passing-brightgreen.svg)](#-quality--tests)
 [![PyPI](https://img.shields.io/badge/pypi-lyrie--agent-3776AB.svg?logo=pypi&logoColor=white)](https://pypi.org/project/lyrie-agent/)
 [![Releases](https://img.shields.io/github/v/release/OTT-Cybersecurity-LLC/lyrie-ai?include_prereleases&label=release)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/releases)
 [![LinkedIn](https://img.shields.io/badge/linkedin-lyrie--ai-0077b5.svg)](https://www.linkedin.com/company/lyrie-ai/)
@@ -600,7 +600,7 @@ Together: a complete digital guardian that operates **and** defends.
 
 ## ✅ Quality & tests
 
-- **465 tests passing / 0 failing** — 373 TypeScript + 92 Python
+- **854 tests passing / 0 failing** — 749 TypeScript + 105 Python
 - Multi-platform CI (Node 20/22/24 × Ubuntu/macOS) + Rust Shield build
 - Weekly CodeQL security analysis + Dependabot
 - Pre-commit hooks: gitleaks, codespell, hygiene
@@ -609,11 +609,11 @@ Together: a complete digital guardian that operates **and** defends.
 ```bash
 # TypeScript suite
 bun test packages/ action/
-# → 373 pass · 0 fail
+# → 105 pass · 0 fail
 
 # Python SDK
 cd sdk/python && PYTHONPATH=. python -m pytest tests/
-# → 92 pass · 0 fail
+# → 105 pass · 0 fail
 ```
 
 ---
