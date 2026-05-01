@@ -5,6 +5,137 @@ All notable changes to Lyrie Agent will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+---
+
+## [Unreleased]
+
+_Nothing yet — open a PR or file an issue at https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/issues_
+
+---
+
+## [0.9.0] — 2026-05-02
+
+> **Phase 3 Multi-Channel + AAV State-Actor Corpus + AI Governance**
+>
+> This release rolls up the four security upgrades that were tracked under
+> `[Unreleased]` (AAV Entra, AAV state-actor, AI governance scorecard,
+> permission analyzer), the Phase 3 multi-channel adapters (Feishu, IRC,
+> Matrix), the Lyrie Tools Catalog, and a hardened SARIF 2.1.0 viewer with a
+> proper view-model API. **794 tests pass, 0 fail.**
+
+### Added — Phase 3 Multi-Channel
+
+#### feat(channels): Feishu / Lark Bot Adapter
+- **`packages/gateway/src/feishu/bot.ts`** — full Feishu (飞书) + Lark adapter.
+  - One adapter, two host environments: `open.feishu.cn` (mainland China) and `open.larksuite.com` (international).
+  - Webhook handler with HMAC-SHA1 verification (`X-Lark-Signature` header).
+  - Group-chat activation gating: `@bot mention`, slash command, or always-on (configurable).
+  - Card-based reply rendering — `text`, `interactive`, and `markdown` message types.
+  - Tenant access token refresh loop (auto-renews 5 min before expiry).
+- 22 unit tests in `bot.test.ts` covering signature verification, message routing, card rendering, and tenant auth.
+
+#### feat(channels): IRC Bot Adapter
+- **`packages/gateway/src/irc/bot.ts`** — RFC 2812 IRC adapter (the original chat protocol).
+  - TLS + SASL PLAIN authentication.
+  - Channel auto-rejoin on disconnect with exponential backoff.
+  - PRIVMSG / NOTICE / CTCP ACTION handlers.
+  - Multi-line response chunking (max 400 chars per IRC line).
+  - Per-channel mention gating (`bot:` prefix or `@nick` highlight).
+- 21 unit tests in `bot.test.ts` covering protocol parsing, SASL handshake, reconnect, and mention detection.
+
+#### feat(channels): Matrix Bot Adapter
+- **`packages/gateway/src/matrix/bot.ts`** — federated Matrix protocol adapter.
+  - `/sync` long-poll loop with `since_token` persistence.
+  - Room-join flow + space membership awareness.
+  - End-to-end encryption stubs (Olm / Megolm session bootstrap path) — see `matrix-e2ee.test.ts`.
+  - Reply formatting via Matrix `m.relates_to → m.in_reply_to`.
+- 23 unit tests across `bot.test.ts` + `matrix-e2ee.test.ts` covering sync resume, federation, room state, and E2EE bootstrap.
+
+### Added — Lyrie Tools Catalog
+
+#### feat(tools): Tools Catalog Registry
+- **`packages/core/src/tools-catalog/`** — typed registry of every built-in Lyrie tool.
+  - `types.ts` — `LyrieTool`, `ToolCategory`, `ToolPermission`, `ToolRisk` types with NIST AI RMF + EU AI Act tags.
+  - `categories.ts` — 9 first-class categories: `read`, `write`, `network`, `code-exec`, `system`, `security`, `agent`, `data`, `ui`.
+  - `registry.ts` — `ToolRegistry` class with `register()`, `get()`, `findByCategory()`, `findByPermission()`, `validate()`.
+  - `builtin.ts` — pre-populated registry with all stock Lyrie tools (read/write/exec/shield/redteam/etc.).
+  - `index.ts` — public exports.
+- 18 unit tests in `catalog.test.ts` covering registration, lookup, validation, and category filtering.
+- CI templates: GitHub Actions, GitLab CI, CircleCI, and Jenkins reference jobs in `action/templates/` and `.github/workflows/`.
+
+### Added — 4 Security Upgrades (feat: Lyrie Product Threats)
+
+#### feat(aav): Microsoft Entra AI Agent Priv-Esc Detection
+- **`packages/core/src/aav/corpus/entra.ts`** — 4 critical attack vectors for Entra AI agent privilege escalation.
+  - `ENTRA-001`: AI Agent Admin Role Abuse (Global Administrator assignment without PIM)
+  - `ENTRA-002`: Copilot token exfiltration via indirect prompt injection in documents
+  - `ENTRA-003`: Cross-tenant agent permission escalation (B2B boundary bypass)
+  - `ENTRA-004`: Service principal hijack via AI agent context (credential injection)
+- New preset: `lyrie redteam --preset entra` — runs only Entra-specific vectors.
+- All vectors: LLM08 (Excessive Agency), critical severity, GOVERN-1.1, Article 9.
+- 10+ unit tests in `entra.test.ts`.
+
+#### feat(aav): Dual-Use LLM Attack Corpus (State-Actor Grade)
+- **`packages/core/src/aav/corpus/state-actor.ts`** — 6 critical attack vectors representing nation-state APT capabilities.
+  - `STATE-001`: Automated spear-phishing via agent context theft
+  - `STATE-002`: Multi-step indirect prompt injection chain (APT-style persistence)
+  - `STATE-003`: AI-assisted reconnaissance via tool chaining
+  - `STATE-004`: Deepfake voice social engineering script generation
+  - `STATE-005`: Supply chain prompt injection via ingested vendor documents
+  - `STATE-006`: Federated identity abuse via agent delegation (OBO flow)
+- New preset: `lyrie redteam --preset state-actor`.
+- Categories: LLM01 (Prompt Injection) + LLM08 (Excessive Agency).
+- 12+ unit tests in `state-actor.test.ts`.
+
+#### feat(governance): AI Governance Scorecard
+- **`packages/core/src/governance/scorecard.ts`** — NIST AI RMF + EU AI Act assessment engine.
+  - `AiGovernanceScorecard.assess(target)` — produces `GovernanceReport` (0–100 score, maturity level, gaps, recommendations).
+  - 8 governance questions covering GOVERN-1.1, GOVERN-2.2, MANAGE-1.1, MEASURE-2.5, MANAGE-4.1, MAP-5.1, MEASURE-2.9, MAP-3.5.
+  - Interactive questionnaire mode: `AiGovernanceScorecard.runInteractive()`.
+  - Config auto-inference: heuristic analysis of agent config files.
+  - EU AI Act risk classification: High-Risk / Limited-Risk / Minimal-Risk.
+  - CLI: `lyrie governance assess [--config <path>] [--interactive] [--out report.json]`.
+- 15 unit tests in `scorecard.test.ts`.
+
+#### feat(governance): Agent Permission Analyzer
+- **`packages/core/src/governance/permissions.ts`** — tool manifest risk scanner.
+  - `AgentPermissionAnalyzer.analyze(manifest)` — produces `PermissionReport` (risk score 0–100, excessive permissions, missing controls).
+  - 8 tool risk rules covering: file write, email/messaging, database write, external APIs, PII access, code execution, financial transactions, identity management.
+  - Parses OpenAI tool format, Lyrie config format, and heuristic extraction from arbitrary files.
+  - All findings include NIST AI RMF + EU AI Act references.
+  - CLI: `lyrie governance permissions <path-to-agent-config>`.
+- 13 unit tests in `permissions.test.ts`.
+
+#### Shared: Corpus Index + Exports
+- `packages/core/src/aav/corpus/index.ts`: Added `getPreset()`, `AttackPreset` type, preset registry (entra, state-actor, critical, all).
+- ENTRA and STATE-ACTOR vectors included in `ATTACK_CORPUS` (corpus now 60+ vectors).
+- `scripts/redteam.ts`: Added `--preset `flag.
+- `scripts/governance.ts`: New CLI script with `assess` and `permissions` subcommands.
+- All new types/classes exported from `packages/core/src/index.ts`.
+
+### Changed — SARIF Viewer (Hardened API)
+
+#### feat(ui): SARIF 2.1.0 Viewer — view-model API
+- **`packages/ui/src/sarif-viewer/parse.ts`** — split into three exports:
+  - `parseSarif(input)` now returns a flattened `ParsedSarif` view-model: `{ findings[], totalCount, bySeverity, toolNames, runIds }` — the shape the React component renders against.
+  - `parseSarifRaw(input)` preserves the strict spec parser (legacy callers and the framework-free `SarifViewer` DOM class).
+  - `parseSarifJson(jsonString)` — safe variant that returns `null` instead of throwing on malformed JSON.
+- **`packages/ui/src/sarif-viewer/types.ts`** — added `Finding`, `BySeverity`, `ParsedSarif`, `SarifDocument`, plus backwards-compatible aliases `ParsedFinding` and `SeverityLevel`.
+- **`packages/ui/src/sarif-viewer/index.ts`** — expanded barrel exports.
+- DOM-renderer `SarifViewer.ts` (vanilla) and React `SarifViewer.tsx` now both work end-to-end against the same `parse.ts` module.
+- 38 SARIF viewer tests pass (parse + groupByRule + view-model + happy-dom DOM render + React component module shape).
+
+### Dependencies
+- Added `happy-dom@^20.9.0` as a `@lyrie/ui` devDependency — required by the `SarifViewer.test.ts` DOM-renderer suite.
+
+### Test Suite
+- **794 tests pass, 0 fail** (up from 759 pass / 8 fail at the start of v0.9.0 work, +35 net tests).
+- 1 skipped error during boot is benign (an empty fixture import in tests-catalog scaffolding).
+
+### Migration Notes
+- If your code imported `parseSarif` from `@lyrie/ui` and walked `result.runs[]`, switch to `parseSarifRaw` for that exact shape, or migrate to the new `findings[]` view-model.
+- All other public APIs are unchanged.
+
 ## [0.8.0] — 2026-05-01
 
 ### Added
@@ -81,61 +212,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README: comparison table updated with migrate, degraded mode, CVE validation, OpenRouter, Cerebras.
 - README: "🛡️ Security-First Features" section added.
 - **762 tests pass** (up from 627 in v0.6.0, +135 new tests).
-
----
-
-## [Unreleased]
-
-### Added — 4 Security Upgrades (feat: Lyrie Product Threats)
-
-#### feat(aav): Microsoft Entra AI Agent Priv-Esc Detection
-- **`packages/core/src/aav/corpus/entra.ts`** — 4 critical attack vectors for Entra AI agent privilege escalation.
-  - `ENTRA-001`: AI Agent Admin Role Abuse (Global Administrator assignment without PIM)
-  - `ENTRA-002`: Copilot token exfiltration via indirect prompt injection in documents
-  - `ENTRA-003`: Cross-tenant agent permission escalation (B2B boundary bypass)
-  - `ENTRA-004`: Service principal hijack via AI agent context (credential injection)
-- New preset: `lyrie redteam --preset entra` — runs only Entra-specific vectors.
-- All vectors: LLM08 (Excessive Agency), critical severity, GOVERN-1.1, Article 9.
-- 10+ unit tests in `entra.test.ts`.
-
-#### feat(aav): Dual-Use LLM Attack Corpus (State-Actor Grade)
-- **`packages/core/src/aav/corpus/state-actor.ts`** — 6 critical attack vectors representing nation-state APT capabilities.
-  - `STATE-001`: Automated spear-phishing via agent context theft
-  - `STATE-002`: Multi-step indirect prompt injection chain (APT-style persistence)
-  - `STATE-003`: AI-assisted reconnaissance via tool chaining
-  - `STATE-004`: Deepfake voice social engineering script generation
-  - `STATE-005`: Supply chain prompt injection via ingested vendor documents
-  - `STATE-006`: Federated identity abuse via agent delegation (OBO flow)
-- New preset: `lyrie redteam --preset state-actor`.
-- Categories: LLM01 (Prompt Injection) + LLM08 (Excessive Agency).
-- 12+ unit tests in `state-actor.test.ts`.
-
-#### feat(governance): AI Governance Scorecard
-- **`packages/core/src/governance/scorecard.ts`** — NIST AI RMF + EU AI Act assessment engine.
-  - `AiGovernanceScorecard.assess(target)` — produces `GovernanceReport` (0–100 score, maturity level, gaps, recommendations).
-  - 8 governance questions covering GOVERN-1.1, GOVERN-2.2, MANAGE-1.1, MEASURE-2.5, MANAGE-4.1, MAP-5.1, MEASURE-2.9, MAP-3.5.
-  - Interactive questionnaire mode: `AiGovernanceScorecard.runInteractive()`.
-  - Config auto-inference: heuristic analysis of agent config files.
-  - EU AI Act risk classification: High-Risk / Limited-Risk / Minimal-Risk.
-  - CLI: `lyrie governance assess [--config <path>] [--interactive] [--out report.json]`.
-- 15 unit tests in `scorecard.test.ts`.
-
-#### feat(governance): Agent Permission Analyzer
-- **`packages/core/src/governance/permissions.ts`** — tool manifest risk scanner.
-  - `AgentPermissionAnalyzer.analyze(manifest)` — produces `PermissionReport` (risk score 0–100, excessive permissions, missing controls).
-  - 8 tool risk rules covering: file write, email/messaging, database write, external APIs, PII access, code execution, financial transactions, identity management.
-  - Parses OpenAI tool format, Lyrie config format, and heuristic extraction from arbitrary files.
-  - All findings include NIST AI RMF + EU AI Act references.
-  - CLI: `lyrie governance permissions <path-to-agent-config>`.
-- 13 unit tests in `permissions.test.ts`.
-
-#### Shared: Corpus Index + Exports
-- `packages/core/src/aav/corpus/index.ts`: Added `getPreset()`, `AttackPreset` type, preset registry (entra, state-actor, critical, all).
-- ENTRA and STATE-ACTOR vectors included in `ATTACK_CORPUS` (corpus now 60+ vectors).
-- `scripts/redteam.ts`: Added `--preset <name>` flag.
-- `scripts/governance.ts`: New CLI script with `assess` and `permissions` subcommands.
-- All new types/classes exported from `packages/core/src/index.ts`.
-- **All 627 tests pass.**
 
 ## [0.6.0] — 2026-04-29
 

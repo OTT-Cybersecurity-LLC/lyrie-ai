@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from "bun:test";
-import { parseSarif, groupByRule } from "./parse";
+import { parseSarifRaw as parseSarif, groupByRule } from "./parse";
 import type { SarifLog, SarifRun } from "./types";
 
 // ---------------------------------------------------------------------------

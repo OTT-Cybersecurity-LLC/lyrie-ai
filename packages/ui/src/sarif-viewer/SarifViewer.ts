@@ -7,7 +7,7 @@
  *   viewer.load(sarifJson);
  */
 
-import { parseSarif, groupByRule } from "./parse";
+import { parseSarifRaw, groupByRule } from "./parse";
 import type { SarifLog, FindingGroup, SarifLevel } from "./types";
 
 const SEVERITY_COLORS: Record<SarifLevel, string> = {
@@ -34,7 +34,7 @@ export class SarifViewer {
 
   /** Load a SARIF log from a JSON string or parsed object */
   load(input: string | object): void {
-    this.log = parseSarif(input);
+    this.log = parseSarifRaw(input);
     this.render();
   }
 

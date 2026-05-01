@@ -116,7 +116,10 @@ const MULTI_SEVERITY: SarifLog = {
 // ---------------------------------------------------------------------------
 
 async function makeSarifViewer(container: HTMLElement) {
-  const { SarifViewer } = await import("./SarifViewer");
+  // Explicit `.ts` import: bun would otherwise resolve `./SarifViewer` to
+  // the React component in `SarifViewer.tsx`. The DOM-renderer class lives
+  // in `SarifViewer.ts` alongside it.
+  const { SarifViewer } = await import("./SarifViewer.ts");
   return new SarifViewer(container);
 }
 

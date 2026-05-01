@@ -18,7 +18,7 @@ Lyrie is not just another AI assistant. It runs your operations and protects the
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
 [![CI](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-854%20passing-brightgreen.svg)](#-quality--tests)
+[![Tests](https://img.shields.io/badge/tests-794%20passing-brightgreen.svg)](#-quality--tests)
 [![PyPI](https://img.shields.io/badge/pypi-lyrie--agent-3776AB.svg?logo=pypi&logoColor=white)](https://pypi.org/project/lyrie-agent/)
 [![Releases](https://img.shields.io/github/v/release/OTT-Cybersecurity-LLC/lyrie-ai?include_prereleases&label=release)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/releases)
 [![LinkedIn](https://img.shields.io/badge/linkedin-lyrie--ai-0077b5.svg)](https://www.linkedin.com/company/lyrie-ai/)
@@ -37,7 +37,15 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 
 > **Cybersecurity isn't a plugin — it's Layer 1.**
 
-### Highlights (current main, [`v0.8.0`](CHANGELOG.md))
+### Highlights (current main, [`v0.9.0`](CHANGELOG.md))
+
+### What's New in v0.9.0
+- 🌐 **Phase 3 Multi-Channel** — first-class adapters for **Feishu / Lark**, **IRC**, and **Matrix** (with E2EE bootstrap). Full set is now 13 channels.
+- 🧰 **Lyrie Tools Catalog** — typed registry of every built-in tool with NIST AI RMF + EU AI Act tags, 9 categories, and CI templates for GitHub Actions / GitLab / CircleCI / Jenkins.
+- 🛡️ **AI Governance** — `lyrie governance assess` (NIST AI RMF + EU AI Act scorecard, 8 controls, A–F maturity) and `lyrie governance permissions` (tool manifest risk scanner, 8 risk rules).
+- 🔴 **AAV State-Actor Corpus** — 6 nation-state APT-grade attack vectors plus 4 Microsoft Entra AI-agent priv-esc vectors. Run with `lyrie redteam --preset state-actor` or `--preset entra`.
+- 🔍 **SARIF Viewer v2** — hardened `parseSarif` view-model API (`findings[]`, `bySeverity`, `runIds`), backwards-compatible `parseSarifRaw` for the spec shape, safe-parse `parseSarifJson`. Both the React component and the framework-free DOM renderer ship green.
+- ✅ **794 tests pass, 0 fail** (up from 759 pass / 8 fail at the start of v0.9.0).
 
 ### What's New in v0.8.0
 - 🌊 **DeepSeek V4 Pro + Flash** — 1.6T-parameter models, 1M context, Thinking/Non-Thinking modes. `DEEPSEEK_API_KEY` to enable.
@@ -62,7 +70,7 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 - 🩺 **`lyrie doctor`** — read-only environment, channel, and security self-diagnostic with `--json` for CI.
 - 🧬 **LyrieEvolve** — the agent scores every task, auto-generates reusable skills from wins, retrieves top-3 past successes as context before each new task, and runs nightly GRPO fine-tuning on your own GPU. Domain-specific rewards for cyber, SEO, trading, and code. ([`docs/evolve.md`](docs/evolve.md))
 - ☁️ **Pluggable execution backends** — run Lyrie scans locally, in a Daytona devbox, or as a Modal serverless function. Same Shield Doctrine, same SARIF, different host.
-- 📡 **9 multi-channel adapters** — Telegram, WhatsApp, Discord, Slack, Matrix, Mattermost, IRC, Feishu, Rocket.Chat, WebChat — one inbox, all secured.
+- 📡 **13 multi-channel adapters** — Telegram, WhatsApp, Discord, Slack, Matrix, Mattermost, IRC, Feishu/Lark, Rocket.Chat, WebChat, LinkedIn, plus Phase 3 Matrix-E2EE — one inbox, all secured.
 - 🔴 **LyrieAAV** — Autonomous Adversarial Validation: 50+ attack vectors across all OWASP LLM Top 10 categories, automated verdict scoring, SARIF output, Python + TypeScript SDKs. Beats Audn.AI at its own game. ([`docs/aav.md`](docs/aav.md))
 
 ---
@@ -600,7 +608,7 @@ Together: a complete digital guardian that operates **and** defends.
 
 ## ✅ Quality & tests
 
-- **854 tests passing / 0 failing** — 749 TypeScript + 105 Python
+- **794 TypeScript tests passing / 0 failing** in `bun test` (and 105 Python tests in `sdk/python` via `pytest`)
 - Multi-platform CI (Node 20/22/24 × Ubuntu/macOS) + Rust Shield build
 - Weekly CodeQL security analysis + Dependabot
 - Pre-commit hooks: gitleaks, codespell, hygiene

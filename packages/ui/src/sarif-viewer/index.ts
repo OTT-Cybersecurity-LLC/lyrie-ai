@@ -1,3 +1,15 @@
 export { SarifViewer } from "./SarifViewer";
-export { parseSarif, groupByRule } from "./parse";
-export type { SarifLog, SarifRun, SarifRule, SarifResult, SarifLocation, SarifLevel, FindingGroup } from "./types";
+export { parseSarif, parseSarifRaw, parseSarifJson, groupByRule } from "./parse";
+export type {
+  BySeverity,
+  Finding,
+  FindingGroup,
+  ParsedSarif,
+  SarifDocument,
+  SarifLevel,
+  SarifLocation,
+  SarifLog,
+  SarifResult,
+  SarifRule,
+  SarifRun,
+} from "./types";
