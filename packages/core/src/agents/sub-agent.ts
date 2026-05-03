@@ -13,6 +13,7 @@
 
 import { ToolExecutor, ToolCall, ToolResult } from "../tools/tool-executor";
 import type { ModelInstance } from "../engine/model-router";
+import { AgentMessageBus } from "./message-bus";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -148,6 +149,9 @@ export class SubAgentManager {
 
     this.agents.set(task.id, state);
 
+    // Register this agent's message-bus channel so peers can reach it
+    AgentMessageBus.getInstance().registerChannel(task.id);
+
     // Build initial messages
     state.messages.push({
       role: "system",
@@ -194,7 +198,8 @@ export class SubAgentManager {
       this.results.set(task.id, result);
       return result;
     } finally {
-      // Clean up state after some time
+      // Clean up state after some time; also remove bus channel
+      AgentMessageBus.getInstance().unregisterChannel(task.id);
       setTimeout(() => this.agents.delete(task.id), 60000);
     }
   }
