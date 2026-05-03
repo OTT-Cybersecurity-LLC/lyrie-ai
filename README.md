@@ -10,9 +10,9 @@ _Pentests apps. Defends agents. Researches binaries. One daemon._
 
 **No Docker. No yak-shaving. Just `pip install lyrie-agent` or one curl pipe and you're scanning.**
 
-Lyrie is the only stack that fuses offensive AI red-teaming, real-time agent defense, binary exploit research, and a self-improving engine — in a single daemon, on your own hardware, under a cryptographic trust standard we authored.
+Lyrie is the only stack that fuses offensive AI red-teaming, real-time agent defense, binary exploit research, and a self-improving engine - in a single daemon, on your own hardware, under a cryptographic trust standard we authored.
 
-We are building the security infrastructure of the AI era. Not a plugin on top of an LLM. Not a wrapper around someone else's guardrails. The foundation itself — starting with the **Agent Trust Protocol (ATP)**, the first open cryptographic standard for AI agent identity, scope, and action verification.
+We are building the security infrastructure of the AI era. Not a plugin on top of an LLM. Not a wrapper around someone else's guardrails. The foundation itself - starting with the **Agent Trust Protocol (ATP)**, the first open cryptographic standard for AI agent identity, scope, and action verification.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Security: Native](https://img.shields.io/badge/Security-Native-green.svg)](SECURITY.md)
@@ -35,7 +35,7 @@ We are building the security infrastructure of the AI era. Not a plugin on top o
 
 ## Who We Are
 
-**OTT Cybersecurity LLC** builds the security infrastructure of the AI era. We're not a startup adding a security feature to an AI product. We are a cybersecurity company that builds AI — the distinction matters.
+**OTT Cybersecurity LLC** builds the security infrastructure of the AI era. We're not a startup adding a security feature to an AI product. We are a cybersecurity company that builds AI - the distinction matters.
 
 Every AI agent platform treats security as an afterthought. We treat it as the foundation. Every advisory we publish on [lyrie.ai/research](https://lyrie.ai/research) is backed by a reproducible exploit lab and detection rules in this repo.
 
@@ -45,63 +45,65 @@ The internet needed TLS before e-commerce could exist. AI agents need a trust pr
 
 We are building it.
 
-**The Agent Trust Protocol (ATP)** — the first open cryptographic standard for AI agent identity, scope, and action verification — is authored by Lyrie and implemented here as the reference. Five primitives define what it means for an AI agent to be trustworthy: who it is, what it’s authorized to do, what it did, whether it was tampered with, and how trust flows when it spawns children.
+**The Agent Trust Protocol (ATP)** - the first open cryptographic standard for AI agent identity, scope, and action verification - is authored by Lyrie and implemented here as the reference. Five primitives define what it means for an AI agent to be trustworthy: who it is, what it's authorized to do, what it did, whether it was tampered with, and how trust flows when it spawns children.
 
-Lyrie v1.0.0 is the reference implementation. The spec goes to IETF. Every organization running agents on ATP gets a verifiable attestation — the padlock for the AI era.
+Lyrie v1.0.0 is the reference implementation. The spec goes to IETF. Every organization running agents on ATP gets a verifiable attestation - the padlock for the AI era.
 
 Beyond ATP, Lyrie is the only stack that fuses:
-- **Offensive** — `lyrie hack <target>` runs end-to-end autonomous pentesting with GPU-accelerated adversarial attacks (GCG on H200, 140GB HBM3e)
-- **Defensive** — Shield Doctrine + Microsoft AGT bridge for 10/10 OWASP ASI 2026 coverage
-- **Research** — Omega-Suite binary exploit analysis with Z3 SMT solver, ROP chains, CodeQL, deterministic crash replay
-- **Self-improving** — LyrieEvolve trains your own model on your own hardware via GRPO on H200
+- **Offensive** - `lyrie hack <target>` runs end-to-end autonomous pentesting with GPU-accelerated adversarial attacks (GCG on H200, 140GB HBM3e)
+- **Defensive** - Shield Doctrine + Microsoft AGT bridge for 10/10 OWASP ASI 2026 coverage
+- **Research** - Omega-Suite binary exploit analysis with Z3 SMT solver, ROP chains, CodeQL, deterministic crash replay
+- **Self-improving** - LyrieEvolve trains your own model on your own hardware via GRPO on H200
 
 All of this in one daemon. Zero required cloud dependencies.
 
-> **Cybersecurity isn’t a plugin — it’s Layer 1.**
+Every advisory we publish on [lyrie.ai/research](https://lyrie.ai/research) is backed by a reproducible exploit lab and detection rules in this repo. Every scanner we trust, we verify before trusting. Every agent we run, we can prove hasn't been tampered with.
 
-### Highlights (current main, [`v1.0.0`](CHANGELOG.md))
-
-### What's New in v1.0.0
-- 🔐 **Agent Trust Protocol (ATP) v1.0** — the first open cryptographic standard for AI agent identity, scope, and action verification. Five primitives: Agent Identity Certificates, Action Receipts, Scope Declaration Language, Trust Chain Rules, Breach Attestation. IETF-draft quality RFC included. [`packages/atp/`](packages/atp/)
-- ⚡ **`lyrie hack <target>`** — one command, end-to-end. Recon → Scan → Validate → Exploit → Remediate → Report → Self-scan. Real SARIF, real PoCs, real code diffs.
-- 🤖 **Provider independence** — Hermes-3 (NousResearch, Apache 2.0), Ollama, LMStudio as first-class local providers. `--require-local` for zero-cloud deployments. Never forced onto any API.
-- 🏛️ **Microsoft AGT bridge** — `@lyrie/agt-bridge` sits on top of Microsoft's Agent Governance Toolkit for 10/10 OWASP ASI 2026 coverage. 7/10 standalone.
-- 🦀 **Rust Shield wired** — the `packages/shield/` binary is now actually called by the engine via JSON-RPC. File-write scan, outbound WAF, behavioral analysis.
-- 🎯 **GCG + AutoDAN on GPU** — gradient-based white-box adversarial suffixes via H200 (140GB HBM3e). AutoDAN genetic algorithm black-box. `lyrie redteam --strategy gcg|autodan`.
-- 🌊 **Crescendo + TAP** — multi-turn jailbreak strategies (HarmBench baselines). No GPU required.
-- 💥 **Runnable PoCs** — Stage E generates real exploit scripts for SQLi, XSS, SSRF, RCE, path traversal, deserialization. Operator approval gate.
-- 🩹 **Code-level remediation diffs** — Stage F produces actual before/after patches, not descriptions.
-- 🔎 **Scanner adapters** — Nuclei, Trivy (with binary hash verification post-supply-chain-incident), Semgrep CE, TruffleHog. All integrated into `lyrie hack`.
-- 👁️ **`lyrie daemon`** — always-on threat watch, self-heal, KAIROS tick loop. `lyrie daemon --threat-watch --self-heal --provider hermes`.
-- 🧠 **Memory integrity** — SHA-256 drift detection (OWASP ASI-06 defense). `lyrie memory integrity-check`.
-- 📡 **A2A message bus** — agents query each other mid-flight via Shield-filtered pub/sub.
-- 🔌 **MCP Security Scanner** — 8 pre-connection safety checks on every MCP server before Lyrie connects.
-- 🏋️ **LyrieEvolve H200 training** — `lyrie evolve train --export atropos` → GRPO fine-tuning on your own GPU. Lyrie trains its own model.
-- 🔬 **Omega-Suite (Tier 1)** — binary exploit feasibility with Z3 SMT solver + ROP chain analysis, CodeQL agent, crash analysis with deterministic rr replay, OSS forensics. The deepest open-source offensive research stack on GitHub.
-- ✅ **1,362 tests pass, 0 fail**
-
-
-- 🛡️ **The Shield Doctrine** — every layer of Lyrie that touches untrusted text passes a Shield gate. ([`docs/shield-doctrine.md`](docs/shield-doctrine.md))
-- 🔍 **Lyrie Attack-Surface Mapper** (`/understand`) — maps entry points, trust boundaries, tainted data flows, and ranked risk hotspots before any scanner runs.
-- 🧪 **Lyrie Stages A–F Validator** — every finding earns its severity through six validation gates. Auto-PoCs for confirmed vulns. Auto-remediation summaries. Kills false positives at the source.
-- 🌐 **Lyrie Multi-Language Vulnerability Scanners** — 8 purpose-built scanners (JS / TS / Python / Go / PHP / Ruby / C / C++) with 53 Lyrie-original detection rules covering OWASP Top 10 + CWE classics.
-- 📡 **Lyrie Threat-Intel feed** — every PR finding auto-attributed against [research.lyrie.ai](https://research.lyrie.ai), CISA-KEV-aligned, with Lyrie Verdict surfaced inline. Bumps severity to critical when KEV-listed.
-- 🔍 **Lyrie HTTP Proxy** — capture, classify, replay, and fuzz HTTP exchanges. 9 security-signal detectors (missing security headers, weak cookie flags, open CORS, secrets in responses, GraphQL introspection, auth tokens in URLs, verbose 5xx errors, and more). 7 structured mutators for replay-based testing.
-- 🆓 **Lyrie OSS-Scan service** — free public scan at `research.lyrie.ai/scan`. Submit any GitHub / GitLab / Bitbucket / Codeberg repo URL, get a Lyrie report (Mapper + Scanners + Stages A–F + auto-PoC) in seconds.
-- 🚀 **Lyrie Pentest GitHub Action** — Shield-scans every PR, posts a single-comment-per-PR Markdown summary, uploads SARIF to Code Scanning, blocks merges on `fail-on` threshold.
-- 🧠 **FTS5 cross-session memory** — bm25-ranked recall + LLM-summarized session digests, every snippet Shield-gated.
-- ✏️ **Diff-view edits** with approval gates — `apply_diff` produces unified diffs, never overwrites whole files; Shield scans every patch *before* it touches disk.
-- 🔌 **MCP adapter** (`@lyrie/mcp`) — Lyrie speaks fluent Model Context Protocol both as client and server.
-- 🚪 **DM pairing** — unknown senders can't reach the agent without operator approval. Three modes: `open` / `pairing` / `closed`.
-- 🩺 **`lyrie doctor`** — read-only environment, channel, and security self-diagnostic with `--json` for CI.
-- 🧬 **LyrieEvolve** — the agent scores every task, auto-generates reusable skills from wins, retrieves top-3 past successes as context before each new task, and runs nightly GRPO fine-tuning on your own GPU. Domain-specific rewards for cyber, SEO, trading, and code. ([`docs/evolve.md`](docs/evolve.md))
-- ☁️ **Pluggable execution backends** — run Lyrie scans locally, in a Daytona devbox, or as a Modal serverless function. Same Shield Doctrine, same SARIF, different host.
-- 📡 **13 multi-channel adapters** — Telegram, WhatsApp, Discord, Slack, Matrix, Mattermost, IRC, Feishu/Lark, Rocket.Chat, WebChat, LinkedIn, plus Phase 3 Matrix-E2EE — one inbox, all secured.
-- 🔴 **LyrieAAV** — Autonomous Adversarial Validation: 200+ attack vectors across OWASP LLM Top 10 + Agentic ASI 2026, GCG/AutoDAN GPU attacks, Crescendo + TAP multi-turn strategies, automated verdict scoring, SARIF output. ([`docs/aav.md`](docs/aav.md))
+That's what it means to build AI security from the ground up — not as a feature, but as the architecture.
 
 ---
 
-## 🔴 LyrieAAV — Autonomous Adversarial Validation
+## What's New in v1.0.0
+- 🔐 **Agent Trust Protocol (ATP) v1.0** - the first open cryptographic standard for AI agent identity, scope, and action verification. Five primitives: Agent Identity Certificates, Action Receipts, Scope Declaration Language, Trust Chain Rules, Breach Attestation. IETF-draft quality RFC included. [`packages/atp/`](packages/atp/)
+- ⚡ **`lyrie hack <target>`** - one command, end-to-end. Recon → Scan → Validate → Exploit → Remediate → Report → Self-scan. Real SARIF, real PoCs, real code diffs.
+- 🤖 **Provider independence** - Hermes-3 (NousResearch, Apache 2.0), Ollama, LMStudio as first-class local providers. `--require-local` for zero-cloud deployments. Never forced onto any API.
+- 🏛️ **Microsoft AGT bridge** - `@lyrie/agt-bridge` sits on top of Microsoft's Agent Governance Toolkit for 10/10 OWASP ASI 2026 coverage. 7/10 standalone.
+- 🦀 **Rust Shield wired** - the `packages/shield/` binary is now actually called by the engine via JSON-RPC. File-write scan, outbound WAF, behavioral analysis.
+- 🎯 **GCG + AutoDAN on GPU** - gradient-based white-box adversarial suffixes via H200 (140GB HBM3e). AutoDAN genetic algorithm black-box. `lyrie redteam --strategy gcg|autodan`.
+- 🌊 **Crescendo + TAP** - multi-turn jailbreak strategies (HarmBench baselines). No GPU required.
+- 💥 **Runnable PoCs** - Stage E generates real exploit scripts for SQLi, XSS, SSRF, RCE, path traversal, deserialization. Operator approval gate.
+- 🩹 **Code-level remediation diffs** - Stage F produces actual before/after patches, not descriptions.
+- 🔎 **Scanner adapters** - Nuclei, Trivy (with binary hash verification post-supply-chain-incident), Semgrep CE, TruffleHog. All integrated into `lyrie hack`.
+- 👁️ **`lyrie daemon`** - always-on threat watch, self-heal, KAIROS tick loop. `lyrie daemon --threat-watch --self-heal --provider hermes`.
+- 🧠 **Memory integrity** - SHA-256 drift detection (OWASP ASI-06 defense). `lyrie memory integrity-check`.
+- 📡 **A2A message bus** - agents query each other mid-flight via Shield-filtered pub/sub.
+- 🔌 **MCP Security Scanner** - 8 pre-connection safety checks on every MCP server before Lyrie connects.
+- 🏋️ **LyrieEvolve H200 training** - `lyrie evolve train --export atropos` → GRPO fine-tuning on your own GPU. Lyrie trains its own model.
+- 🔬 **Omega-Suite (Tier 1)** - binary exploit feasibility with Z3 SMT solver + ROP chain analysis, CodeQL agent, crash analysis with deterministic rr replay, OSS forensics. The deepest open-source offensive research stack on GitHub.
+- ✅ **1,362 tests pass, 0 fail**
+
+
+- 🛡️ **The Shield Doctrine** - every layer of Lyrie that touches untrusted text passes a Shield gate. ([`docs/shield-doctrine.md`](docs/shield-doctrine.md))
+- 🔍 **Lyrie Attack-Surface Mapper** (`/understand`) - maps entry points, trust boundaries, tainted data flows, and ranked risk hotspots before any scanner runs.
+- 🧪 **Lyrie Stages A-F Validator** - every finding earns its severity through six validation gates. Auto-PoCs for confirmed vulns. Auto-remediation summaries. Kills false positives at the source.
+- 🌐 **Lyrie Multi-Language Vulnerability Scanners** - 8 purpose-built scanners (JS / TS / Python / Go / PHP / Ruby / C / C++) with 53 Lyrie-original detection rules covering OWASP Top 10 + CWE classics.
+- 📡 **Lyrie Threat-Intel feed** - every PR finding auto-attributed against [research.lyrie.ai](https://research.lyrie.ai), CISA-KEV-aligned, with Lyrie Verdict surfaced inline. Bumps severity to critical when KEV-listed.
+- 🔍 **Lyrie HTTP Proxy** - capture, classify, replay, and fuzz HTTP exchanges. 9 security-signal detectors (missing security headers, weak cookie flags, open CORS, secrets in responses, GraphQL introspection, auth tokens in URLs, verbose 5xx errors, and more). 7 structured mutators for replay-based testing.
+- 🆓 **Lyrie OSS-Scan service** - free public scan at `research.lyrie.ai/scan`. Submit any GitHub / GitLab / Bitbucket / Codeberg repo URL, get a Lyrie report (Mapper + Scanners + Stages A-F + auto-PoC) in seconds.
+- 🚀 **Lyrie Pentest GitHub Action** - Shield-scans every PR, posts a single-comment-per-PR Markdown summary, uploads SARIF to Code Scanning, blocks merges on `fail-on` threshold.
+- 🧠 **FTS5 cross-session memory** - bm25-ranked recall + LLM-summarized session digests, every snippet Shield-gated.
+- ✏️ **Diff-view edits** with approval gates - `apply_diff` produces unified diffs, never overwrites whole files; Shield scans every patch *before* it touches disk.
+- 🔌 **MCP adapter** (`@lyrie/mcp`) - Lyrie speaks fluent Model Context Protocol both as client and server.
+- 🚪 **DM pairing** - unknown senders can't reach the agent without operator approval. Three modes: `open` / `pairing` / `closed`.
+- 🩺 **`lyrie doctor`** - read-only environment, channel, and security self-diagnostic with `--json` for CI.
+- 🧬 **LyrieEvolve** - the agent scores every task, auto-generates reusable skills from wins, retrieves top-3 past successes as context before each new task, and runs nightly GRPO fine-tuning on your own GPU. Domain-specific rewards for cyber, SEO, trading, and code. ([`docs/evolve.md`](docs/evolve.md))
+- ☁️ **Pluggable execution backends** - run Lyrie scans locally, in a Daytona devbox, or as a Modal serverless function. Same Shield Doctrine, same SARIF, different host.
+- 📡 **13 multi-channel adapters** - Telegram, WhatsApp, Discord, Slack, Matrix, Mattermost, IRC, Feishu/Lark, Rocket.Chat, WebChat, LinkedIn, plus Phase 3 Matrix-E2EE - one inbox, all secured.
+- 🔴 **LyrieAAV** - Autonomous Adversarial Validation: 200+ attack vectors across OWASP LLM Top 10 + Agentic ASI 2026, GCG/AutoDAN GPU attacks, Crescendo + TAP multi-turn strategies, automated verdict scoring, SARIF output. ([`docs/aav.md`](docs/aav.md))
+
+---
+
+## 🔴 LyrieAAV - Autonomous Adversarial Validation
 
 LyrieAAV is Lyrie's AI red-teaming engine. It attacks deployed AI agents and LLMs to find
 security vulnerabilities before adversaries do.
@@ -160,7 +162,7 @@ lyrie governance permissions ./agent.config.json --json --out perms.json
 
 ### Governance Scorecard
 
-Scores your AI deployment 0–100 across 4 NIST AI RMF functions:
+Scores your AI deployment 0-100 across 4 NIST AI RMF functions:
 
 | Function | Covers |
 |----------|--------|
@@ -187,7 +189,7 @@ All findings include NIST AI RMF and EU AI Act references.
 
 ---
 
-## 🧬 LyrieEvolve — Self-Improving Agent
+## 🧬 LyrieEvolve - Self-Improving Agent
 
 Lyrie is the only autonomous agent that gets **measurably better** at your specific workloads over time.
 
@@ -200,11 +202,11 @@ lyrie evolve train           # trigger H200 GRPO fine-tuning job
 ```
 
 **How it works:**
-1. **Task Scorer** — scores every completed task: `0` (fail) / `0.5` (partial) / `1.0` (success). CI pass for code, threat confirmed for cyber, P&L positive for trading.
-2. **Skill Auto-Generation** — sessions scoring >= 0.5 are distilled into reusable skill files (`skills/auto-generated/`). Cosine-similarity dedup prevents redundant entries.
-3. **Contexture Layer** — before each new task, retrieves top-3 most relevant past wins (MMR-diverse) from LanceDB and injects them into the prompt.
-4. **Dream Cycle** — 4 AM batch: score outcomes, extract new skills, prune dead ones (score < 0.3 after 5+ uses), generate evolution report.
-5. **H200 GRPO Training** — accumulated conversations become LoRA fine-tuning data. Domain-specific reward functions train on owned hardware — no third-party APIs required.
+1. **Task Scorer** - scores every completed task: `0` (fail) / `0.5` (partial) / `1.0` (success). CI pass for code, threat confirmed for cyber, P&L positive for trading.
+2. **Skill Auto-Generation** - sessions scoring >= 0.5 are distilled into reusable skill files (`skills/auto-generated/`). Cosine-similarity dedup prevents redundant entries.
+3. **Contexture Layer** - before each new task, retrieves top-3 most relevant past wins (MMR-diverse) from LanceDB and injects them into the prompt.
+4. **Dream Cycle** - 4 AM batch: score outcomes, extract new skills, prune dead ones (score < 0.3 after 5+ uses), generate evolution report.
+5. **H200 GRPO Training** - accumulated conversations become LoRA fine-tuning data. Domain-specific reward functions train on owned hardware - no third-party APIs required.
 
 > MetaClaw trains on rented cloud APIs. Lyrie trains on owned hardware with domain-specific rewards. That's the moat.
 
@@ -233,8 +235,8 @@ Lyrie is a 30K-LOC, MIT-licensed, Shield-native autonomous agent. Competitors he
 | Diff-view edits with approval | ❌ | ❌ | ❌ | ✅ | ✅ + Shield-on-patch |
 | MCP adapter (client + server) | ✅ client | ❌ | ✅ client | Partial | ✅ client + server |
 | **One-command migration** | ❌ | ❌ | ❌ | ❌ | **✅ `lyrie migrate` (11 platforms)** |
-| **Migrate from Claude Code** | — | ❌ | — | ❌ | **✅ MCP servers + providers** |
-| **Migrate from Cursor** | ❌ | ❌ | ❌ | — | **✅ Settings + extensions** |
+| **Migrate from Claude Code** | - | ❌ | - | ❌ | **✅ MCP servers + providers** |
+| **Migrate from Cursor** | ❌ | ❌ | ❌ | - | **✅ Settings + extensions** |
 | **Post-import Shield scan** | ❌ | ❌ | ❌ | ❌ | **✅ `--secure` flag** |
 | **Native cybersecurity layer** | ❌ | ❌ | ❌ | ❌ | **✅ The Shield + Doctrine** |
 | **CVE-aware provider validation** | ❌ | ❌ | ❌ | ❌ | **✅ 41391/42428/7314 class checks** |
@@ -251,7 +253,7 @@ Lyrie is a 30K-LOC, MIT-licensed, Shield-native autonomous agent. Competitors he
 | Audit-friendly footprint | 430K+ LOC | ~30K LOC | Closed | ~50K LOC | **<30K LOC, MIT, fully auditable** |
 | Built by | OpenClaw | Nous Research | Anthropic | SST | **OTT Cybersecurity LLC** |
 
-> **The headline:** OpenClaw and Hermes are great agents. Claude Code and opencode are great coding assistants. None of them was built to *defend you while it works*. Lyrie is. Cybersecurity isn't a plugin — it's Layer 1.
+> **The headline:** OpenClaw and Hermes are great agents. Claude Code and opencode are great coding assistants. None of them was built to *defend you while it works*. Lyrie is. Cybersecurity isn't a plugin - it's Layer 1.
 
 ### vs AI-pentest agents
 
@@ -261,7 +263,7 @@ Lyrie also competes head-to-head with the AI-pentest crowd. Here we trade ecosys
 |---|---|---|---|---|---|
 | GitHub Action for PR scans | ✅ | ❌ | ❌ | ❌ | **✅ + SARIF + diff-scope** |
 | Attack-surface mapper (`/understand`) | ❌ | ❌ | ✅ | ❌ | **✅ Lyrie Mapper** |
-| Stages A–F validation | ❌ | ❌ | ✅ (A-D only) | ❌ | **✅ A–F + auto-PoC + auto-remediation** |
+| Stages A-F validation | ❌ | ❌ | ✅ (A-D only) | ❌ | **✅ A-F + auto-PoC + auto-remediation** |
 | Multi-language scanners (JS / Py / Go / PHP / Ruby / C/C++) | Partial | Partial | Partial | Partial | **✅ 8 scanners, 53 rules** |
 | Threat-intel feed (KEV-driven) | ❌ | ❌ | ❌ | ❌ | **✅ research.lyrie.ai** |
 | HTTP proxy + replay + mutators | ✅ | ❌ | ❌ | ❌ | **✅ 9 signal detectors** |
@@ -269,7 +271,7 @@ Lyrie also competes head-to-head with the AI-pentest crowd. Here we trade ecosys
 | Reproducible exploit labs in-repo | ❌ | ❌ | ❌ | ❌ | **✅ 9+ CVE labs** |
 | Native cybersecurity Shield (defends *itself*) | ❌ | ❌ | ❌ | ❌ | **✅ The Shield Doctrine** |
 | Multi-channel inbox (TG/WA/Discord/Slack) | ❌ | ❌ | ❌ | ❌ | **✅ 8 channels** |
-| Tests passing | — | — | — | — | **259 / 0 / 669 expect()s** |
+| Tests passing | - | - | - | - | **259 / 0 / 669 expect()s** |
 | License | Apache 2.0 | MIT | MIT | MIT + paid | **MIT** |
 | Built by | usestrix | GreyDGL | Gadi Evron | Alias Robotics | **OTT Cybersecurity LLC** |
 
@@ -356,21 +358,21 @@ jobs:
 
 You get:
 
-1. **Diff-scoped Shield + Mapper scan** — only PR-changed files, zero noise on untouched code
-2. **Stages A–F validation** — false positives killed before they hit the report
+1. **Diff-scoped Shield + Mapper scan** - only PR-changed files, zero noise on untouched code
+2. **Stages A-F validation** - false positives killed before they hit the report
 3. **Single PR comment** that updates in place (no spam)
 4. **SARIF** auto-uploaded to GitHub Code Scanning (findings show as PR annotations)
 5. **Workflow artifact** with full `report.md` + `report.json` + `lyrie.sarif`
 6. **Job summary** rendered into the GitHub Actions step summary tab
-7. **Non-zero exit on threshold** — block merges when configured as a required check
+7. **Non-zero exit on threshold** - block merges when configured as a required check
 
 Full docs: [`action/README.md`](action/README.md).
 
-**Other CI/CD platforms?** Drop-in templates for GitLab CI, Jenkins, and CircleCI live in [`action/templates/`](action/templates/). Same Lyrie scan, same Shield Doctrine, same SARIF — anywhere your code builds.
+**Other CI/CD platforms?** Drop-in templates for GitLab CI, Jenkins, and CircleCI live in [`action/templates/`](action/templates/). Same Lyrie scan, same Shield Doctrine, same SARIF - anywhere your code builds.
 
 ## 💬 Where Lyrie talks to you
 
-Lyrie ships a **multi-channel gateway** so the agent reaches you on whatever your team already uses — not just Slack-or-die.
+Lyrie ships a **multi-channel gateway** so the agent reaches you on whatever your team already uses - not just Slack-or-die.
 
 | Channel | Status | Notes |
 |---|:---:|---|
@@ -386,7 +388,7 @@ Lyrie ships a **multi-channel gateway** so the agent reaches you on whatever you
 | **WebChat**       | ✅ v0.3.2 | The widget Lyrie owns end-to-end (lyrie.ai) |
 | Signal | 🔭 roadmap | |
 
-Every channel implements the same `ChannelBot` contract — unified `UnifiedMessage` in, unified `UnifiedResponse` out. Same Shield Doctrine, same DM-pairing policy, same engine.
+Every channel implements the same `ChannelBot` contract - unified `UnifiedMessage` in, unified `UnifiedResponse` out. Same Shield Doctrine, same DM-pairing policy, same engine.
 
 ## ☁️ Where Lyrie runs
 
@@ -403,7 +405,7 @@ Switch at runtime:
 ```bash
 LYRIE_BACKEND=modal bun run action/runner.ts          # serverless
 LYRIE_BACKEND=daytona bun run action/runner.ts        # Daytona devbox
-LYRIE_BACKEND=local bun run action/runner.ts          # default — host
+LYRIE_BACKEND=local bun run action/runner.ts          # default - host
 ```
 
 Inspect what's wired up:
@@ -417,7 +419,7 @@ bun run backend preflight      # cheap auth/connectivity check
 
 Deployment recipes (Modal Python function + Daytona devcontainer): [`deploy/`](deploy/).
 
-**Same contract everywhere.** Every backend returns the same `BackendRunResult` shape — same SARIF, same Markdown, same Shield Doctrine — different host. **No Docker. No vendor lock-in.**
+**Same contract everywhere.** Every backend returns the same `BackendRunResult` shape - same SARIF, same Markdown, same Shield Doctrine - different host. **No Docker. No vendor lock-in.**
 
 ---
 
@@ -442,7 +444,7 @@ Deployment recipes (Modal Python function + Daytona devcontainer): [`deploy/`](d
 │  LAYER 1 · THE SHIELD                                        │
 │    Real-time threat detection  ·  Prompt-injection gate      │
 │    DM pairing  ·  Path scoping  ·  Tool-call validation      │
-│    Lyrie Attack-Surface Mapper  ·  Stages A–F Validator      │
+│    Lyrie Attack-Surface Mapper  ·  Stages A-F Validator      │
 │    KEV-driven threat-intel feed (research.lyrie.ai)          │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -451,7 +453,7 @@ The Shield is not a wrapper. It runs underneath every other layer.
 
 ---
 
-## 🧬 LyrieEvolve — Autonomous Self-Improvement
+## 🧬 LyrieEvolve - Autonomous Self-Improvement
 
 > Lyrie gets better the more it works. Every task outcome is scored, patterns are extracted, and the Dream Cycle prunes what doesn't work.
 
@@ -481,7 +483,7 @@ python3 -c "from lyrie.evolve import LyrieEvolve; print('LyrieEvolve ready')"
 
 ## 🛡️ Security-First Features
 
-> Things only Lyrie does. Not add-ons — baked in from day one.
+> Things only Lyrie does. Not add-ons - baked in from day one.
 
 ### CVE-Aware Provider Validation
 ```bash
@@ -503,7 +505,7 @@ lyrie migrate --from cursor --secure        # import settings + API key scan
 After migration, `--secure` automatically runs `LyrieProviderValidator` on all imported providers and MCP server configs.
 
 ### Tool-Loop Detection
-Every agent run automatically tracks tool call fingerprints. If the same normalized call appears 3+ times in a single run, it’s flagged as a loop and the router triggers fallback classification.
+Every agent run automatically tracks tool call fingerprints. If the same normalized call appears 3+ times in a single run, it's flagged as a loop and the router triggers fallback classification.
 
 ### Gateway Degraded Mode
 If a channel plugin (e.g., Discord token expired) fails to start, Lyrie boots in **degraded mode** instead of crashing. The remaining channels stay online. `lyrie doctor` shows which plugins degraded and why.
@@ -534,11 +536,11 @@ Full rule: [`docs/shield-doctrine.md`](docs/shield-doctrine.md).
 
 | Path | What |
 |---|---|
-| [`packages/core/`](packages/core/) | Lyrie agent core — engine, memory, skills, tools, MCP, attack-surface mapper, Stages A–F validator, EditEngine, Shield Guard |
+| [`packages/core/`](packages/core/) | Lyrie agent core - engine, memory, skills, tools, MCP, attack-surface mapper, Stages A-F validator, EditEngine, Shield Guard |
 | [`packages/gateway/`](packages/gateway/) | Multi-channel gateway (Telegram / WhatsApp / Discord) with DM pairing |
-| [`packages/mcp/`](packages/mcp/) | `@lyrie/mcp` — Model Context Protocol adapter |
-| [`packages/shield/`](packages/shield/) | Lyrie Shield — Rust cybersecurity engine |
-| [`packages/omega-suite/`](packages/omega-suite/) | Lyrie OMEGA — autonomous security intelligence backend powering [research.lyrie.ai](https://research.lyrie.ai) |
+| [`packages/mcp/`](packages/mcp/) | `@lyrie/mcp` - Model Context Protocol adapter |
+| [`packages/shield/`](packages/shield/) | Lyrie Shield - Rust cybersecurity engine |
+| [`packages/omega-suite/`](packages/omega-suite/) | Lyrie OMEGA - autonomous security intelligence backend powering [research.lyrie.ai](https://research.lyrie.ai) |
 | [`packages/ui/`](packages/ui/) | Lyrie war-room dashboard (Next.js) |
 | [`action/`](action/) | Lyrie Pentest GitHub Action |
 | [`research/`](research/) | Reproducible CVE exploit labs (Dockerfile + PoC + Sigma + YARA + IOCs) |
@@ -562,13 +564,13 @@ Model-agnostic. Lyrie routes per task class automatically:
 | Bulk | MiniMax-M2.7-HS | Mass content, parallel batches |
 | Local | Qwen / Gemma / Llama-local | Private, self-hosted |
 
-Bring any model — Anthropic, OpenAI, Google, xAI, MiniMax, Ollama, or your own endpoint. No lock-in.
+Bring any model - Anthropic, OpenAI, Google, xAI, MiniMax, Ollama, or your own endpoint. No lock-in.
 
 ---
 
 ## 📡 Channels
 
-Telegram · WhatsApp · Discord · Slack · Signal · iMessage · CLI · Webchat — connect Lyrie to wherever you already work. **DM pairing on by default for production deployments.**
+Telegram · WhatsApp · Discord · Slack · Signal · iMessage · CLI · Webchat - connect Lyrie to wherever you already work. **DM pairing on by default for production deployments.**
 
 ---
 
@@ -589,7 +591,7 @@ bun run edits list                # show pending diff-view edits awaiting approv
 bun run edits approve <planId>
 ```
 
-### Lyrie OSS-Scan — free public scan
+### Lyrie OSS-Scan - free public scan
 
 Any public repo, one command:
 
@@ -597,7 +599,7 @@ Any public repo, one command:
 bun run scan https://github.com/<owner>/<repo>
 ```
 
-Lyrie clones the repo (`--depth 1`), runs the **Attack-Surface Mapper**, all eight **Multi-Language Scanners**, then **Stages A–F Validator** — returns the confirmed findings with auto-PoCs and Lyrie remediation summaries. Allowlisted hosts: `github.com`, `gitlab.com`, `bitbucket.org`, `codeberg.org`. Loopback / private addresses refused at the URL gate.
+Lyrie clones the repo (`--depth 1`), runs the **Attack-Surface Mapper**, all eight **Multi-Language Scanners**, then **Stages A-F Validator** - returns the confirmed findings with auto-PoCs and Lyrie remediation summaries. Allowlisted hosts: `github.com`, `gitlab.com`, `bitbucket.org`, `codeberg.org`. Loopback / private addresses refused at the URL gate.
 
 ---
 
@@ -610,7 +612,7 @@ Lyrie clones the repo (`--depth 1`), runs the **Attack-Surface Mapper**, all eig
 | **Lyrie Research** | [research.lyrie.ai](https://research.lyrie.ai) | KEV-driven verified threat intel, 2100+ advisories, live threat feed |
 | **Lyrie OMEGA** | OSS · MIT (in this repo) | Autonomous security-intelligence backend |
 | **Lyrie SaaS** | [lyrie.ai](https://lyrie.ai) | Hosted Shield, WAF, scanner, breach monitoring |
-| **Lyrie LinkedIn** | [linkedin.com/company/lyrie-ai](https://www.linkedin.com/company/lyrie-ai/) | Official company channel — news, research highlights, updates |
+| **Lyrie LinkedIn** | [linkedin.com/company/lyrie-ai](https://www.linkedin.com/company/lyrie-ai/) | Official company channel - news, research highlights, updates |
 
 Together: a complete digital guardian that operates **and** defends.
 
@@ -622,7 +624,7 @@ Together: a complete digital guardian that operates **and** defends.
 - Multi-platform CI (Node 20/22/24 × Ubuntu/macOS) + Rust Shield build
 - Weekly CodeQL security analysis + Dependabot
 - Pre-commit hooks: gitleaks, codespell, hygiene
-- Lyrie Pentest Action runs **on this repo** every PR — Lyrie is its own first user
+- Lyrie Pentest Action runs **on this repo** every PR - Lyrie is its own first user
 
 ```bash
 # TypeScript suite
@@ -669,7 +671,7 @@ Code of Conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). PRs that weaponize 
 
 See [`SECURITY.md`](SECURITY.md). Responsible disclosure goes to **security@lyrie.ai**.
 
-Cybersecurity isn't a feature here — it's the product.
+Cybersecurity isn't a feature here - it's the product.
 
 ---
 
@@ -681,7 +683,7 @@ MIT. Use it, fork it, build on it.
 
 <div align="center">
 
-**Lyrie.ai** — _Built by [OTT Cybersecurity LLC](https://overthetop.ae)_
+**Lyrie.ai** - _Built by [OTT Cybersecurity LLC](https://overthetop.ae)_
 
 [Research](https://research.lyrie.ai) · [@lyrie_ai](https://x.com/lyrie_ai) · [LinkedIn](https://www.linkedin.com/company/lyrie-ai/) · [lyrie.ai](https://lyrie.ai) · [overthetop.ae](https://overthetop.ae)
 
