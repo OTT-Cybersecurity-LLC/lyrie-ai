@@ -20,7 +20,8 @@ import type {
   Tool,
   Transport,
 } from "./types";
-import { ShieldGuard, type ShieldGuardLike } from "@lyrie/core";
+import { ShieldGuard, type ShieldGuardLike, MCPSecurityScanner } from "@lyrie/core";
+import type { MCPScannerOptions } from "@lyrie/core";
 
 export interface RegisteredTool {
   /** Fully-qualified name surfaced to the agent: mcp:<server>:<tool> */
@@ -35,12 +36,21 @@ export interface McpRegistryOptions {
   configInline?: McpConfigFile;
   /** Shield guard used to scan tool results before they reach the agent. */
   shield?: ShieldGuardLike;
+  /** Options for the pre-connection MCP security scanner. */
+  scannerOptions?: MCPScannerOptions;
+  /**
+   * What to do when the scanner returns a critical finding:
+   *   "block"  — throw; do not connect (default)
+   *   "warn"   — log a warning but continue connecting
+   */
+  onCritical?: "block" | "warn";
 }
 
 export class McpRegistry {
   private clients = new Map<string, McpClient>();
   private tools: RegisteredTool[] = [];
   private shield: ShieldGuardLike = ShieldGuard.fallback();
+  private scanner = new MCPSecurityScanner();
 
   static defaultConfigPath(): string {
     return join(homedir(), ".lyrie", "mcp.json");
@@ -85,9 +95,34 @@ export class McpRegistry {
     const config = opts.configInline ?? McpRegistry.loadConfig(path);
     if (!config?.mcpServers) return;
 
+    const onCritical = opts.onCritical ?? "block";
+    this.scanner = new MCPSecurityScanner(opts.scannerOptions ?? {});
+
     for (const [name, cfg] of Object.entries(config.mcpServers)) {
       if (cfg.disabled) continue;
       try {
+        // ── Pre-connection security scan ─────────────────────────────────
+        const scanResult = await this.scanner.scan({ name, ...cfg });
+        if (!scanResult.safe) {
+          const findingsSummary = scanResult.findings
+            .map((f) => `[${f.severity}] ${f.check}: ${f.description}`)
+            .join("\n");
+          if (scanResult.riskLevel === "critical") {
+            const msg = `[mcp] BLOCKED server "${name}" — MCPSecurityScanner critical finding:\n${findingsSummary}`;
+            if (onCritical === "block") {
+              console.error(msg);
+              continue; // skip this server entirely
+            } else {
+              console.warn(msg);
+            }
+          } else {
+            console.warn(
+              `[mcp] WARNING: server "${name}" has security findings (riskLevel=${scanResult.riskLevel}):\n${findingsSummary}`,
+            );
+          }
+        }
+        // ── End security scan ─────────────────────────────────────────────
+
         const client = new McpClient({
           name,
           transport: McpRegistry.toTransport(cfg),

@@ -366,6 +366,18 @@ export type { SkillContext, RetrievalResult, ContextureOptions } from "./evolve/
 export { runDreamCycle, findPruneCandidates, pruneSkills, DREAM_VERSION } from "./evolve/dream-cycle";
 export type { DreamReport, DreamCycleOptions, PruneCandidate } from "./evolve/dream-cycle";
 
+// ─── MCP Security Scanner ─────────────────────────────────────────────────────
+export { MCPSecurityScanner } from "./security/mcp-scanner";
+export type {
+  MCPScanResult,
+  MCPFinding,
+  MCPRiskLevel,
+  MCPFindingSeverity,
+  MCPToolDecl,
+  MCPServerConfig as MCPScannerServerConfig,
+  MCPScannerOptions,
+} from "./security/mcp-scanner";
+
 // ─── Boot ────────────────────────────────────────────────────────────────────
 
 import { LyrieEngine } from "./engine/lyrie-engine";
