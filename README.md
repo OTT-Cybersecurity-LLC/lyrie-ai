@@ -18,7 +18,7 @@ Lyrie is not just another AI assistant. It runs your operations and protects the
 [![X](https://img.shields.io/badge/follow-@lyrie__ai-1da1f2.svg)](https://x.com/lyrie_ai)
 [![CI](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-889%20passing-brightgreen.svg)](#-quality--tests)
+[![Tests](https://img.shields.io/badge/tests-1452%20passing-brightgreen.svg)](#-quality--tests)
 [![PyPI](https://img.shields.io/badge/pypi-lyrie--agent-3776AB.svg?logo=pypi&logoColor=white)](https://pypi.org/project/lyrie-agent/)
 [![Releases](https://img.shields.io/github/v/release/OTT-Cybersecurity-LLC/lyrie-ai?include_prereleases&label=release)](https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/releases)
 [![LinkedIn](https://img.shields.io/badge/linkedin-lyrie--ai-0077b5.svg)](https://www.linkedin.com/company/lyrie-ai/)
@@ -37,7 +37,7 @@ Every AI agent platform treats security as an afterthought. Lyrie treats it as t
 
 > **Cybersecurity isn't a plugin — it's Layer 1.**
 
-### Highlights (current main, [`v0.9.0`](CHANGELOG.md))
+### Highlights (current main, [`v1.0.0`](CHANGELOG.md))
 
 ### What's New in v0.9.0
 - 🌐 **Phase 3 Multi-Channel** — first-class adapters for **Feishu / Lark**, **IRC**, and **Matrix** (with E2EE bootstrap). Full set is now 13 channels.
