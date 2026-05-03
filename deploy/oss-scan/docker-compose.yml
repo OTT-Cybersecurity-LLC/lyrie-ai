@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  oss-scan:
+    build: .
+    ports:
+      - "3020:3020"
+    environment:
+      - NODE_ENV=production
+      - OSS_SCAN_RATE_LIMIT_WINDOW_MS=300000
+      - OSS_SCAN_MAX_REPO_SIZE_MB=50
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3020/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Optional: redis for persistent rate limiting across restarts
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
