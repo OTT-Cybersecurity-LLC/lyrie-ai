@@ -3,12 +3,14 @@
 //! Can be run independently or called from the TypeScript agent core.
 //! 
 //! Usage:
+//!   lyrie-shield rpc                Run as JSON-RPC server over stdin/stdout
 //!   lyrie-shield scan <file>        Scan a file for threats
 //!   lyrie-shield watch <directory>  Monitor a directory in real-time
 //!   lyrie-shield waf <port>         Start WAF proxy on given port
 //!   lyrie-shield status             Show shield status
 
 use lyrie_shield::LyrieShield;
+mod rpc;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -24,6 +26,11 @@ fn main() {
     let shield = LyrieShield::new();
 
     match args[1].as_str() {
+        // JSON-RPC mode: the TypeScript engine spawns this and communicates
+        // via newline-delimited JSON over stdin/stdout.
+        "rpc" => {
+            rpc::run_rpc_server(&shield);
+        }
         "scan" => {
             if args.len() < 3 {
                 eprintln!("Usage: lyrie-shield scan <file>");
@@ -54,6 +61,7 @@ fn main() {
 
 fn print_usage() {
     println!("Usage:");
+    println!("  lyrie-shield rpc             Run JSON-RPC server over stdin/stdout");
     println!("  lyrie-shield scan <file>     Scan a file for threats");
     println!("  lyrie-shield url <url>       Check if a URL is safe");
     println!("  lyrie-shield watch <dir>     Monitor directory in real-time");
