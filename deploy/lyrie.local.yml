@@ -1,0 +1,84 @@
+# Lyrie v1.0.0 — Fully-Local Deployment
+# Zero external API dependencies. This file is the canonical example of
+# "Lyrie running entirely on your own hardware, no third-party LLM provider."
+#
+# To use:
+#   $ cp deploy/lyrie.local.yml ~/.lyrie/config.yml
+#   $ lyrie daemon --config ~/.lyrie/config.yml
+#
+# Prerequisites:
+#   1. Ollama running on localhost:11434
+#   2. `ollama pull nous-hermes3:70b`  (the canonical local agentic model)
+#   3. (optional) LM Studio running on localhost:1234 as fallback
+# -----------------------------------------------------------------------------
+
+# ── Independence layer ───────────────────────────────────────────────────────
+provider: hermes                    # primary: NousResearch Hermes 3 (local via Ollama)
+model: nous-hermes3:70b
+fallbackProvider: ollama            # secondary: any local Ollama model
+requireLocalProvider: true          # HARD GUARD: refuse external API calls
+coordinatorMode: false              # set true to force orchestrator-only main agent
+
+# ── Provider endpoints ───────────────────────────────────────────────────────
+endpoints:
+  ollama: http://localhost:11434
+  lmstudio: http://localhost:1234/v1
+  hermes: http://localhost:11434    # protocol auto-detected (ollama vs openai)
+
+# ── Shield (defensive layer) ─────────────────────────────────────────────────
+shield:
+  provider: rust-native             # local Rust binary, no API calls
+  mode: active                      # passive | active | strict
+
+# ── Memory ───────────────────────────────────────────────────────────────────
+memory:
+  backend: sqlite
+  path: ~/.lyrie/memory.db
+  integrityCheck: true              # weekly content-hash drift check (U9)
+
+# ── Channels ─────────────────────────────────────────────────────────────────
+# Telegram works locally because the bot is OUR bot — no LLM API in the path.
+channels:
+  - telegram
+
+# ── Sub-Agent Trust Protocol (ATP) ───────────────────────────────────────────
+atp:
+  enabled: true
+  keystore: ~/.lyrie/keys/
+  scopeNarrowingRequired: true      # children MUST have narrower tool scope
+
+# ── LyrieEvolve (training loop) ──────────────────────────────────────────────
+evolve:
+  enabled: true
+  exportFormat: atropos
+  trainingHost: ssh://root@210.157.233.86  # H200 (offline export, no LLM call)
+
+# ── Daemon (proactive tick loop) ─────────────────────────────────────────────
+daemon:
+  intervalMs: 300000                # 5 minutes
+  channel: telegram
+  scoutTasks:
+    - dependency-cve-check
+    - threat-feed-delta
+    - mcp-server-health
+    - agent-fleet-sanity
+
+# ── Tool registry (deferred loading) ─────────────────────────────────────────
+tools:
+  deferredLoading: true             # only load schemas on demand
+  alwaysLoaded:
+    - tool_search
+    - agent_spawn
+    - agent_status
+    - report
+
+# ── Verification agent ───────────────────────────────────────────────────────
+verifier:
+  enabled: true
+  autoSpawn: true                   # auto-verify after every successful run
+  rejectPassWithoutProbe: true      # require >=1 adversarial probe before PASS
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+log:
+  level: info
+  path: ~/.lyrie/logs/lyrie.log

@@ -18,6 +18,7 @@
 
 import { ShieldManager } from "../engine/shield-manager";
 import { ShieldGuard, type ShieldGuardLike } from "../engine/shield-guard";
+import { ToolRegistry } from "./tool-registry";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -103,7 +104,14 @@ export class ToolExecutor {
 
   async initialize(): Promise<void> {
     this.registerBuiltinTools();
+    // Mirror all registered tools into the global ToolRegistry singleton so
+    // tool_search and deferred-loading callers see the full catalogue.
+    const registry = ToolRegistry.getInstance();
+    for (const tool of this.tools.values()) {
+      registry.register(tool);
+    }
     console.log(`   → ${this.tools.size} tools registered`);
+    console.log(`   → ToolRegistry seeded with ${registry.size()} tools`);
   }
 
   // ─── Built-in Tool Registration ──────────────────────────────────────────
@@ -578,6 +586,46 @@ export class ToolExecutor {
       },
     });
 
+    // ── tool_search ───────────────────────────────────────────────────────
+    // Deferred tool loading (Claude Code v2.1.88 ToolSearchTool pattern).
+    // Fetch full schemas for tools whose schemas are not in the initial prompt.
+    // Calling this before using an unknown tool saves ~500 tokens per schema.
+    this.register({
+      name: "tool_search",
+      description:
+        "Fetch full schema for deferred tools by name or keyword. Use before calling any tool whose schema is not yet loaded.",
+      parameters: {
+        query: {
+          type: "string",
+          description: "Tool name (exact) or keyword to search",
+          required: true,
+        },
+        max_results: {
+          type: "number",
+          description: "Maximum number of results to return (default: 5)",
+          default: 5,
+        },
+      },
+      risk: "safe",
+      execute: async (params) => {
+        const registry = ToolRegistry.getInstance();
+        const limit = typeof params.max_results === "number" ? params.max_results : 5;
+        const results = registry.search(params.query, limit);
+        if (results.length === 0) {
+          return {
+            success: true,
+            output: JSON.stringify({ tools: [], message: `No tools found matching: ${params.query}` }),
+            metadata: { query: params.query, count: 0 },
+          };
+        }
+        return {
+          success: true,
+          output: JSON.stringify({ tools: results }),
+          metadata: { query: params.query, count: results.length },
+        };
+      },
+    });
+
     // ── apply_diff ────────────────────────────────────────────────────────
     // Lyrie's targeted-edit path with optional approval gate. The existing
     // write_file tool is preserved unchanged for whole-file writes;
@@ -693,6 +741,19 @@ export class ToolExecutor {
     this.tools.set(tool.name, tool);
   }
 
+  /**
+   * Register a built-in tool AND immediately sync it to the global
+   * ToolRegistry singleton so tool_search can discover it before
+   * initialize() has been called (e.g. during registerBuiltinTools()).
+   *
+   * Note: initialize() does a full sync after all builtins are registered;
+   * this is a belt-and-suspenders path for dynamically added tools.
+   */
+  registerAndSync(tool: Tool): void {
+    this.register(tool);
+    ToolRegistry.getInstance().register(tool);
+  }
+
   unregister(name: string): boolean {
     return this.tools.delete(name);
   }
@@ -792,6 +853,63 @@ export class ToolExecutor {
    */
   listNames(): string[] {
     return Array.from(this.tools.keys());
+  }
+
+  /**
+   * Format an explicit tool list for Anthropic's tool_use API.
+   * Useful when coordinator mode filters the available tool set before dispatch.
+   */
+  toAnthropicFormatFrom(tools: Tool[]): AnthropicToolDef[] {
+    return tools.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      input_schema: {
+        type: "object" as const,
+        properties: Object.fromEntries(
+          Object.entries(tool.parameters).map(([key, param]) => [
+            key,
+            {
+              type: param.type,
+              description: param.description,
+              ...(param.enum ? { enum: param.enum } : {}),
+              ...(param.default !== undefined ? { default: param.default } : {}),
+            },
+          ])
+        ),
+        required: Object.entries(tool.parameters)
+          .filter(([_, p]) => p.required)
+          .map(([k]) => k),
+      },
+    }));
+  }
+
+  /**
+   * Format an explicit tool list for OpenAI's function calling API.
+   */
+  toOpenAIFormatFrom(tools: Tool[]): OpenAIToolDef[] {
+    return tools.map((tool) => ({
+      type: "function" as const,
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: {
+          type: "object" as const,
+          properties: Object.fromEntries(
+            Object.entries(tool.parameters).map(([key, param]) => [
+              key,
+              {
+                type: param.type,
+                description: param.description,
+                ...(param.enum ? { enum: param.enum } : {}),
+              },
+            ])
+          ),
+          required: Object.entries(tool.parameters)
+            .filter(([_, p]) => p.required)
+            .map(([k]) => k),
+        },
+      },
+    }));
   }
 
   /**
