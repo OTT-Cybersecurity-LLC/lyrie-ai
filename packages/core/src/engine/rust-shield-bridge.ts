@@ -1,330 +1,358 @@
 /**
- * RustShieldBridge — TypeScript ↔ Rust LyrieShield binary bridge.
+ * RustShieldBridge — wires the compiled Lyrie Shield Rust binary into the
+ * TypeScript engine via JSON-RPC over stdin/stdout.
  *
- * Spawns the compiled `lyrie-shield` binary and communicates via
- * newline-delimited JSON-RPC over stdin/stdout.
+ * The Rust binary (`packages/shield/target/release/lyrie-shield`) exposes
+ * three RPC methods:
+ *   scan_malware(filePath)     → MalwareScanResult
+ *   scan_behaviour(events[])  → BehaviourScanResult
+ *   waf_check(url, headers)   → WAFResult
  *
- * Binary search order (first found wins):
- *   1. packages/shield/target/release/lyrie-shield   (dev build)
- *   2. ~/.lyrie/bin/lyrie-shield                      (installed)
- *   3. $PATH                                           (system install)
+ * Wire-up:
+ *   const bridge = new RustShieldBridge();
+ *   if (await bridge.start()) {
+ *     const result = await bridge.scanMalware('/path/to/file');
+ *   }
  *
- * Graceful degradation: if the binary is not found or fails to start,
- * isAvailable() returns false and all scan methods return clean/safe
- * results so the agent continues operating with the TypeScript-only shield.
+ * Responsibility split (spec U2):
+ *   Rust binary:  malware signature scan, behavioural analysis on file writes,
+ *                 WAF on outbound web fetches.
+ *   TS Shield:    prompt injection, exfil patterns, MCP filter (called per-message,
+ *                 latency-critical — keep in TS).
  *
- * Protocol (newline-delimited JSON-RPC):
- *   Request:  {"id":1,"method":"scan_file","params":{"path":"...","content":"..."}}
- *   Response: {"id":1,"result":{"clean":true,"threats":[],"latency_ms":0.8}}
- *   Error:    {"id":1,"error":"message"}
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
+ * © OTT Cybersecurity LLC — https://lyrie.ai — MIT License
  */
 
-import { type ChildProcess, spawn } from "child_process";
-import { existsSync } from "fs";
-import { resolve as resolvePath, join } from "path";
-import { homedir } from "os";
-import { createInterface } from "readline";
+import { spawn, type ChildProcess } from "node:child_process";
+import { createInterface } from "node:readline";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
-// ─── Public Types ─────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface ScanResult {
+export interface MalwareScanResult {
   clean: boolean;
-  threats: string[];
+  /** Threat name if detected (e.g. "Trojan.Generic.123") */
+  threat?: string;
+  severity: "none" | "low" | "medium" | "high" | "critical";
+  details?: string;
   latencyMs: number;
 }
 
-export interface BehaviorReport {
-  suspicious: boolean;
-  threats: string[];
+export interface BehaviourEvent {
+  type: "file_write" | "file_delete" | "network_connect" | "process_spawn";
+  target: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BehaviourScanResult {
+  anomalous: boolean;
+  signals: string[];
+  severity: "none" | "low" | "medium" | "high" | "critical";
   latencyMs: number;
 }
 
-/** Minimal shape of a ToolCall for behavioral analysis */
-export interface ToolCallRecord {
-  tool: string;
-  args?: Record<string, unknown>;
+export interface WAFResult {
+  blocked: boolean;
+  rule?: string;
+  severity: "none" | "low" | "medium" | "high" | "critical";
+  latencyMs: number;
 }
 
-// ─── Internal ─────────────────────────────────────────────────────────────────
+// ─── JSON-RPC types ───────────────────────────────────────────────────────────
 
-interface RpcRequest {
+interface RPCRequest {
   id: number;
   method: string;
-  params: Record<string, unknown>;
+  params: unknown;
 }
 
-interface RpcResponse {
+interface RPCResponse {
   id: number;
   result?: unknown;
-  error?: string;
+  error?: { code: number; message: string };
 }
 
-type PendingCallback = (response: RpcResponse) => void;
+type PendingCall = {
+  resolve: (value: unknown) => void;
+  reject: (reason: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+};
 
-// ─── Bridge ───────────────────────────────────────────────────────────────────
+// ─── RustShieldBridge ─────────────────────────────────────────────────────────
 
 export class RustShieldBridge {
   private proc: ChildProcess | null = null;
-  private available = false;
+  private pending = new Map<number, PendingCall>();
   private nextId = 1;
-  private pending: Map<number, PendingCallback> = new Map();
-  private readonly callTimeoutMs: number;
+  private available = false;
+  private readonly rpcTimeoutMs = 5000;
 
-  constructor(options?: { callTimeoutMs?: number }) {
-    this.callTimeoutMs = options?.callTimeoutMs ?? 5000;
+  /**
+   * Default path to the compiled Rust binary.
+   * Resolved relative to the monorepo root.
+   */
+  private readonly binaryPath: string;
+
+  constructor(binaryPath?: string) {
+    const repoRoot = resolve(__dirname, "../../../../..");
+    this.binaryPath =
+      binaryPath ??
+      resolve(repoRoot, "packages/shield/target/release/lyrie-shield");
   }
 
-  // ─── Lifecycle ─────────────────────────────────────────────────────────────
-
-  async init(): Promise<void> {
-    const binaryPath = this.findBinary();
-    if (!binaryPath) {
-      console.debug(
-        "[RustShieldBridge] lyrie-shield binary not found — running without Rust acceleration"
+  /**
+   * Start the Rust shield process.
+   * Returns true if the binary was found and started successfully.
+   */
+  async start(): Promise<boolean> {
+    if (!existsSync(this.binaryPath)) {
+      console.warn(
+        `[rust-shield] Binary not found at ${this.binaryPath}. ` +
+          "Run `bun run shield:build` to compile. Rust Shield disabled."
       );
       this.available = false;
-      return;
+      return false;
     }
 
     try {
-      await this.spawnProcess(binaryPath);
+      this.proc = spawn(this.binaryPath, ["--rpc"], {
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+
+      this.proc.on("error", (err) => {
+        console.error(`[rust-shield] Process error: ${err.message}`);
+        this.available = false;
+      });
+
+      this.proc.on("exit", (code) => {
+        if (code !== 0) {
+          console.warn(`[rust-shield] Process exited with code ${code}`);
+        }
+        this.available = false;
+        // Reject all pending calls
+        for (const [, pending] of this.pending) {
+          clearTimeout(pending.timer);
+          pending.reject(new Error("Rust shield process exited"));
+        }
+        this.pending.clear();
+      });
+
+      // Set up stdout line reader for JSON-RPC responses
+      const rl = createInterface({ input: this.proc.stdout! });
+      rl.on("line", (line) => this.handleResponse(line));
+
+      // Wait for the ready signal (the binary writes {"ready":true} on startup)
+      await this.waitForReady();
+
       this.available = true;
-      console.log(`[RustShieldBridge] 🦀 Rust shield online (${binaryPath})`);
+      console.log(`[rust-shield] ✓ Lyrie Shield Rust binary ready at ${this.binaryPath}`);
+      return true;
     } catch (err: any) {
-      console.warn(`[RustShieldBridge] Failed to start binary: ${err.message}`);
+      console.warn(`[rust-shield] Failed to start: ${err.message}. Rust Shield disabled.`);
+      this.available = false;
+      return false;
+    }
+  }
+
+  /**
+   * Stop the Rust shield process gracefully.
+   */
+  async stop(): Promise<void> {
+    if (this.proc) {
+      this.proc.kill("SIGTERM");
+      this.proc = null;
       this.available = false;
     }
   }
 
-  async shutdown(): Promise<void> {
-    if (this.proc) {
-      this.proc.stdin?.end();
-      this.proc.kill("SIGTERM");
-      this.proc = null;
-    }
-    this.available = false;
-    // Reject all pending calls
-    for (const [id, cb] of this.pending) {
-      cb({ id, error: "Bridge shut down" });
-    }
-    this.pending.clear();
-  }
-
+  /** Whether the Rust binary is running and available. */
   isAvailable(): boolean {
     return this.available;
   }
 
-  // ─── Public API ────────────────────────────────────────────────────────────
+  // ─── Public RPC methods ───────────────────────────────────────────────────
 
   /**
-   * Scan a file write for malware signatures BEFORE it touches disk.
+   * Scan a file for malware signatures using the Rust binary's YARA/ClamAV
+   * signature engine. Falls back gracefully when unavailable.
    */
-  async scanFileWrite(path: string, content: string): Promise<ScanResult> {
-    if (!this.available) return cleanResult();
+  async scanMalware(filePath: string): Promise<MalwareScanResult> {
+    const start = performance.now();
+
+    if (!this.available) {
+      return {
+        clean: true,
+        severity: "none",
+        details: "Rust Shield unavailable — compile with `bun run shield:build`",
+        latencyMs: performance.now() - start,
+      };
+    }
+
     try {
-      const raw = await this.call("scan_file", { path, content });
-      return normalizeScanResult(raw);
+      const result = await this.call<Omit<MalwareScanResult, "latencyMs">>(
+        "scan_malware",
+        { path: filePath }
+      );
+      return { ...result, latencyMs: performance.now() - start };
     } catch (err: any) {
-      console.debug(`[RustShieldBridge] scanFileWrite error: ${err.message}`);
-      return cleanResult();
+      return {
+        clean: true,
+        severity: "low",
+        details: `scan error: ${err.message}`,
+        latencyMs: performance.now() - start,
+      };
     }
   }
 
   /**
-   * Behavioral analysis: is this sequence of tool calls suspicious?
+   * Analyse a sequence of behavioural events (file writes, network calls, etc.)
+   * for anomaly signals.
    */
-  async analyzeToolSequence(calls: ToolCallRecord[]): Promise<BehaviorReport> {
-    if (!this.available) return cleanBehaviorReport();
+  async scanBehaviour(events: BehaviourEvent[]): Promise<BehaviourScanResult> {
+    const start = performance.now();
+
+    if (!this.available) {
+      return {
+        anomalous: false,
+        signals: [],
+        severity: "none",
+        latencyMs: performance.now() - start,
+      };
+    }
+
     try {
-      const raw = await this.call("analyze_tool_sequence", { calls });
-      return normalizeBehaviorReport(raw);
+      const result = await this.call<Omit<BehaviourScanResult, "latencyMs">>(
+        "scan_behaviour",
+        { events }
+      );
+      return { ...result, latencyMs: performance.now() - start };
     } catch (err: any) {
-      console.debug(`[RustShieldBridge] analyzeToolSequence error: ${err.message}`);
-      return cleanBehaviorReport();
+      return {
+        anomalous: false,
+        signals: [`scan error: ${err.message}`],
+        severity: "low",
+        latencyMs: performance.now() - start,
+      };
     }
   }
 
   /**
-   * WAF on outbound HTTP: scan request before it goes out.
+   * Web Application Firewall check on an outbound URL + headers.
+   * Detects SSRF, header injection, and known-bad URL patterns.
    */
-  async scanOutboundRequest(
-    url: string,
-    headers: Record<string, string>,
-    body?: string
-  ): Promise<ScanResult> {
-    if (!this.available) return cleanResult();
+  async wafCheck(url: string, headers?: Record<string, string>): Promise<WAFResult> {
+    const start = performance.now();
+
+    if (!this.available) {
+      return {
+        blocked: false,
+        severity: "none",
+        latencyMs: performance.now() - start,
+      };
+    }
+
     try {
-      const raw = await this.call("scan_outbound_request", { url, headers, body: body ?? "" });
-      return normalizeScanResult(raw);
+      const result = await this.call<Omit<WAFResult, "latencyMs">>(
+        "waf_check",
+        { url, headers: headers ?? {} }
+      );
+      return { ...result, latencyMs: performance.now() - start };
     } catch (err: any) {
-      console.debug(`[RustShieldBridge] scanOutboundRequest error: ${err.message}`);
-      return cleanResult();
+      return {
+        blocked: false,
+        severity: "low",
+        latencyMs: performance.now() - start,
+      };
     }
   }
 
-  // ─── Internal — Binary Discovery ───────────────────────────────────────────
+  // ─── JSON-RPC internals ───────────────────────────────────────────────────
 
-  private findBinary(): string | null {
-    const candidates = [
-      // 1. Dev build inside the monorepo
-      resolvePath(
-        join(__dirname, "../../../../shield/target/release/lyrie-shield")
-      ),
-      // Also try relative to the packages dir (compiled from CWD)
-      resolvePath(
-        join(process.cwd(), "packages/shield/target/release/lyrie-shield")
-      ),
-      // 2. User-installed
-      join(homedir(), ".lyrie", "bin", "lyrie-shield"),
-      // 3. PATH (checked last; existsSync won't find it so we check separately)
-    ];
-
-    for (const p of candidates) {
-      if (existsSync(p)) return p;
-    }
-
-    // 3. Try PATH via `which`/`command -v`
-    try {
-      const { execSync } = require("child_process");
-      const found = execSync("command -v lyrie-shield 2>/dev/null", {
-        encoding: "utf-8",
-        timeout: 2000,
-      }).trim();
-      if (found) return found;
-    } catch {
-      // not in PATH
-    }
-
-    return null;
-  }
-
-  // ─── Internal — Process Management ─────────────────────────────────────────
-
-  private async spawnProcess(binaryPath: string): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      const proc = spawn(binaryPath, ["rpc"], {
-        stdio: ["pipe", "pipe", "pipe"],
-        env: { ...process.env },
-      });
-
-      proc.on("error", (err) => {
-        this.available = false;
-        reject(err);
-      });
-
-      proc.on("exit", (code) => {
-        if (this.available) {
-          console.warn(`[RustShieldBridge] process exited with code ${code}; disabling`);
-          this.available = false;
-          // Fail all pending
-          for (const [id, cb] of this.pending) {
-            cb({ id, error: `Process exited (code ${code})` });
-          }
-          this.pending.clear();
-        }
-      });
-
-      // Read responses line-by-line
-      const rl = createInterface({ input: proc.stdout! });
-      rl.on("line", (line) => {
-        line = line.trim();
-        if (!line) return;
-        try {
-          const resp: RpcResponse = JSON.parse(line);
-          const cb = this.pending.get(resp.id);
-          if (cb) {
-            this.pending.delete(resp.id);
-            cb(resp);
-          }
-        } catch {
-          console.debug(`[RustShieldBridge] bad JSON from binary: ${line}`);
-        }
-      });
-
-      proc.stderr?.on("data", (chunk: Buffer) => {
-        const msg = chunk.toString().trim();
-        if (msg) console.debug(`[RustShieldBridge] stderr: ${msg}`);
-      });
-
-      this.proc = proc;
-
-      // Verify the process is alive with a status call
-      setTimeout(async () => {
-        try {
-          await this.call("status", {});
-          resolve();
-        } catch (err: any) {
-          reject(err);
-        }
-      }, 100);
-    });
-  }
-
-  // ─── Internal — RPC ────────────────────────────────────────────────────────
-
-  private call(method: string, params: Record<string, unknown>): Promise<unknown> {
-    return new Promise<unknown>((resolve, reject) => {
-      if (!this.proc || !this.proc.stdin || this.proc.stdin.destroyed) {
-        return reject(new Error("Process not running"));
-      }
-
+  private call<T>(method: string, params: unknown): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
       const id = this.nextId++;
-      const request: RpcRequest = { id, method, params };
-      const line = JSON.stringify(request) + "\n";
+      const request: RPCRequest = { id, method, params };
 
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error(`RPC timeout: ${method} (${this.callTimeoutMs}ms)`));
-      }, this.callTimeoutMs);
+        reject(new Error(`RPC timeout after ${this.rpcTimeoutMs}ms for method "${method}"`));
+      }, this.rpcTimeoutMs);
 
-      this.pending.set(id, (resp) => {
-        clearTimeout(timer);
-        if (resp.error) {
-          reject(new Error(`RPC error: ${resp.error}`));
-        } else {
-          resolve(resp.result);
-        }
+      this.pending.set(id, {
+        resolve: resolve as (value: unknown) => void,
+        reject,
+        timer,
       });
 
-      this.proc.stdin.write(line, "utf-8", (err) => {
-        if (err) {
-          clearTimeout(timer);
-          this.pending.delete(id);
-          reject(new Error(`stdin write failed: ${err.message}`));
+      const line = JSON.stringify(request) + "\n";
+      this.proc!.stdin!.write(line);
+    });
+  }
+
+  private handleResponse(line: string): void {
+    let response: RPCResponse;
+    try {
+      response = JSON.parse(line) as RPCResponse;
+    } catch {
+      return; // ignore non-JSON lines (e.g. startup messages)
+    }
+
+    const pending = this.pending.get(response.id);
+    if (!pending) return;
+
+    clearTimeout(pending.timer);
+    this.pending.delete(response.id);
+
+    if (response.error) {
+      pending.reject(
+        new Error(`RPC error ${response.error.code}: ${response.error.message}`)
+      );
+    } else {
+      pending.resolve(response.result);
+    }
+  }
+
+  private waitForReady(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error("Rust Shield startup timeout")),
+        3000
+      );
+
+      const rl = createInterface({ input: this.proc!.stdout! });
+      rl.once("line", (line) => {
+        clearTimeout(timeout);
+        rl.close();
+        try {
+          const msg = JSON.parse(line);
+          if (msg.ready) {
+            resolve();
+          } else {
+            reject(new Error(`Unexpected startup message: ${line}`));
+          }
+        } catch {
+          reject(new Error(`Non-JSON startup message: ${line}`));
         }
       });
     });
   }
 }
 
-// ─── Normalizers & Defaults ───────────────────────────────────────────────────
+// ─── Convenience singleton ────────────────────────────────────────────────────
 
-function cleanResult(): ScanResult {
-  return { clean: true, threats: [], latencyMs: 0 };
+let _instance: RustShieldBridge | undefined;
+
+export async function getRustShieldBridge(
+  binaryPath?: string
+): Promise<RustShieldBridge> {
+  if (!_instance) {
+    _instance = new RustShieldBridge(binaryPath);
+    await _instance.start();
+  }
+  return _instance;
 }
 
-function cleanBehaviorReport(): BehaviorReport {
-  return { suspicious: false, threats: [], latencyMs: 0 };
-}
-
-function normalizeScanResult(raw: unknown): ScanResult {
-  if (!raw || typeof raw !== "object") return cleanResult();
-  const r = raw as Record<string, unknown>;
-  return {
-    clean: r.clean === true,
-    threats: Array.isArray(r.threats) ? (r.threats as string[]) : [],
-    latencyMs: typeof r.latency_ms === "number" ? r.latency_ms : 0,
-  };
-}
-
-function normalizeBehaviorReport(raw: unknown): BehaviorReport {
-  if (!raw || typeof raw !== "object") return cleanBehaviorReport();
-  const r = raw as Record<string, unknown>;
-  return {
-    suspicious: r.suspicious === true,
-    threats: Array.isArray(r.threats) ? (r.threats as string[]) : [],
-    latencyMs: typeof r.latency_ms === "number" ? r.latency_ms : 0,
-  };
+export function resetRustShieldBridge(): void {
+  _instance = undefined;
 }
