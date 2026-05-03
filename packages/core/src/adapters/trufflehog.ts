@@ -8,11 +8,10 @@
  * Key features:
  *   • Runs `trufflehog filesystem <path> --json --no-update`
  *   • Parses TruffleHog DetectorResult JSON-lines → AdapterFinding[]
- *   • Maps every detected secret to an AdapterFinding with
- *     severity=critical for verified secrets, high for unverified
- *   • Adds Lyrie's AI-judgment hint in the finding description
- *     ("this key is in examples/ — likely a placeholder")
+ *   • Verified secrets → critical; unverified → high
+ *   • Lyrie's AI-judgment hint: "this key is in examples/ — likely a placeholder"
  *   • AGPL license: calls the binary only, no vendoring
+ *   • Accepts injected executor for testing (DI pattern)
  *
  * © OTT Cybersecurity LLC — Released under MIT License.
  */
@@ -22,8 +21,23 @@ import { promisify } from "node:util";
 import { basename, dirname } from "node:path";
 
 import type { AdapterFinding, AdapterOptions, AdapterResult, ScannerAdapter } from "./adapter-types";
+import type { ShellExecutor } from "./nuclei";
 
 const execFileAsync = promisify(execFile);
+
+function defaultExecutor(
+  cmd: string,
+  args: string[],
+  opts?: { timeout?: number; maxBuffer?: number },
+): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync(cmd, args, {
+    timeout: opts?.timeout,
+    maxBuffer: opts?.maxBuffer,
+  }).catch((err: any) => ({
+    stdout: err?.stdout ?? "",
+    stderr: err?.stderr ?? "",
+  }));
+}
 
 // ─── TruffleHog JSON output shapes ───────────────────────────────────────────
 
@@ -33,24 +47,12 @@ interface TruffleHogResult {
   DecoderName?: string;
   Verified?: boolean;
   Raw?: string;
-  RawV2?: string;
   Redacted?: string;
   ExtraData?: Record<string, string>;
-  StructuredData?: unknown;
   SourceMetadata?: {
     Data?: {
-      Filesystem?: {
-        file?: string;
-        line?: number;
-      };
-      Git?: {
-        commit?: string;
-        file?: string;
-        line?: number;
-        repository?: string;
-        author?: string;
-        date?: string;
-      };
+      Filesystem?: { file?: string; line?: number };
+      Git?: { file?: string; line?: number; repository?: string };
     };
   };
 }
@@ -69,10 +71,18 @@ function extractLocation(r: TruffleHogResult): { file: string; line?: number } |
 }
 
 /**
- * Lyrie verdict hint: detect whether a secret looks like a placeholder / example.
- * This is the "AI judgment layer" on top of TruffleHog's mechanical detection.
+ * Lyrie judgment hint: detect whether a secret looks like a placeholder.
+ *
+ * TruffleHog finds everything mechanically. Lyrie adds context:
+ *  - Secrets in test/fixture/example dirs → likely fake → don't page on-call
+ *  - Known placeholder values (AKIAIOSFODNN7EXAMPLE) → definitely fake
+ *
+ * This reduces alert fatigue while keeping real secrets actionable.
  */
-function detectPlaceholderHint(location?: { file: string; line?: number }, raw?: string): string | undefined {
+export function detectPlaceholderHint(
+  location?: { file: string; line?: number },
+  raw?: string,
+): string | undefined {
   if (!location?.file) return undefined;
 
   const file = location.file.toLowerCase();
@@ -94,8 +104,8 @@ function detectPlaceholderHint(location?: { file: string; line?: number }, raw?:
     (raw.toLowerCase().includes("your_") ||
       raw.toLowerCase().includes("replace_") ||
       raw.toLowerCase().includes("placeholder") ||
-      raw === "AKIAIOSFODNN7EXAMPLE" || // AWS example key
-      /^[A-Z_]+$/.test(raw)); // all-caps env var style
+      raw === "AKIAIOSFODNN7EXAMPLE" ||
+      /^[A-Z_]{10,}$/.test(raw)); // ALL_CAPS_PLACEHOLDER pattern
 
   if (isExamplePath) {
     return `Secret is in ${file} — likely an example/fixture placeholder. Confirm before alerting.`;
@@ -112,9 +122,15 @@ export class TruffleHogAdapter implements ScannerAdapter {
   readonly name = "trufflehog";
   readonly version = "3.x";
 
+  private readonly exec: ShellExecutor;
+
+  constructor(executor?: ShellExecutor) {
+    this.exec = executor ?? defaultExecutor;
+  }
+
   async isAvailable(): Promise<boolean> {
     try {
-      await execFileAsync("trufflehog", ["--version"], { timeout: 5_000 });
+      await this.exec("trufflehog", ["--version"], { timeout: 5_000 });
       return true;
     } catch {
       return false;
@@ -135,24 +151,19 @@ export class TruffleHogAdapter implements ScannerAdapter {
       args.push(...options.extraArgs);
     }
 
-    let rawOutput = "";
-    try {
-      const { stdout } = await execFileAsync("trufflehog", args, {
-        timeout: options.timeoutMs ?? 120_000,
-        maxBuffer: 50 * 1024 * 1024,
-      });
-      rawOutput = stdout;
-    } catch (err: any) {
-      rawOutput = err?.stdout ?? "";
-      if (!rawOutput) {
-        return {
-          findings: [],
-          scannerName: this.name,
-          scannerVersion: this.version,
-          durationMs: Date.now() - start,
-          warnings: [`trufflehog failed: ${err.message}`],
-        };
-      }
+    const { stdout: rawOutput, stderr } = await this.exec("trufflehog", args, {
+      timeout: options.timeoutMs ?? 120_000,
+      maxBuffer: 50 * 1024 * 1024,
+    });
+
+    if (!rawOutput && stderr) {
+      return {
+        findings: [],
+        scannerName: this.name,
+        scannerVersion: this.version,
+        durationMs: Date.now() - start,
+        warnings: [`trufflehog failed: ${stderr}`],
+      };
     }
 
     const findings = parseTruffleHogOutput(rawOutput);
@@ -185,12 +196,11 @@ export function parseTruffleHogOutput(raw: string): AdapterFinding[] {
 
     const detector = parsed.DetectorName ?? "Unknown";
     const verified = parsed.Verified ?? false;
-    const raw_val = parsed.Redacted ?? parsed.Raw ?? "";
+    const rawVal = parsed.Redacted ?? parsed.Raw ?? "";
 
     const location = extractLocation(parsed);
-    const placeholderHint = detectPlaceholderHint(location, raw_val);
+    const placeholderHint = detectPlaceholderHint(location, rawVal);
 
-    // Verified secrets = critical. Unverified = high.
     const severity: AdapterFinding["severity"] = verified ? "critical" : "high";
 
     const baseDescription = verified

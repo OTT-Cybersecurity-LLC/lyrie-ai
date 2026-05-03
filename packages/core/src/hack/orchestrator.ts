@@ -3,21 +3,18 @@
  *
  * Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai — MIT License
  *
- * Run lifecycle for `lyrie hack <target>`:
+ * Run lifecycle for `lyrie hack <target>`.
  *
- *   Phase 1 — RECON
- *     • AttackSurfaceMapper.run(target)
+ * Phase 2 — SCAN includes optional external scanner adapters:
+ *   • NucleiAdapter   (web vulnerability templates — 26.9k⭐ ecosystem)
+ *   • TrivyAdapter    (container/fs/repo CVEs + binary verification)
+ *   • SemgrepAdapter  (SAST, 30 languages, 20k+ rules)
+ *   • TruffleHogAdapter (secret detection with Lyrie AI judgment layer)
  *
- *   Phase 2 — SCAN
- *     • MultiLangScanner.run(target)
- *     • External scanner adapters (if available and enabled):
- *       - NucleiAdapter   (web vulnerability templates)
- *       - TrivyAdapter    (container/fs/repo CVEs)
- *       - SemgrepAdapter  (SAST, 30 languages)
- *       - TruffleHogAdapter (secret detection)
- *
- *   Phase 3 — VALIDATE
- *     • StagesAtoF.validate(findings)
+ * CLI adapter flags:
+ *   lyrie hack <target> --adapters all         # all available
+ *   lyrie hack <target> --adapters nuclei,semgrep
+ *   lyrie hack <target> --no-adapters          # skip external scanners
  *
  * © OTT Cybersecurity LLC — Released under MIT License.
  */
@@ -37,10 +34,10 @@ export type AdapterSet = "all" | "none" | Set<string>;
 export interface HackOptions {
   mode?: HackMode;
   /**
-   * Which external scanner adapters to invoke.
-   *  "all"  — run every adapter that isAvailable()
-   *  "none" — skip all external adapters (--no-adapters)
-   *  Set    — run only the named adapters (e.g. new Set(["nuclei","semgrep"]))
+   * Which external scanner adapters to invoke in Phase 2.
+   *  "all"  — run every adapter that isAvailable() (default in standard/deep/paranoid)
+   *  "none" — skip all external adapters (--no-adapters flag)
+   *  Set    — run only the named adapters e.g. new Set(["nuclei","semgrep"])
    */
   adapters?: AdapterSet;
   /** Injected adapters for testing (overrides real binaries). */
@@ -57,9 +54,9 @@ export interface AdapterOverrides {
 export interface HackPhase2Result {
   /** Raw findings from built-in scanner. */
   builtinFindings: RawFinding[];
-  /** Findings emitted by external adapters. */
+  /** Findings emitted by external adapters, converted to RawFinding. */
   adapterFindings: RawFinding[];
-  /** Raw adapter results (for reporting / warnings). */
+  /** Raw adapter results (for reporting / binaryVerified warnings). */
   adapterResults: AdapterResult[];
 }
 
@@ -89,7 +86,7 @@ export function adapterFindingToRaw(
   };
 }
 
-// ─── Phase 2 — external adapter dispatch ─────────────────────────────────────
+// ─── Adapter selection logic ──────────────────────────────────────────────────
 
 function shouldRunAdapter(name: string, adapters: AdapterSet): boolean {
   if (adapters === "none") return false;
@@ -97,17 +94,21 @@ function shouldRunAdapter(name: string, adapters: AdapterSet): boolean {
   return adapters.has(name);
 }
 
+// ─── Phase 2 — external adapter dispatch ─────────────────────────────────────
+
 /**
  * Run Phase 2 external scanner adapters.
  *
- * Adapters are invoked if:
- *   1. `options.adapters` includes the adapter name (or is "all")
- *   2. The adapter's isAvailable() returns true
- *   3. mode is not "quick" (quick = built-in scanner only)
+ * Adapters run when:
+ *   1. options.adapters includes the adapter (or is "all")
+ *   2. The adapter's isAvailable() is true
+ *   3. mode is not "quick" (quick = built-in scanner only, no external tools)
  *
- * Binary verification note: TrivyAdapter always verifies the trivy binary
- * before trusting its output. A hash mismatch sets binaryVerified=false and
- * emits a warning — the operator decides whether to act on the findings.
+ * Trivy note: The Trivy adapter always verifies the trivy binary hash before
+ * trusting its output (supply-chain incident defence). A hash mismatch sets
+ * binaryVerified=false and emits a warning in AdapterResult.warnings, but
+ * does NOT stop the scan — the operator decides whether to act on those results.
+ * This is Lyrie's "scanner-of-scanners" attestation model.
  */
 export async function runAdapterPhase(
   target: string,
@@ -128,28 +129,24 @@ export async function runAdapterPhase(
   const adapterResults: AdapterResult[] = [];
   const adapterFindings: RawFinding[] = [];
 
-  // Nuclei — web vulnerability templates
   if (shouldRunAdapter("nuclei", adapterSet) && await nuclei.isAvailable()) {
     const result = await nuclei.scan(target);
     adapterResults.push(result);
     adapterFindings.push(...result.findings.map(f => adapterFindingToRaw(f, "nuclei")));
   }
 
-  // Trivy — container/fs/repo CVEs (with binary attestation)
   if (shouldRunAdapter("trivy", adapterSet) && await trivy.isAvailable()) {
     const result = await trivy.scan(target, { mode: "fs" });
     adapterResults.push(result);
     adapterFindings.push(...result.findings.map(f => adapterFindingToRaw(f, "trivy")));
   }
 
-  // Semgrep CE — SAST (skip in quick mode, already gated by adapterSet)
   if (shouldRunAdapter("semgrep", adapterSet) && await semgrep.isAvailable()) {
     const result = await semgrep.scan(target);
     adapterResults.push(result);
     adapterFindings.push(...result.findings.map(f => adapterFindingToRaw(f, "semgrep")));
   }
 
-  // TruffleHog — secret detection
   if (shouldRunAdapter("trufflehog", adapterSet) && await trufflehog.isAvailable()) {
     const result = await trufflehog.scan(target);
     adapterResults.push(result);

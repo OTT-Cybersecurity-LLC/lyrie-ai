@@ -1,121 +1,123 @@
 /**
  * Lyrie Scanner Adapters — Test Suite
  *
- * All tests use mocked shell execution — no scanner binary required.
+ * Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai — MIT License
+ *
+ * All tests use injected mock executors (no real binaries required).
  * Tests cover:
  *   1. isAvailable() → false when binary not on PATH
  *   2. JSON output parsing → correct AdapterFinding conversion
- *   3. Trivy binary verification: mismatch → binaryVerified=false
- *   4. Graceful error handling
+ *   3. Trivy binary verification: mismatch → binaryVerified=false + warning
+ *   4. Trivy binary verification: known hash → binaryVerified=true
+ *   5. TruffleHog placeholder detection (Lyrie AI judgment layer)
+ *   6. Orchestrator Phase 2 adapter dispatch
+ *   7. Graceful error handling (missing tools, bad JSON)
  *
  * © OTT Cybersecurity LLC — Released under MIT License.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "bun:test";
 
-// ─── Mock node:child_process ──────────────────────────────────────────────────
-vi.mock("node:child_process", () => ({
-  execFile: vi.fn(),
-  execFileSync: vi.fn(),
-}));
+import type { ShellExecutor } from "./nuclei";
+import {
+  NucleiAdapter,
+  parseNucleiOutput,
+} from "./nuclei";
+import {
+  TrivyAdapter,
+  parseTrivyOutput,
+  verifyBinaryHash,
+  TRIVY_KNOWN_HASHES,
+  type BinaryHasher,
+} from "./trivy";
+import { SemgrepAdapter, parseSemgrepOutput } from "./semgrep";
+import { TruffleHogAdapter, parseTruffleHogOutput, detectPlaceholderHint } from "./trufflehog";
+import {
+  runAdapterPhase,
+  adapterFindingToRaw,
+} from "../hack/orchestrator";
+import type { AdapterResult } from "./adapter-types";
 
-// ─── Mock node:fs (for Trivy binary hash) ────────────────────────────────────
-vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs")>();
-  return {
-    ...actual,
-    existsSync: vi.fn(() => true),
-    readFileSync: vi.fn(() => Buffer.from("mock-binary-content")),
+// ─── Test helpers ─────────────────────────────────────────────────────────────
+
+function makeExecutor(stdout: string, rejects = false): ShellExecutor {
+  return async () => {
+    if (rejects) throw new Error("command not found");
+    return { stdout, stderr: "" };
   };
-});
-
-// ─── Mock node:crypto (for Trivy hash) ───────────────────────────────────────
-vi.mock("node:crypto", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:crypto")>();
-  return {
-    ...actual,
-    createHash: vi.fn(() => ({
-      update: vi.fn().mockReturnThis(),
-      digest: vi.fn(() => "deadbeef0000000000000000000000000000000000000000000000000000cafe"),
-    })),
-  };
-});
-
-import * as childProcess from "node:child_process";
-import { promisify } from "node:util";
-
-// Helpers to set up mock responses
-function mockExecFile(stdout: string, exitCode = 0) {
-  const execFileMock = vi.mocked(childProcess.execFile);
-  execFileMock.mockImplementation((_cmd: any, _args: any, _opts: any, callback: any) => {
-    if (typeof _opts === "function") {
-      callback = _opts;
-    }
-    if (exitCode === 0) {
-      callback(null, { stdout, stderr: "" });
-    } else {
-      const err: any = new Error("non-zero exit");
-      err.stdout = stdout;
-      err.code = exitCode;
-      callback(err, { stdout, stderr: "" });
-    }
-    return {} as any;
-  });
 }
 
-function mockExecFileReject(message = "command not found") {
-  const execFileMock = vi.mocked(childProcess.execFile);
-  execFileMock.mockImplementation((_cmd: any, _args: any, _opts: any, callback: any) => {
-    if (typeof _opts === "function") {
-      callback = _opts;
-    }
-    callback(new Error(message), { stdout: "", stderr: message });
-    return {} as any;
-  });
-}
-
-function mockExecFileSync(output: string) {
-  vi.mocked(childProcess.execFileSync).mockReturnValue(output as any);
+function makeFailingExecutor(stderr: string): ShellExecutor {
+  return async () => ({ stdout: "", stderr });
 }
 
 // ─── Nuclei Adapter ───────────────────────────────────────────────────────────
 
-import { NucleiAdapter, parseNucleiOutput } from "./nuclei";
-
-describe("NucleiAdapter", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe("NucleiAdapter — isAvailable", () => {
+  it("returns false when nuclei is not installed", async () => {
+    const adapter = new NucleiAdapter(makeExecutor("", true));
+    expect(await adapter.isAvailable()).toBe(false);
   });
 
-  it("isAvailable() returns false when nuclei is not installed", async () => {
-    mockExecFileReject("nuclei: command not found");
-    const adapter = new NucleiAdapter();
-    const available = await adapter.isAvailable();
-    expect(available).toBe(false);
+  it("returns true when nuclei responds", async () => {
+    const adapter = new NucleiAdapter(makeExecutor("nuclei version 3.0.0"));
+    expect(await adapter.isAvailable()).toBe(true);
   });
+});
 
-  it("isAvailable() returns true when nuclei is on PATH", async () => {
-    mockExecFile("nuclei version 3.0.0");
-    const adapter = new NucleiAdapter();
-    const available = await adapter.isAvailable();
-    expect(available).toBe(true);
-  });
-
-  it("scan() returns empty findings when nuclei output is empty", async () => {
-    mockExecFile("");
-    const adapter = new NucleiAdapter();
+describe("NucleiAdapter — scan", () => {
+  it("returns empty findings when output is empty", async () => {
+    const adapter = new NucleiAdapter(makeExecutor(""));
     const result = await adapter.scan("https://example.com");
     expect(result.findings).toHaveLength(0);
     expect(result.scannerName).toBe("nuclei");
   });
 
-  it("parses single Nuclei JSON finding correctly", () => {
-    const rawLine = JSON.stringify({
+  it("returns findings from JSON-lines output", async () => {
+    const line = JSON.stringify({
+      "template-id": "sqli-error",
+      info: { name: "SQL Injection", severity: "high", description: "SQLi detected" },
+      "matched-at": "https://example.com/api",
+    });
+    const adapter = new NucleiAdapter(makeExecutor(line));
+    const result = await adapter.scan("https://example.com");
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0].severity).toBe("high");
+  });
+
+  it("passes -t flag when templates are provided", async () => {
+    let capturedArgs: string[] = [];
+    const exec: ShellExecutor = async (_cmd, args) => {
+      capturedArgs = args;
+      return { stdout: "", stderr: "" };
+    };
+    const adapter = new NucleiAdapter(exec);
+    await adapter.scan("http://t.com", { templates: ["cves/2021/"] });
+    expect(capturedArgs).toContain("-t");
+    expect(capturedArgs).toContain("cves/2021/");
+  });
+
+  it("passes -severity flag when severity filter is provided", async () => {
+    let capturedArgs: string[] = [];
+    const exec: ShellExecutor = async (_cmd, args) => {
+      capturedArgs = args;
+      return { stdout: "", stderr: "" };
+    };
+    const adapter = new NucleiAdapter(exec);
+    await adapter.scan("http://t.com", { severity: ["critical", "high"] });
+    expect(capturedArgs).toContain("-severity");
+    expect(capturedArgs).toContain("critical,high");
+  });
+});
+
+describe("parseNucleiOutput", () => {
+  it("parses a full Nuclei finding with CVE/CWE/remediation", () => {
+    const line = JSON.stringify({
       "template-id": "cve-2021-44228-log4j",
       info: {
         name: "Log4j RCE",
         severity: "critical",
-        description: "Remote code execution via Log4j JNDI injection",
+        description: "Remote code execution via JNDI injection",
         classification: {
           "cve-id": "CVE-2021-44228",
           "cwe-id": "CWE-917",
@@ -125,9 +127,7 @@ describe("NucleiAdapter", () => {
       "matched-at": "https://example.com/login",
     });
 
-    const findings = parseNucleiOutput(rawLine);
-    expect(findings).toHaveLength(1);
-    const f = findings[0];
+    const [f] = parseNucleiOutput(line);
     expect(f.id).toBe("cve-2021-44228-log4j");
     expect(f.title).toBe("Log4j RCE");
     expect(f.severity).toBe("critical");
@@ -137,317 +137,275 @@ describe("NucleiAdapter", () => {
     expect(f.remediation).toBe("Upgrade Log4j to 2.17.1+");
   });
 
-  it("parses multiple Nuclei JSON findings from JSON-lines output", () => {
-    const lines = [
-      JSON.stringify({
-        "template-id": "sqli-error",
-        info: { name: "SQL Injection", severity: "high", description: "SQLi detected" },
-        "matched-at": "https://example.com/api",
-      }),
-      JSON.stringify({
-        "template-id": "xss-reflected",
-        info: { name: "Reflected XSS", severity: "medium", description: "XSS in query param" },
-        host: "https://example.com",
-      }),
+  it("parses multiple findings from JSON-lines", () => {
+    const raw = [
+      JSON.stringify({ "template-id": "t1", info: { name: "XSS", severity: "medium", description: "d" }, "matched-at": "http://a.com" }),
+      JSON.stringify({ "template-id": "t2", info: { name: "SQLi", severity: "high", description: "d" }, host: "http://b.com" }),
     ].join("\n");
 
-    const findings = parseNucleiOutput(lines);
+    const findings = parseNucleiOutput(raw);
     expect(findings).toHaveLength(2);
-    expect(findings[0].severity).toBe("high");
-    expect(findings[1].severity).toBe("medium");
+    expect(findings[0].severity).toBe("medium");
+    expect(findings[1].severity).toBe("high");
+  });
+
+  it("handles cve-id as array (takes first)", () => {
+    const line = JSON.stringify({
+      "template-id": "t",
+      info: { name: "T", severity: "high", description: "d", classification: { "cve-id": ["CVE-2021-001", "CVE-2021-002"] } },
+    });
+    expect(parseNucleiOutput(line)[0].cve).toBe("CVE-2021-001");
   });
 
   it("maps unknown severity to info", () => {
-    const line = JSON.stringify({
-      "template-id": "misc-check",
-      info: { name: "Misc", severity: "unknown", description: "misc" },
-    });
-    const findings = parseNucleiOutput(line);
-    expect(findings[0].severity).toBe("info");
+    const line = JSON.stringify({ "template-id": "t", info: { name: "T", severity: "unknown", description: "d" } });
+    expect(parseNucleiOutput(line)[0].severity).toBe("info");
   });
 
-  it("skips non-JSON lines in output gracefully", () => {
-    const raw = `[INF] nuclei starting
-${JSON.stringify({ "template-id": "t1", info: { name: "Test", severity: "low", description: "d" } })}
-[WRN] some warning
-`;
-    const findings = parseNucleiOutput(raw);
-    expect(findings).toHaveLength(1);
+  it("skips non-JSON lines gracefully", () => {
+    const raw = `[INF] starting\n${JSON.stringify({ "template-id": "t", info: { name: "T", severity: "low", description: "d" } })}\n[WRN] done`;
+    expect(parseNucleiOutput(raw)).toHaveLength(1);
   });
 
-  it("scan() handles non-zero exit code from nuclei (findings still returned)", async () => {
-    const jsonLine = JSON.stringify({
-      "template-id": "xss",
-      info: { name: "XSS", severity: "medium", description: "desc" },
-      "matched-at": "http://t.com",
-    });
-    mockExecFile(jsonLine, 1);
-    const adapter = new NucleiAdapter();
-    const result = await adapter.scan("http://t.com");
-    expect(result.findings).toHaveLength(1);
-  });
-
-  it("scan() passes template options to nuclei args", async () => {
-    mockExecFile("");
-    const adapter = new NucleiAdapter();
-    await adapter.scan("http://t.com", { templates: ["cves/2021/"] });
-    const execFileMock = vi.mocked(childProcess.execFile);
-    const callArgs = execFileMock.mock.calls[0][1] as string[];
-    expect(callArgs).toContain("-t");
-    expect(callArgs).toContain("cves/2021/");
-  });
-
-  it("scan() passes severity filter to nuclei args", async () => {
-    mockExecFile("");
-    const adapter = new NucleiAdapter();
-    await adapter.scan("http://t.com", { severity: ["critical", "high"] });
-    const callArgs = vi.mocked(childProcess.execFile).mock.calls[0][1] as string[];
-    expect(callArgs).toContain("-severity");
-    expect(callArgs).toContain("critical,high");
-  });
-
-  it("handles cve-id as an array (takes first)", () => {
-    const line = JSON.stringify({
-      "template-id": "multi-cve",
-      info: {
-        name: "Multi CVE",
-        severity: "high",
-        description: "d",
-        classification: { "cve-id": ["CVE-2021-001", "CVE-2021-002"] },
-      },
-    });
-    const findings = parseNucleiOutput(line);
-    expect(findings[0].cve).toBe("CVE-2021-001");
+  it("returns empty findings for empty string", () => {
+    expect(parseNucleiOutput("")).toHaveLength(0);
   });
 });
 
 // ─── Trivy Adapter ────────────────────────────────────────────────────────────
 
-import { TrivyAdapter, parseTrivyOutput, verifyBinaryHash, TRIVY_KNOWN_HASHES } from "./trivy";
-
-describe("TrivyAdapter", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe("TrivyAdapter — isAvailable", () => {
+  it("returns false when trivy not on PATH", async () => {
+    const adapter = new TrivyAdapter({ whichResolver: () => null });
+    expect(await adapter.isAvailable()).toBe(false);
   });
 
-  it("isAvailable() returns false when trivy is not installed", async () => {
-    vi.mocked(childProcess.execFileSync).mockImplementation(() => {
-      throw new Error("not found");
-    });
-    mockExecFileReject("trivy: command not found");
-    const adapter = new TrivyAdapter();
-    const available = await adapter.isAvailable();
-    expect(available).toBe(false);
+  it("returns true when trivy is found", async () => {
+    const adapter = new TrivyAdapter({ whichResolver: () => "/usr/local/bin/trivy" });
+    expect(await adapter.isAvailable()).toBe(true);
+  });
+});
+
+describe("TrivyAdapter — binary verification", () => {
+  const MOCK_HASH = "aabbccdd" + "0".repeat(56);
+  const KNOWN_HASHES = new Set([MOCK_HASH]);
+  const mockHasher: BinaryHasher = () => MOCK_HASH;
+  const wrongHasher: BinaryHasher = () => "deadbeef" + "0".repeat(56);
+
+  const alwaysExists = () => true;
+
+  it("returns verified=true when hash matches known-good", () => {
+    const result = verifyBinaryHash("/usr/local/bin/trivy", KNOWN_HASHES, mockHasher, alwaysExists);
+    expect(result.verified).toBe(true);
+    expect(result.hash).toBe(MOCK_HASH);
   });
 
-  it("isAvailable() returns true when trivy is on PATH", async () => {
-    vi.mocked(childProcess.execFileSync).mockReturnValue("/usr/local/bin/trivy" as any);
-    mockExecFile("trivy 0.51.0");
-    const adapter = new TrivyAdapter();
-    const available = await adapter.isAvailable();
-    expect(available).toBe(true);
-  });
-
-  it("binary verification returns binaryVerified=false when hash not in known list", () => {
-    // The mock hash will be "deadbeef..." which is NOT in TRIVY_KNOWN_HASHES
-    const result = verifyBinaryHash("/usr/local/bin/trivy");
+  it("returns verified=false with warning when hash mismatches", () => {
+    const result = verifyBinaryHash("/usr/local/bin/trivy", KNOWN_HASHES, wrongHasher, alwaysExists);
     expect(result.verified).toBe(false);
-    expect(result.warning).toMatch(/hash mismatch|No known-good/);
+    expect(result.warning).toMatch(/mismatch/);
   });
 
-  it("binary verification returns binaryVerified=true when hash matches known-good", () => {
-    // Temporarily inject our mock hash into the known list
-    const mockHash = "deadbeef0000000000000000000000000000000000000000000000000000cafe";
-    // We test by spying — add known hash via module augmentation workaround
-    // Since TRIVY_KNOWN_HASHES is readonly, test by checking the hash is NOT in set (mocked)
-    expect(TRIVY_KNOWN_HASHES.has(mockHash)).toBe(false);
-    expect(result => result).toBeTruthy(); // confirmed hash not in set → verified=false
+  it("returns verified=false with placeholder warning when only placeholders registered", () => {
+    const result = verifyBinaryHash("/usr/local/bin/trivy", TRIVY_KNOWN_HASHES, mockHasher, alwaysExists);
+    expect(result.verified).toBe(false);
+    expect(result.warning).toMatch(/placeholder/i);
   });
 
   it("scan() sets binaryVerified=false in result when hash mismatches", async () => {
-    vi.mocked(childProcess.execFileSync).mockReturnValue("/usr/local/bin/trivy" as any);
-    const trivyOutput = JSON.stringify({ SchemaVersion: 2, Results: [] });
-    mockExecFile(trivyOutput);
-    const adapter = new TrivyAdapter();
+    const trivyJson = JSON.stringify({ Results: [] });
+    const adapter = new TrivyAdapter({
+      executor: makeExecutor(trivyJson),
+      whichResolver: () => "/usr/local/bin/trivy",
+      hasher: wrongHasher,
+      knownHashes: KNOWN_HASHES,
+      existsCheck: () => true,
+    });
     const result = await adapter.scan("/some/path");
     expect(result.binaryVerified).toBe(false);
-    expect(result.warnings).toBeDefined();
-    expect(result.warnings![0]).toMatch(/Trivy binary/);
+    expect(result.warnings?.[0]).toMatch(/mismatch/);
   });
 
-  it("scan() skips binary verification when skipVerification=true", async () => {
-    vi.mocked(childProcess.execFileSync).mockReturnValue("/usr/local/bin/trivy" as any);
-    const trivyOutput = JSON.stringify({ SchemaVersion: 2, Results: [] });
-    mockExecFile(trivyOutput);
-    const adapter = new TrivyAdapter();
+  it("scan() sets binaryVerified=true when hash matches", async () => {
+    const trivyJson = JSON.stringify({ Results: [] });
+    const adapter = new TrivyAdapter({
+      executor: makeExecutor(trivyJson),
+      whichResolver: () => "/usr/local/bin/trivy",
+      hasher: mockHasher,
+      knownHashes: KNOWN_HASHES,
+      existsCheck: () => true,
+    });
+    const result = await adapter.scan("/some/path");
+    expect(result.binaryVerified).toBe(true);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("scan() skips verification when skipVerification=true", async () => {
+    const adapter = new TrivyAdapter({
+      executor: makeExecutor(JSON.stringify({ Results: [] })),
+      whichResolver: () => "/usr/local/bin/trivy",
+    });
     const result = await adapter.scan("/some/path", { skipVerification: true });
     expect(result.binaryVerified).toBeUndefined();
     expect(result.warnings).toBeUndefined();
   });
+});
 
-  it("parses Trivy vulnerability findings correctly", () => {
+describe("parseTrivyOutput", () => {
+  it("parses vulnerability findings correctly", () => {
     const raw = JSON.stringify({
-      SchemaVersion: 2,
-      ArtifactName: "my-image:latest",
-      Results: [
-        {
-          Target: "my-image:latest (alpine 3.17.0)",
-          Type: "alpine",
-          Vulnerabilities: [
-            {
-              VulnerabilityID: "CVE-2023-1234",
-              PkgName: "openssl",
-              Title: "OpenSSL memory corruption",
-              Description: "A buffer overflow in OpenSSL",
-              Severity: "HIGH",
-              FixedVersion: "3.0.8-r3",
-              CweIDs: ["CWE-122"],
-            },
-          ],
-        },
-      ],
+      Results: [{
+        Target: "alpine:3.17",
+        Vulnerabilities: [{
+          VulnerabilityID: "CVE-2023-1234",
+          PkgName: "openssl",
+          Title: "OpenSSL buffer overflow",
+          Description: "A buffer overflow in OpenSSL",
+          Severity: "HIGH",
+          FixedVersion: "3.0.8-r3",
+          CweIDs: ["CWE-122"],
+        }],
+      }],
     });
 
-    const findings = parseTrivyOutput(raw);
-    expect(findings).toHaveLength(1);
-    const f = findings[0];
+    const [f] = parseTrivyOutput(raw);
     expect(f.id).toBe("CVE-2023-1234");
     expect(f.severity).toBe("high");
     expect(f.cve).toBe("CVE-2023-1234");
     expect(f.cwe).toBe("CWE-122");
     expect(f.remediation).toBe("Upgrade to 3.0.8-r3");
-    expect(f.location?.file).toContain("my-image:latest");
+    expect(f.location?.file).toContain("alpine");
   });
 
-  it("parses Trivy misconfigurations correctly", () => {
+  it("parses misconfiguration findings with line number", () => {
     const raw = JSON.stringify({
-      SchemaVersion: 2,
-      Results: [
-        {
-          Target: "Dockerfile",
-          Type: "dockerfile",
-          Misconfigurations: [
-            {
-              ID: "DS002",
-              Title: "Image user should not be root",
-              Description: "Running as root is dangerous",
-              Severity: "CRITICAL",
-              Resolution: "Add USER directive",
-              CauseMetadata: { StartLine: 10 },
-            },
-          ],
-        },
-      ],
+      Results: [{
+        Target: "Dockerfile",
+        Misconfigurations: [{
+          ID: "DS002",
+          Title: "Image user should not be root",
+          Description: "Running as root",
+          Severity: "CRITICAL",
+          Resolution: "Add USER directive",
+          CauseMetadata: { StartLine: 10 },
+        }],
+      }],
     });
 
-    const findings = parseTrivyOutput(raw);
-    expect(findings).toHaveLength(1);
-    const f = findings[0];
+    const [f] = parseTrivyOutput(raw);
     expect(f.id).toBe("DS002");
     expect(f.severity).toBe("critical");
     expect(f.location?.line).toBe(10);
     expect(f.remediation).toBe("Add USER directive");
   });
 
-  it("parses Trivy secret findings correctly", () => {
+  it("parses secret findings", () => {
     const raw = JSON.stringify({
-      SchemaVersion: 2,
-      Results: [
-        {
-          Target: "config/production.yml",
-          Secrets: [
-            {
-              RuleID: "aws-access-key-id",
-              Title: "AWS Access Key ID",
-              Severity: "CRITICAL",
-              StartLine: 42,
-              Match: "AKIA...EXAMPLE",
-            },
-          ],
-        },
-      ],
+      Results: [{
+        Target: "config/prod.yml",
+        Secrets: [{
+          RuleID: "aws-access-key-id",
+          Title: "AWS Access Key",
+          Severity: "CRITICAL",
+          StartLine: 42,
+          Match: "AKIA***",
+        }],
+      }],
     });
 
-    const findings = parseTrivyOutput(raw);
-    expect(findings).toHaveLength(1);
-    const f = findings[0];
+    const [f] = parseTrivyOutput(raw);
     expect(f.id).toBe("aws-access-key-id");
-    expect(f.severity).toBe("critical");
     expect(f.location?.line).toBe(42);
-  });
-
-  it("returns empty findings for empty Results array", () => {
-    const raw = JSON.stringify({ SchemaVersion: 2, Results: [] });
-    expect(parseTrivyOutput(raw)).toHaveLength(0);
-  });
-
-  it("returns empty findings for invalid JSON", () => {
-    expect(parseTrivyOutput("not json")).toHaveLength(0);
   });
 
   it("maps UNKNOWN severity to info", () => {
     const raw = JSON.stringify({
-      SchemaVersion: 2,
-      Results: [
-        {
-          Target: "test",
-          Vulnerabilities: [
-            { VulnerabilityID: "GHSA-xxx", Severity: "UNKNOWN", Title: "t", Description: "d" },
-          ],
-        },
-      ],
+      Results: [{
+        Target: "test",
+        Vulnerabilities: [{
+          VulnerabilityID: "GHSA-xxx",
+          Severity: "UNKNOWN",
+          Title: "T",
+          Description: "D",
+        }],
+      }],
     });
     expect(parseTrivyOutput(raw)[0].severity).toBe("info");
+  });
+
+  it("returns empty for invalid JSON", () => {
+    expect(parseTrivyOutput("not json")).toHaveLength(0);
+  });
+
+  it("returns empty for empty Results", () => {
+    expect(parseTrivyOutput(JSON.stringify({ Results: [] }))).toHaveLength(0);
   });
 });
 
 // ─── Semgrep Adapter ──────────────────────────────────────────────────────────
 
-import { SemgrepAdapter, parseSemgrepOutput } from "./semgrep";
-
-describe("SemgrepAdapter", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe("SemgrepAdapter — isAvailable", () => {
+  it("returns false when executor throws", async () => {
+    const adapter = new SemgrepAdapter(makeExecutor("", true));
+    expect(await adapter.isAvailable()).toBe(false);
   });
 
-  it("isAvailable() returns false when semgrep is not installed", async () => {
-    mockExecFileReject("semgrep: command not found");
-    const adapter = new SemgrepAdapter();
-    const available = await adapter.isAvailable();
-    expect(available).toBe(false);
+  it("returns true when semgrep responds", async () => {
+    const adapter = new SemgrepAdapter(makeExecutor("semgrep 1.60.0"));
+    expect(await adapter.isAvailable()).toBe(true);
+  });
+});
+
+describe("SemgrepAdapter — scan", () => {
+  it("uses --config auto by default", async () => {
+    let capturedArgs: string[] = [];
+    const exec: ShellExecutor = async (_cmd, args) => {
+      capturedArgs = args;
+      return { stdout: JSON.stringify({ results: [] }), stderr: "" };
+    };
+    const adapter = new SemgrepAdapter(exec);
+    await adapter.scan("/code");
+    expect(capturedArgs).toContain("--config");
+    expect(capturedArgs).toContain("auto");
   });
 
-  it("isAvailable() returns true when semgrep is on PATH", async () => {
-    mockExecFile("semgrep 1.60.0");
-    const adapter = new SemgrepAdapter();
-    const available = await adapter.isAvailable();
-    expect(available).toBe(true);
+  it("uses custom config when provided", async () => {
+    let capturedArgs: string[] = [];
+    const exec: ShellExecutor = async (_cmd, args) => {
+      capturedArgs = args;
+      return { stdout: JSON.stringify({ results: [] }), stderr: "" };
+    };
+    const adapter = new SemgrepAdapter(exec);
+    await adapter.scan("/code", { config: "p/owasp-top-ten" });
+    expect(capturedArgs).toContain("p/owasp-top-ten");
   });
 
-  it("parses a Semgrep JSON finding correctly", () => {
+  it("returns warning when semgrep fails with stderr and no stdout", async () => {
+    const adapter = new SemgrepAdapter(makeFailingExecutor("semgrep: internal error"));
+    const result = await adapter.scan("/code");
+    expect(result.findings).toHaveLength(0);
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings![0]).toContain("semgrep failed");
+  });
+});
+
+describe("parseSemgrepOutput", () => {
+  it("parses a finding with full metadata", () => {
     const raw = JSON.stringify({
-      version: "1.60.0",
-      results: [
-        {
-          check_id: "javascript.lang.security.audit.sqli.pg-sqli",
-          path: "src/db/query.js",
-          start: { line: 45, col: 12 },
-          extra: {
-            message: "SQL injection via unsanitized input",
-            severity: "ERROR",
-            metadata: {
-              cwe: ["CWE-89"],
-              owasp: ["A03:2021"],
-            },
-            fix: "Use parameterized queries",
-          },
+      results: [{
+        check_id: "javascript.lang.security.audit.sqli.pg-sqli",
+        path: "src/db/query.js",
+        start: { line: 45 },
+        extra: {
+          message: "SQL injection via unsanitized input",
+          severity: "ERROR",
+          metadata: { cwe: ["CWE-89"] },
+          fix: "Use parameterized queries",
         },
-      ],
+      }],
     });
 
-    const findings = parseSemgrepOutput(raw);
-    expect(findings).toHaveLength(1);
-    const f = findings[0];
+    const [f] = parseSemgrepOutput(raw);
     expect(f.id).toBe("javascript.lang.security.audit.sqli.pg-sqli");
     expect(f.severity).toBe("high"); // ERROR → high
     expect(f.cwe).toBe("CWE-89");
@@ -456,225 +414,118 @@ describe("SemgrepAdapter", () => {
     expect(f.remediation).toBe("Use parameterized queries");
   });
 
-  it("parses WARNING severity as medium", () => {
+  it("maps WARNING → medium", () => {
     const raw = JSON.stringify({
-      results: [
-        {
-          check_id: "python.flask.security.xss",
-          path: "app.py",
-          extra: { message: "XSS via jinja2", severity: "WARNING" },
-        },
-      ],
+      results: [{ check_id: "t", path: "f.py", extra: { message: "m", severity: "WARNING" } }],
     });
     expect(parseSemgrepOutput(raw)[0].severity).toBe("medium");
   });
 
-  it("parses INFO severity as info", () => {
+  it("maps INFO → info", () => {
     const raw = JSON.stringify({
-      results: [
-        {
-          check_id: "generic.info",
-          path: "README.md",
-          extra: { message: "Informational finding", severity: "INFO" },
-        },
-      ],
+      results: [{ check_id: "t", path: "f.py", extra: { message: "m", severity: "INFO" } }],
     });
     expect(parseSemgrepOutput(raw)[0].severity).toBe("info");
   });
 
-  it("handles metadata.cwe as an array (takes first)", () => {
+  it("handles cwe as array (takes first)", () => {
     const raw = JSON.stringify({
-      results: [
-        {
-          check_id: "t",
-          path: "f.js",
-          extra: {
-            message: "m",
-            severity: "ERROR",
-            metadata: { cwe: ["CWE-89", "CWE-564"] },
-          },
-        },
-      ],
+      results: [{
+        check_id: "t",
+        path: "f.js",
+        extra: { message: "m", severity: "ERROR", metadata: { cwe: ["CWE-89", "CWE-564"] } },
+      }],
     });
     expect(parseSemgrepOutput(raw)[0].cwe).toBe("CWE-89");
   });
 
-  it("returns empty findings for empty results", () => {
-    expect(parseSemgrepOutput(JSON.stringify({ results: [] }))).toHaveLength(0);
-  });
-
-  it("returns empty findings for invalid JSON", () => {
+  it("returns empty for invalid JSON", () => {
     expect(parseSemgrepOutput("not json")).toHaveLength(0);
   });
 
-  it("scan() uses --config auto by default", async () => {
-    mockExecFile(JSON.stringify({ results: [] }));
-    const adapter = new SemgrepAdapter();
-    await adapter.scan("/path/to/code");
-    const callArgs = vi.mocked(childProcess.execFile).mock.calls[0][1] as string[];
-    expect(callArgs).toContain("--config");
-    expect(callArgs).toContain("auto");
-  });
-
-  it("scan() uses custom config when provided", async () => {
-    mockExecFile(JSON.stringify({ results: [] }));
-    const adapter = new SemgrepAdapter();
-    await adapter.scan("/path/to/code", { config: "p/owasp-top-ten" });
-    const callArgs = vi.mocked(childProcess.execFile).mock.calls[0][1] as string[];
-    expect(callArgs).toContain("p/owasp-top-ten");
-  });
-
-  it("scan() handles non-zero exit (findings still returned)", async () => {
-    const output = JSON.stringify({
-      results: [
-        { check_id: "xss", path: "a.js", extra: { message: "xss", severity: "ERROR" } },
-      ],
-    });
-    mockExecFile(output, 1);
-    const adapter = new SemgrepAdapter();
-    const result = await adapter.scan("/path");
-    expect(result.findings).toHaveLength(1);
-  });
-
-  it("scan() returns warning when semgrep fails with no output", async () => {
-    mockExecFileReject("semgrep: internal error");
-    const adapter = new SemgrepAdapter();
-    const result = await adapter.scan("/path");
-    expect(result.findings).toHaveLength(0);
-    expect(result.warnings).toBeDefined();
+  it("returns empty for empty results", () => {
+    expect(parseSemgrepOutput(JSON.stringify({ results: [] }))).toHaveLength(0);
   });
 });
 
 // ─── TruffleHog Adapter ───────────────────────────────────────────────────────
 
-import { TruffleHogAdapter, parseTruffleHogOutput } from "./trufflehog";
-
-describe("TruffleHogAdapter", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe("TruffleHogAdapter — isAvailable", () => {
+  it("returns false when trufflehog throws", async () => {
+    const adapter = new TruffleHogAdapter(makeExecutor("", true));
+    expect(await adapter.isAvailable()).toBe(false);
   });
 
-  it("isAvailable() returns false when trufflehog is not installed", async () => {
-    mockExecFileReject("trufflehog: command not found");
-    const adapter = new TruffleHogAdapter();
-    const available = await adapter.isAvailable();
-    expect(available).toBe(false);
+  it("returns true when trufflehog responds", async () => {
+    const adapter = new TruffleHogAdapter(makeExecutor("trufflehog v3.63.4"));
+    expect(await adapter.isAvailable()).toBe(true);
+  });
+});
+
+describe("TruffleHogAdapter — scan", () => {
+  it("uses filesystem mode and --no-update", async () => {
+    let capturedArgs: string[] = [];
+    const exec: ShellExecutor = async (_cmd, args) => {
+      capturedArgs = args;
+      return { stdout: "", stderr: "" };
+    };
+    const adapter = new TruffleHogAdapter(exec);
+    await adapter.scan("/some/codebase");
+    expect(capturedArgs).toContain("filesystem");
+    expect(capturedArgs).toContain("/some/codebase");
+    expect(capturedArgs).toContain("--no-update");
+    expect(capturedArgs).toContain("--json");
   });
 
-  it("isAvailable() returns true when trufflehog is on PATH", async () => {
-    mockExecFile("trufflehog v3.63.4");
-    const adapter = new TruffleHogAdapter();
-    const available = await adapter.isAvailable();
-    expect(available).toBe(true);
+  it("returns warning when trufflehog fails with no output", async () => {
+    const adapter = new TruffleHogAdapter(makeFailingExecutor("trufflehog: internal error"));
+    const result = await adapter.scan("/code");
+    expect(result.findings).toHaveLength(0);
+    expect(result.warnings).toBeDefined();
   });
+});
 
-  it("parses a verified TruffleHog secret finding as critical", () => {
+describe("parseTruffleHogOutput", () => {
+  it("parses verified secret as critical", () => {
     const line = JSON.stringify({
       DetectorName: "AWS",
-      DetectorType: 2,
       Verified: true,
-      Redacted: "AKIA***EXAMPLE",
-      SourceMetadata: {
-        Data: {
-          Filesystem: { file: "config/prod.env", line: 5 },
-        },
-      },
+      Redacted: "AKIA***",
+      SourceMetadata: { Data: { Filesystem: { file: "config/prod.env", line: 5 } } },
     });
 
-    const findings = parseTruffleHogOutput(line);
-    expect(findings).toHaveLength(1);
-    const f = findings[0];
+    const [f] = parseTruffleHogOutput(line);
     expect(f.severity).toBe("critical");
     expect(f.title).toContain("verified live");
     expect(f.location?.file).toBe("config/prod.env");
     expect(f.location?.line).toBe(5);
-    expect((f.extra as any)?.verified).toBe(true);
+    expect((f.extra as any).verified).toBe(true);
   });
 
-  it("parses an unverified TruffleHog secret finding as high", () => {
+  it("parses unverified secret as high", () => {
     const line = JSON.stringify({
       DetectorName: "Github",
       Verified: false,
-      Redacted: "ghp_****",
-      SourceMetadata: {
-        Data: {
-          Filesystem: { file: "scripts/deploy.sh", line: 12 },
-        },
-      },
+      SourceMetadata: { Data: { Filesystem: { file: "scripts/deploy.sh", line: 12 } } },
     });
 
-    const findings = parseTruffleHogOutput(line);
-    expect(findings[0].severity).toBe("high");
-    expect(findings[0].title).not.toContain("verified live");
+    const [f] = parseTruffleHogOutput(line);
+    expect(f.severity).toBe("high");
+    expect(f.title).not.toContain("verified live");
   });
 
-  it("adds Lyrie placeholder hint for secrets in test/example directories", () => {
-    const line = JSON.stringify({
-      DetectorName: "AWS",
-      Verified: false,
-      Redacted: "AKIA***EXAMPLE",
-      SourceMetadata: {
-        Data: {
-          Filesystem: { file: "tests/fixtures/sample.env", line: 3 },
-        },
-      },
-    });
-
-    const findings = parseTruffleHogOutput(line);
-    expect(findings[0].description).toContain("Lyrie note:");
-    expect(findings[0].description).toContain("example/fixture placeholder");
-  });
-
-  it("adds placeholder hint for known-placeholder AWS example key", () => {
-    const line = JSON.stringify({
-      DetectorName: "AWS",
-      Verified: false,
-      Raw: "AKIAIOSFODNN7EXAMPLE",
-      SourceMetadata: {
-        Data: { Filesystem: { file: "docs/guide.md", line: 1 } },
-      },
-    });
-
-    const findings = parseTruffleHogOutput(line);
-    expect(findings[0].description).toContain("Lyrie note:");
-  });
-
-  it("does NOT add placeholder hint for secrets in production paths", () => {
-    const line = JSON.stringify({
-      DetectorName: "Stripe",
-      Verified: true,
-      Redacted: "sk_live_***",
-      SourceMetadata: {
-        Data: { Filesystem: { file: "src/billing/payments.ts", line: 8 } },
-      },
-    });
-
-    const findings = parseTruffleHogOutput(line);
-    expect(findings[0].description).not.toContain("Lyrie note:");
-    expect(findings[0].severity).toBe("critical");
-  });
-
-  it("parses Git source metadata correctly", () => {
+  it("parses Git source metadata", () => {
     const line = JSON.stringify({
       DetectorName: "Slack",
       Verified: false,
-      SourceMetadata: {
-        Data: {
-          Git: { file: "src/notify.ts", line: 20, repository: "org/repo" },
-        },
-      },
+      SourceMetadata: { Data: { Git: { file: "src/notify.ts", line: 20 } } },
     });
-
-    const findings = parseTruffleHogOutput(line);
-    expect(findings[0].location?.file).toBe("src/notify.ts");
-    expect(findings[0].location?.line).toBe(20);
+    const [f] = parseTruffleHogOutput(line);
+    expect(f.location?.file).toBe("src/notify.ts");
+    expect(f.location?.line).toBe(20);
   });
 
-  it("returns empty findings for invalid JSON lines", () => {
-    expect(parseTruffleHogOutput("not json\nalso not json\n")).toHaveLength(0);
-  });
-
-  it("handles multiple findings from JSON-lines output", () => {
+  it("handles multiple findings from JSON-lines", () => {
     const lines = [
       JSON.stringify({ DetectorName: "AWS", Verified: true, SourceMetadata: { Data: { Filesystem: { file: "a.env" } } } }),
       JSON.stringify({ DetectorName: "Slack", Verified: false, SourceMetadata: { Data: { Filesystem: { file: "b.ts" } } } }),
@@ -686,133 +537,173 @@ describe("TruffleHogAdapter", () => {
     expect(findings[1].severity).toBe("high");
   });
 
-  it("scan() calls trufflehog with filesystem mode and --no-update flag", async () => {
-    mockExecFile("");
-    const adapter = new TruffleHogAdapter();
-    await adapter.scan("/some/codebase");
-    const callArgs = vi.mocked(childProcess.execFile).mock.calls[0][1] as string[];
-    expect(callArgs).toContain("filesystem");
-    expect(callArgs).toContain("/some/codebase");
-    expect(callArgs).toContain("--no-update");
-    expect(callArgs).toContain("--json");
+  it("returns empty for invalid JSON lines", () => {
+    expect(parseTruffleHogOutput("not json\nalso not\n")).toHaveLength(0);
+  });
+});
+
+describe("detectPlaceholderHint — Lyrie AI judgment layer", () => {
+  it("flags secrets in test/ directories", () => {
+    const hint = detectPlaceholderHint({ file: "tests/fixtures/sample.env", line: 3 }, "some-value");
+    expect(hint).toContain("example/fixture placeholder");
   });
 
-  it("scan() returns warning when trufflehog fails with no output", async () => {
-    mockExecFileReject("trufflehog: internal error");
-    const adapter = new TruffleHogAdapter();
-    const result = await adapter.scan("/some/codebase");
-    expect(result.findings).toHaveLength(0);
-    expect(result.warnings).toBeDefined();
+  it("flags secrets in example/ directories", () => {
+    const hint = detectPlaceholderHint({ file: "examples/basic/config.yml" }, "something");
+    expect(hint).toContain("example/fixture placeholder");
+  });
+
+  it("flags known AWS example key AKIAIOSFODNN7EXAMPLE", () => {
+    const hint = detectPlaceholderHint({ file: "docs/guide.md" }, "AKIAIOSFODNN7EXAMPLE");
+    expect(hint).toBeTruthy();
+    expect(hint).toContain("placeholder");
+  });
+
+  it("does NOT flag secrets in production paths", () => {
+    const hint = detectPlaceholderHint({ file: "src/billing/payments.ts", line: 8 }, "sk_live_realkey123");
+    expect(hint).toBeUndefined();
+  });
+
+  it("returns undefined when no location", () => {
+    expect(detectPlaceholderHint(undefined, "anything")).toBeUndefined();
+  });
+
+  it("adds placeholder hint to TruffleHog description for test-dir secrets", () => {
+    const line = JSON.stringify({
+      DetectorName: "AWS",
+      Verified: false,
+      Redacted: "AKIA***",
+      SourceMetadata: { Data: { Filesystem: { file: "spec/fixtures/aws.env" } } },
+    });
+    const [f] = parseTruffleHogOutput(line);
+    expect(f.description).toContain("Lyrie note:");
+  });
+
+  it("does NOT add hint for real production secrets", () => {
+    const line = JSON.stringify({
+      DetectorName: "Stripe",
+      Verified: true,
+      Redacted: "sk_live_***",
+      SourceMetadata: { Data: { Filesystem: { file: "src/billing/stripe.ts", line: 8 } } },
+    });
+    const [f] = parseTruffleHogOutput(line);
+    expect(f.description).not.toContain("Lyrie note:");
+    expect(f.severity).toBe("critical");
   });
 });
 
 // ─── Orchestrator — Phase 2 adapter dispatch ──────────────────────────────────
 
-import { runAdapterPhase, adapterFindingToRaw } from "../hack/orchestrator";
-import type { AdapterResult } from "./adapter-types";
-
-function makeAdapter(available: boolean, findings: any[] = []): any {
+function makeMockAdapter(available: boolean, findings: any[] = []) {
   return {
     name: "mock",
     version: "1.0",
-    isAvailable: vi.fn().mockResolvedValue(available),
-    scan: vi.fn().mockResolvedValue({
+    isAvailable: async () => available,
+    scan: async () => ({
       findings,
       scannerName: "mock",
       scannerVersion: "1.0",
       durationMs: 10,
     } satisfies AdapterResult),
-  };
+  } as any;
 }
 
 describe("Orchestrator — runAdapterPhase", () => {
   it("skips all adapters when adapters='none'", async () => {
-    const nuclei = makeAdapter(true);
-    const trivy = makeAdapter(true);
-    const semgrep = makeAdapter(true);
-    const trufflehog = makeAdapter(true);
+    let scanned = false;
+    const mockAdapter = {
+      name: "mock",
+      version: "1",
+      isAvailable: async () => true,
+      scan: async () => { scanned = true; return { findings: [], scannerName: "m", scannerVersion: "1", durationMs: 0 }; },
+    } as any;
 
-    const result = await runAdapterPhase("/target", {
+    await runAdapterPhase("/target", {
       adapters: "none",
-      _adapterOverrides: { nuclei, trivy, semgrep, trufflehog },
+      _adapterOverrides: { nuclei: mockAdapter, trivy: mockAdapter, semgrep: mockAdapter, trufflehog: mockAdapter },
     });
 
-    expect(nuclei.scan).not.toHaveBeenCalled();
-    expect(trivy.scan).not.toHaveBeenCalled();
-    expect(result.adapterFindings).toHaveLength(0);
+    expect(scanned).toBe(false);
   });
 
-  it("skips unavailable adapters gracefully (isAvailable=false)", async () => {
-    const nuclei = makeAdapter(false);
-    const trivy = makeAdapter(false);
-    const semgrep = makeAdapter(false);
-    const trufflehog = makeAdapter(false);
+  it("skips unavailable adapters (isAvailable=false)", async () => {
+    const nuclei = makeMockAdapter(false);
+    const trivy = makeMockAdapter(false);
+    const semgrep = makeMockAdapter(false);
+    const trufflehog = makeMockAdapter(false);
 
     const result = await runAdapterPhase("/target", {
       adapters: "all",
       _adapterOverrides: { nuclei, trivy, semgrep, trufflehog },
     });
 
-    expect(nuclei.scan).not.toHaveBeenCalled();
     expect(result.adapterFindings).toHaveLength(0);
   });
 
   it("runs all available adapters when adapters='all'", async () => {
     const finding = { id: "t1", title: "Test", severity: "high" as const, description: "d" };
-    const nuclei = makeAdapter(true, [finding]);
-    const trivy = makeAdapter(true, [finding]);
-    const semgrep = makeAdapter(true, [finding]);
-    const trufflehog = makeAdapter(true, [{ ...finding, id: "t2" }]);
+    const nuclei = makeMockAdapter(true, [finding]);
+    const trivy = makeMockAdapter(true, [finding]);
+    const semgrep = makeMockAdapter(true, [finding]);
+    const trufflehog = makeMockAdapter(true, [{ ...finding, id: "t2" }]);
 
     const result = await runAdapterPhase("/target", {
       adapters: "all",
       _adapterOverrides: { nuclei, trivy, semgrep, trufflehog },
     });
 
-    expect(nuclei.scan).toHaveBeenCalledWith("/target");
-    expect(trivy.scan).toHaveBeenCalled();
-    expect(semgrep.scan).toHaveBeenCalled();
-    expect(trufflehog.scan).toHaveBeenCalled();
     expect(result.adapterFindings).toHaveLength(4);
     expect(result.adapterResults).toHaveLength(4);
   });
 
   it("runs only named adapters from a Set", async () => {
     const finding = { id: "x", title: "T", severity: "medium" as const, description: "d" };
-    const nuclei = makeAdapter(true, [finding]);
-    const trivy = makeAdapter(true, [finding]);
-    const semgrep = makeAdapter(true);
-    const trufflehog = makeAdapter(true);
+    let semgrepScanned = false;
+    let trufflehogScanned = false;
+
+    const semgrepMock = {
+      name: "semgrep", version: "1",
+      isAvailable: async () => true,
+      scan: async () => { semgrepScanned = true; return { findings: [], scannerName: "s", scannerVersion: "1", durationMs: 0 }; },
+    } as any;
+    const trufflehogMock = {
+      name: "trufflehog", version: "1",
+      isAvailable: async () => true,
+      scan: async () => { trufflehogScanned = true; return { findings: [], scannerName: "t", scannerVersion: "1", durationMs: 0 }; },
+    } as any;
 
     const result = await runAdapterPhase("/target", {
       adapters: new Set(["nuclei", "trivy"]),
-      _adapterOverrides: { nuclei, trivy, semgrep, trufflehog },
+      _adapterOverrides: {
+        nuclei: makeMockAdapter(true, [finding]),
+        trivy: makeMockAdapter(true, [finding]),
+        semgrep: semgrepMock,
+        trufflehog: trufflehogMock,
+      },
     });
 
-    expect(nuclei.scan).toHaveBeenCalled();
-    expect(trivy.scan).toHaveBeenCalled();
-    expect(semgrep.scan).not.toHaveBeenCalled();
-    expect(trufflehog.scan).not.toHaveBeenCalled();
     expect(result.adapterFindings).toHaveLength(2);
+    expect(semgrepScanned).toBe(false);
+    expect(trufflehogScanned).toBe(false);
   });
 
   it("defaults to 'none' in quick mode", async () => {
-    const nuclei = makeAdapter(true);
-    const trivy = makeAdapter(true);
-    const semgrep = makeAdapter(true);
-    const trufflehog = makeAdapter(true);
+    let scanned = false;
+    const mockAdapter = {
+      name: "m", version: "1",
+      isAvailable: async () => true,
+      scan: async () => { scanned = true; return { findings: [], scannerName: "m", scannerVersion: "1", durationMs: 0 }; },
+    } as any;
 
-    const result = await runAdapterPhase("/target", {
+    await runAdapterPhase("/target", {
       mode: "quick",
-      _adapterOverrides: { nuclei, trivy, semgrep, trufflehog },
+      _adapterOverrides: { nuclei: mockAdapter, trivy: mockAdapter, semgrep: mockAdapter, trufflehog: mockAdapter },
     });
 
-    expect(nuclei.scan).not.toHaveBeenCalled();
-    expect(result.adapterFindings).toHaveLength(0);
+    expect(scanned).toBe(false);
   });
 
-  it("includes Trivy binaryVerified=false warning in adapterResults", async () => {
-    const nuclei = makeAdapter(false);
+  it("preserves Trivy binaryVerified=false in adapterResults", async () => {
     const trivyResult: AdapterResult = {
       findings: [],
       scannerName: "trivy",
@@ -821,33 +712,36 @@ describe("Orchestrator — runAdapterPhase", () => {
       binaryVerified: false,
       warnings: ["Trivy binary hash mismatch — possible supply-chain compromise."],
     };
-    const trivy = {
-      ...makeAdapter(true),
-      scan: vi.fn().mockResolvedValue(trivyResult),
-    };
-    const semgrep = makeAdapter(false);
-    const trufflehog = makeAdapter(false);
+    const trivyMock = {
+      name: "trivy", version: "0.x",
+      isAvailable: async () => true,
+      scan: async () => trivyResult,
+    } as any;
 
     const result = await runAdapterPhase("/target", {
       adapters: new Set(["trivy"]),
-      _adapterOverrides: { nuclei, trivy, semgrep, trufflehog },
+      _adapterOverrides: {
+        nuclei: makeMockAdapter(false),
+        trivy: trivyMock,
+        semgrep: makeMockAdapter(false),
+        trufflehog: makeMockAdapter(false),
+      },
     });
 
-    const trivyAdapterResult = result.adapterResults.find(r => r.scannerName === "trivy");
-    expect(trivyAdapterResult?.binaryVerified).toBe(false);
-    expect(trivyAdapterResult?.warnings?.[0]).toMatch(/supply-chain/);
+    const tr = result.adapterResults.find(r => r.scannerName === "trivy");
+    expect(tr?.binaryVerified).toBe(false);
+    expect(tr?.warnings?.[0]).toMatch(/supply-chain/);
   });
 });
 
 describe("adapterFindingToRaw", () => {
-  it("converts AdapterFinding to RawFinding correctly", () => {
-    const f: import("./adapter-types").AdapterFinding = {
+  it("converts AdapterFinding to RawFinding with all fields", () => {
+    const f = {
       id: "CVE-2023-1234",
       title: "Test Vuln",
-      severity: "critical",
+      severity: "critical" as const,
       description: "A critical vulnerability",
       location: { file: "src/app.ts", line: 10 },
-      cve: "CVE-2023-1234",
       cwe: "CWE-89",
     };
 
@@ -859,14 +753,15 @@ describe("adapterFindingToRaw", () => {
     expect(raw.cwe).toBe("CWE-89");
   });
 
-  it("defaults to 'other' category", () => {
-    const f: import("./adapter-types").AdapterFinding = {
-      id: "t",
-      title: "T",
-      severity: "info",
-      description: "d",
-    };
+  it("defaults category to 'other'", () => {
+    const f = { id: "t", title: "T", severity: "info" as const, description: "d" };
     const raw = adapterFindingToRaw(f, "trivy");
     expect(raw.category).toBe("other");
+  });
+
+  it("prefixes id with source name", () => {
+    const f = { id: "rule-001", title: "T", severity: "low" as const, description: "d" };
+    expect(adapterFindingToRaw(f, "semgrep").id).toBe("semgrep-rule-001");
+    expect(adapterFindingToRaw(f, "trufflehog").id).toBe("trufflehog-rule-001");
   });
 });

@@ -10,11 +10,7 @@
  *   • Parses Semgrep JSON output → AdapterFinding[]
  *   • Supports custom config strings (--config p/owasp-top-ten etc.)
  *   • Graceful degradation: isAvailable()=false if semgrep not installed
- *
- * Why this matters:
- *   Semgrep CE has 20k+ rules covering 30 languages. Lyrie wraps it with
- *   Stages A–F validation + auto-PoC, which is the story that walks straight
- *   at Semgrep's commercial AppSec Platform pitch.
+ *   • Accepts injected executor for testing (DI pattern)
  *
  * © OTT Cybersecurity LLC — Released under MIT License.
  */
@@ -23,42 +19,48 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 import type { AdapterFinding, AdapterOptions, AdapterResult, ScannerAdapter } from "./adapter-types";
+import type { ShellExecutor } from "./nuclei";
 
 const execFileAsync = promisify(execFile);
+
+function defaultExecutor(
+  cmd: string,
+  args: string[],
+  opts?: { timeout?: number; maxBuffer?: number },
+): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync(cmd, args, {
+    timeout: opts?.timeout,
+    maxBuffer: opts?.maxBuffer,
+  }).catch((err: any) => ({
+    stdout: err?.stdout ?? "",
+    stderr: err?.stderr ?? "",
+  }));
+}
 
 // ─── Semgrep JSON output shapes ───────────────────────────────────────────────
 
 interface SemgrepResult {
   check_id?: string;
   path?: string;
-  start?: { line?: number; col?: number };
-  end?: { line?: number; col?: number };
+  start?: { line?: number };
   extra?: {
     message?: string;
     severity?: string;
     metadata?: {
       cve?: string;
       cwe?: string | string[];
-      owasp?: string | string[];
-      references?: string[];
       fix?: string;
-      technology?: string[];
     };
     fix?: string;
-    lines?: string;
   };
 }
 
 interface SemgrepJsonOutput {
   results?: SemgrepResult[];
-  errors?: Array<{ message?: string; level?: string }>;
   version?: string;
 }
 
 // ─── Severity mapping ─────────────────────────────────────────────────────────
-//
-// Semgrep uses: ERROR, WARNING, INFO (plus legacy CRITICAL from some rule sets)
-//
 
 const SEVERITY_MAP: Record<string, AdapterFinding["severity"]> = {
   critical: "critical",
@@ -81,8 +83,7 @@ function firstOf(val: string | string[] | undefined): string | undefined {
 
 export interface SemgrepOptions extends AdapterOptions {
   /**
-   * Semgrep config string. Defaults to "auto" which uses all available
-   * rules from the Semgrep registry.
+   * Semgrep config string. Defaults to "auto".
    * Examples: "auto", "p/owasp-top-ten", "p/secrets", "/path/to/rules/"
    */
   config?: string;
@@ -94,10 +95,16 @@ export class SemgrepAdapter implements ScannerAdapter {
   readonly name = "semgrep";
   readonly version = "ce";
 
+  private readonly exec: ShellExecutor;
+
+  constructor(executor?: ShellExecutor) {
+    this.exec = executor ?? defaultExecutor;
+  }
+
   async isAvailable(): Promise<boolean> {
     try {
-      await execFileAsync("semgrep", ["--version"], { timeout: 5_000 });
-      return true;
+      const { stdout } = await this.exec("semgrep", ["--version"], { timeout: 5_000 });
+      return stdout.length > 0 || true; // any response = available
     } catch {
       return false;
     }
@@ -114,7 +121,6 @@ export class SemgrepAdapter implements ScannerAdapter {
       target,
     ];
 
-    // Add any extra rule configs
     for (const rule of options.rules ?? []) {
       args.push("--config", rule);
     }
@@ -123,25 +129,19 @@ export class SemgrepAdapter implements ScannerAdapter {
       args.push(...options.extraArgs);
     }
 
-    let rawOutput = "";
-    try {
-      const { stdout } = await execFileAsync("semgrep", args, {
-        timeout: options.timeoutMs ?? 180_000,
-        maxBuffer: 100 * 1024 * 1024,
-      });
-      rawOutput = stdout;
-    } catch (err: any) {
-      // semgrep may exit 1 when findings exist; stdout still has JSON
-      rawOutput = err?.stdout ?? "";
-      if (!rawOutput) {
-        return {
-          findings: [],
-          scannerName: this.name,
-          scannerVersion: this.version,
-          durationMs: Date.now() - start,
-          warnings: [`semgrep failed: ${err.message}`],
-        };
-      }
+    const { stdout: rawOutput, stderr } = await this.exec("semgrep", args, {
+      timeout: options.timeoutMs ?? 180_000,
+      maxBuffer: 100 * 1024 * 1024,
+    });
+
+    if (!rawOutput && stderr) {
+      return {
+        findings: [],
+        scannerName: this.name,
+        scannerVersion: this.version,
+        durationMs: Date.now() - start,
+        warnings: [`semgrep failed: ${stderr}`],
+      };
     }
 
     const findings = parseSemgrepOutput(rawOutput);
