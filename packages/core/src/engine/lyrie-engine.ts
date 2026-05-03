@@ -20,6 +20,7 @@ import { ToolExecutor, ToolResult } from "../tools/tool-executor";
 import { SkillManager } from "../skills/skill-manager";
 import { CronManager } from "../cron/cron-manager";
 import { SubAgentManager } from "../agents/sub-agent";
+import { LyrieCoordinator } from "../agents/coordinator";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,12 @@ export interface LyrieEngineConfig {
   maxToolCalls?: number;
   /** Enable cron scheduler */
   enableCron?: boolean;
+  /**
+   * Enable coordinator mode: the main agent may ONLY call orchestration tools
+   * (agent_spawn, agent_status, …). All implementation work is delegated to
+   * sub-agents. Enforced by LyrieCoordinator.filterTools() at runtime.
+   */
+  coordinator?: boolean;
   /** Sub-agent configuration */
   subAgentConfig?: {
     maxConcurrent?: number;
@@ -77,6 +84,7 @@ export class LyrieEngine {
   private maxToolTurns: number;
   private maxToolCalls: number;
   private requestCount = 0;
+  private coordinatorEnabled: boolean;
 
   constructor(config: LyrieEngineConfig) {
     this.shield = config.shield;
@@ -87,6 +95,7 @@ export class LyrieEngine {
     this.subAgents = new SubAgentManager(this.tools, config.subAgentConfig);
     this.maxToolTurns = config.maxToolTurns ?? 25;
     this.maxToolCalls = config.maxToolCalls ?? 50;
+    this.coordinatorEnabled = config.coordinator ?? false;
 
     if (config.enableCron !== false) {
       this.cron = new CronManager({
@@ -146,14 +155,20 @@ export class LyrieEngine {
     let turns = 0;
     let finalContent = "";
 
+    // Coordinator mode: filter the tool list down to orchestration-only tools.
+    const allTools = this.tools.available();
+    const activeTools = this.coordinatorEnabled
+      ? LyrieCoordinator.getInstance().filterTools(allTools)
+      : allTools;
+
     // Determine format based on provider
     const provider = model.config.provider;
     const toolDefs =
       provider === "anthropic"
-        ? { tools: this.tools.toAnthropicFormat() }
+        ? { tools: this.tools.toAnthropicFormatFrom(activeTools) }
         : provider === "openai"
-          ? { tools: this.tools.toOpenAIFormat() }
-          : { tools: this.tools.toAnthropicFormat() }; // default to Anthropic format
+          ? { tools: this.tools.toOpenAIFormatFrom(activeTools) }
+          : { tools: this.tools.toAnthropicFormatFrom(activeTools) }; // default to Anthropic format
 
     console.log(`[Engine] Processing message from ${message.source}: "${message.content.substring(0, 50)}"`);
     console.log(`[Engine] Using model: ${model.config.id} (${model.config.provider})`);
