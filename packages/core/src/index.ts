@@ -254,6 +254,28 @@ export type {
 // Memory
 export { MemoryCore } from "./memory/memory-core";
 export type { MemoryEntry, Importance, Source } from "./memory/memory-core";
+
+// Memory Integrity (ASI06 defense)
+export { MemoryIntegrityChecker, InMemoryIntegrityStore } from "./memory/integrity-checker";
+export type {
+  HashedEntry,
+  FailedEntry,
+  IntegrityReport,
+  VerificationResult,
+  IntegrityStore,
+  LlmProvider,
+} from "./memory/integrity-checker";
+
+// Daemon Engine (v1.0.0 proactive mode)
+export { LyrieDaemon, DaemonEngine, LYRIE_TICK_PROMPT, DAEMON_TICK_PROMPT } from "./engine/daemon";
+export type {
+  DaemonConfig,
+  TickEvent,
+  TickResult,
+  DaemonEngineConfig,
+  DaemonTickResult,
+  AdapterFinding,
+} from "./engine/daemon";
 export {
   ensureFtsIndex,
   searchAcrossSessions,
