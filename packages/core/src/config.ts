@@ -22,6 +22,20 @@ const ConfigSchema = z.object({
 
   // Local Models
   ollamaBaseUrl: z.string().url().default("http://localhost:11434"),
+  lmstudioBaseUrl: z.string().url().default("http://localhost:1234/v1"),
+  hermesEndpoint: z.string().url().default("http://localhost:11434"),
+
+  // ── Independence Layer (v1.0.0) ─────────────────────────────────────────
+  /** Primary provider id ("hermes" | "ollama" | "lmstudio" | "anthropic" | …). */
+  provider: z.string().default("hermes"),
+  /** Primary model id (provider-specific). */
+  model: z.string().optional(),
+  /** Fallback provider if the primary fails. */
+  fallbackProvider: z.string().default("ollama"),
+  /** When true, refuse to call any non-local provider. Hard guard. */
+  requireLocalProvider: z.boolean().default(false),
+  /** When true, run main agent in coordinator (orchestrator-only) mode. */
+  coordinatorMode: z.boolean().default(false),
 
   // Channel Tokens
   telegramBotToken: z.string().optional(),
@@ -54,6 +68,14 @@ function loadFromEnv(): LyrieConfig {
     minimaxGroupId: process.env.MINIMAX_GROUP_ID,
 
     ollamaBaseUrl: process.env.OLLAMA_BASE_URL,
+    lmstudioBaseUrl: process.env.LMSTUDIO_BASE_URL,
+    hermesEndpoint: process.env.HERMES_ENDPOINT,
+
+    provider: process.env.LYRIE_PROVIDER,
+    model: process.env.LYRIE_MODEL,
+    fallbackProvider: process.env.LYRIE_FALLBACK_PROVIDER,
+    requireLocalProvider: process.env.LYRIE_REQUIRE_LOCAL === "true",
+    coordinatorMode: process.env.LYRIE_COORDINATOR_MODE === "true",
 
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
     discordBotToken: process.env.DISCORD_BOT_TOKEN,
