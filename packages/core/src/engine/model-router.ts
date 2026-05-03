@@ -240,7 +240,7 @@ export class ModelRouter {
               })),
             ];
             const result = await registryProvider.complete(modelId, messages, {
-              maxTokens: options?.maxTokens ?? selected.maxTokens,
+              maxTokens: options?.maxTokens ?? selected?.maxTokens ?? 8192,
               temperature: 0.7,
               tools: options?.tools,
             });
@@ -258,7 +258,7 @@ export class ModelRouter {
     }
 
     // ── Path 2: Legacy cloud-provider map ──────────────────────────────
-    const provider = this.providers.get(selected.provider);
+    const provider = selected ? this.providers.get(selected.provider) : undefined;
     const fallbackProvider = provider || this.providers.values().next().value;
     const fallbackModel =
       provider

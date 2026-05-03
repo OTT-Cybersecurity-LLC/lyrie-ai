@@ -42,6 +42,23 @@ export class ToolRegistry {
   /** Names that the agent has already fetched the schema for (per session). */
   private hydrated: Set<string> = new Set();
 
+  // ─── Singleton ─────────────────────────────────────────────────────────────
+
+  private static _instance: ToolRegistry | undefined;
+
+  /** Process-wide singleton registry seeded by ToolExecutor.initialize(). */
+  static getInstance(): ToolRegistry {
+    if (!ToolRegistry._instance) {
+      ToolRegistry._instance = new ToolRegistry({ alwaysLoaded: ["tool_search", "agent_spawn"] });
+    }
+    return ToolRegistry._instance;
+  }
+
+  /** Replace the singleton (for testing). */
+  static setInstance(reg: ToolRegistry): void {
+    ToolRegistry._instance = reg;
+  }
+
   constructor(cfg: ToolRegistryConfig = {}) {
     this.alwaysLoaded = new Set(cfg.alwaysLoaded ?? ["tool_search", "agent_spawn"]);
     this.maxSearchResults = cfg.maxSearchResults ?? 8;

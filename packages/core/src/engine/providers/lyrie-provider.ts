@@ -115,6 +115,23 @@ export interface LyrieProvider {
 export class LyrieProviderRegistry {
   private providers: Map<string, LyrieProvider> = new Map();
 
+  // ─── Singleton ─────────────────────────────────────────────────────────────
+
+  private static _instance: LyrieProviderRegistry | undefined;
+
+  /** Return the process-wide singleton registry. */
+  static getInstance(): LyrieProviderRegistry {
+    if (!LyrieProviderRegistry._instance) {
+      LyrieProviderRegistry._instance = new LyrieProviderRegistry();
+    }
+    return LyrieProviderRegistry._instance;
+  }
+
+  /** Replace the singleton (for testing or bootstrap). */
+  static setInstance(reg: LyrieProviderRegistry): void {
+    LyrieProviderRegistry._instance = reg;
+  }
+
   register(provider: LyrieProvider): void {
     this.providers.set(provider.id, provider);
   }

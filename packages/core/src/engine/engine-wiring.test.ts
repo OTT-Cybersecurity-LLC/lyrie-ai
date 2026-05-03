@@ -3,8 +3,8 @@
  *
  * Covers:
  *   Task 1: ModelRouter routes via LyrieProviderRegistry
- *   Task 2: LyrieEngine coordinator mode filters tools
- *   Task 3: tool_search built-in returns results
+ *   Task 2: LyrieCoordinator singleton + coordinator mode tool filtering
+ *   Task 3: tool_search built-in registered in ToolExecutor
  *
  * © OTT Cybersecurity LLC — https://lyrie.ai
  */
@@ -52,7 +52,6 @@ function makeProvider(id: string, model = `${id}-default`): LyrieProvider {
 
 describe("Task 1 — ModelRouter routes via LyrieProviderRegistry", () => {
   beforeEach(() => {
-    // Reset the singleton so tests don't bleed
     LyrieProviderRegistry.setInstance(new LyrieProviderRegistry());
   });
 
@@ -70,15 +69,11 @@ describe("Task 1 — ModelRouter routes via LyrieProviderRegistry", () => {
   });
 
   test("ModelRouter.route() uses registry hermes provider", async () => {
-    // Seed registry with a stub hermes provider
     const reg = new LyrieProviderRegistry();
-    const hermes = makeProvider("hermes", "nous-hermes3:70b");
-    reg.register(hermes);
+    reg.register(makeProvider("hermes", "nous-hermes3:70b"));
     LyrieProviderRegistry.setInstance(reg);
 
     const router = new ModelRouter();
-    // We don't call initialize() here (it would bootstrap real local providers)
-    // Instead we test route() directly with the seeded singleton
     const instance = await router.route("check the logs");
     expect(instance).toBeDefined();
     expect(instance.config.provider).toBe("hermes");
@@ -98,12 +93,15 @@ describe("Task 1 — ModelRouter routes via LyrieProviderRegistry", () => {
 
   test("ModelRouter.route() complete() calls through to registry provider", async () => {
     const reg = new LyrieProviderRegistry();
-    reg.register(makeProvider("hermes"));
+    reg.register(makeProvider("hermes", "nous-hermes3:70b"));
     LyrieProviderRegistry.setInstance(reg);
 
     const router = new ModelRouter();
     const instance = await router.route("do something");
-    const result = await instance.complete({ system: "sys", messages: [{ role: "user", content: "hi" }] });
+    const result = await instance.complete({
+      system: "sys",
+      messages: [{ role: "user", content: "hi" }],
+    });
     expect(result.content).toBe("stub:hermes");
     expect(result.toolCalls).toEqual([]);
   });
@@ -121,12 +119,10 @@ describe("Task 1 — ModelRouter routes via LyrieProviderRegistry", () => {
     expect(instance.config.provider).toBe("lmstudio");
   });
 
-  test("No registry provider → falls through to legacy stub path", async () => {
-    // Empty registry, no legacy providers either
+  test("Empty registry falls through to legacy stub (no throw)", async () => {
     LyrieProviderRegistry.setInstance(new LyrieProviderRegistry());
     const router = new ModelRouter();
     const instance = await router.route("hello");
-    // Should return the empty stub without throwing
     expect(instance).toBeDefined();
     const result = await instance.complete({ system: "", messages: [] });
     expect(typeof result.content).toBe("string");
@@ -184,34 +180,33 @@ describe("Task 2 — LyrieCoordinator singleton + tool filtering", () => {
     expect(names).toContain("tool_search");
   });
 
-  test("coordinator mode: all filtered tools are in COORDINATOR_ALLOWED_TOOLS", () => {
-    const { COORDINATOR_ALLOWED_TOOLS } = require("./coordinator");
-    // (import path relative to test location, using require for simplicity)
-    // We just verify filterTools only keeps allowed tools
+  test("coordinator mode: filterTools only returns isAllowed() tools", () => {
     const allTools = ["exec", "web_fetch", "agent_spawn", "report", "team_create"].map(makeToolStub);
     const filtered = LyrieCoordinator.getInstance().filterTools(allTools);
+    expect(filtered.length).toBeGreaterThan(0);
     for (const t of filtered) {
       expect(LyrieCoordinator.getInstance().isAllowed(t.name)).toBe(true);
     }
+    const names = filtered.map((t) => t.name);
+    expect(names).not.toContain("exec");
+    expect(names).not.toContain("web_fetch");
   });
 
-  test("when coordinator=false, no tools are filtered (allTools passes through)", () => {
+  test("when coordinator=false, all tools pass through (no filtering)", () => {
     const allTools = ["exec", "read_file", "agent_spawn"].map(makeToolStub);
-    // Simulates the non-coordinator path: don't call filterTools
-    // (engine only calls filterTools when coordinatorEnabled=true)
-    const active = allTools; // passthrough
+    // Simulates the non-coordinator path: engine passes allTools unchanged
+    const active = allTools;
     expect(active.length).toBe(3);
     expect(active.map((t) => t.name)).toContain("exec");
   });
 });
 
-// ─── Task 3: tool_search built-in ────────────────────────────────────────────
+// ─── Task 3: ToolRegistry singleton + tool_search ────────────────────────────
 
 import { ToolRegistry } from "../tools/tool-registry";
 
 describe("Task 3 — ToolRegistry singleton + tool_search", () => {
   beforeEach(() => {
-    // Fresh registry for each test
     ToolRegistry.setInstance(new ToolRegistry({ alwaysLoaded: ["tool_search"] }));
   });
 
@@ -228,9 +223,8 @@ describe("Task 3 — ToolRegistry singleton + tool_search", () => {
     expect(ToolRegistry.getInstance().has("custom_tool")).toBe(true);
   });
 
-  test("tool_search returns results for known tool names", async () => {
+  test("tool_search returns results for known tool names", () => {
     const reg = ToolRegistry.getInstance();
-    // Seed with known tools
     reg.register({
       name: "web_search",
       description: "Search the web with Brave",
@@ -315,7 +309,6 @@ describe("Task 3 — ToolRegistry singleton + tool_search", () => {
     expect(reg.getActiveSchemas().length).toBe(0);
     const results = reg.search("apply_diff");
     expect(results.length).toBe(1);
-    // After search, tool is hydrated
     expect(reg.getActiveSchemas().length).toBe(1);
     expect(reg.getActiveSchemas()[0].name).toBe("apply_diff");
   });
@@ -326,12 +319,8 @@ describe("Task 3 — ToolRegistry singleton + tool_search", () => {
 import { ToolExecutor } from "../tools/tool-executor";
 import { ShieldManager } from "../engine/shield-manager";
 
-// Minimal ShieldManager stub
 class StubShield extends ShieldManager {
-  constructor() {
-    // @ts-ignore — bypass real constructor
-    super();
-  }
+  constructor() { super(); }
   async scanInput() { return { blocked: false, reason: "" }; }
   async validateToolCall() { return true; }
   async scanFile() { return { safe: true }; }
@@ -355,7 +344,6 @@ describe("ToolExecutor — tool_search builtin registered", () => {
     const executor = new ToolExecutor(shield);
     await executor.initialize();
 
-    // After initialize(), the registry should be seeded with all builtins
     const result = await executor.execute({
       id: "call_1",
       tool: "tool_search",

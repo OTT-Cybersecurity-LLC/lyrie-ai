@@ -69,6 +69,23 @@ export class LyrieCoordinator {
   private allowed: Set<string>;
   private appendRules?: string;
 
+  // ─── Singleton ─────────────────────────────────────────────────────────────
+
+  private static _instance: LyrieCoordinator | undefined;
+
+  /** Process-wide singleton coordinator (default options). */
+  static getInstance(): LyrieCoordinator {
+    if (!LyrieCoordinator._instance) {
+      LyrieCoordinator._instance = new LyrieCoordinator();
+    }
+    return LyrieCoordinator._instance;
+  }
+
+  /** Replace the singleton (for testing or custom allowlists). */
+  static setInstance(c: LyrieCoordinator): void {
+    LyrieCoordinator._instance = c;
+  }
+
   constructor(opts: CoordinatorOptions = {}) {
     this.allowed = opts.allowedTools ?? COORDINATOR_ALLOWED_TOOLS;
     this.appendRules = opts.appendRules;
