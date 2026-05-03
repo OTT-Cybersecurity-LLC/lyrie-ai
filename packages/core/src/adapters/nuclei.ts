@@ -10,6 +10,7 @@
  *   • Parses JSON-lines output → AdapterFinding[]
  *   • Graceful degradation: isAvailable()=false if nuclei not installed
  *   • Optional template list and severity filter
+ *   • Accepts an injected `executor` for testing (DI pattern)
  *
  * © OTT Cybersecurity LLC — Released under MIT License.
  */
@@ -20,6 +21,28 @@ import { promisify } from "node:util";
 import type { AdapterFinding, AdapterOptions, AdapterResult, ScannerAdapter } from "./adapter-types";
 
 const execFileAsync = promisify(execFile);
+
+// ─── Executor interface (dependency injection for tests) ──────────────────────
+
+export type ShellExecutor = (
+  cmd: string,
+  args: string[],
+  opts?: { timeout?: number; maxBuffer?: number },
+) => Promise<{ stdout: string; stderr: string }>;
+
+export function defaultExecutor(
+  cmd: string,
+  args: string[],
+  opts?: { timeout?: number; maxBuffer?: number },
+): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync(cmd, args, {
+    timeout: opts?.timeout,
+    maxBuffer: opts?.maxBuffer,
+  }).catch((err: any) => ({
+    stdout: err?.stdout ?? "",
+    stderr: err?.stderr ?? "",
+  }));
+}
 
 // ─── Nuclei JSON output shapes ────────────────────────────────────────────────
 
@@ -37,9 +60,6 @@ interface NucleiJsonResult {
   };
   host?: string;
   "matched-at"?: string;
-  "extracted-results"?: string[];
-  timestamp?: string;
-  "curl-command"?: string;
 }
 
 // ─── Severity mapping ─────────────────────────────────────────────────────────
@@ -75,9 +95,15 @@ export class NucleiAdapter implements ScannerAdapter {
   readonly name = "nuclei";
   readonly version = "3.x";
 
+  private readonly exec: ShellExecutor;
+
+  constructor(executor?: ShellExecutor) {
+    this.exec = executor ?? defaultExecutor;
+  }
+
   async isAvailable(): Promise<boolean> {
     try {
-      await execFileAsync("nuclei", ["-version"], { timeout: 5_000 });
+      await this.exec("nuclei", ["-version"], { timeout: 5_000 });
       return true;
     } catch {
       return false;
@@ -108,17 +134,10 @@ export class NucleiAdapter implements ScannerAdapter {
       args.push(...options.extraArgs);
     }
 
-    let rawOutput = "";
-    try {
-      const { stdout } = await execFileAsync("nuclei", args, {
-        timeout: options.timeoutMs ?? 120_000,
-        maxBuffer: 50 * 1024 * 1024,
-      });
-      rawOutput = stdout;
-    } catch (err: any) {
-      // nuclei exits non-zero when it finds issues; stdout still has the JSON
-      rawOutput = err?.stdout ?? "";
-    }
+    const { stdout: rawOutput } = await this.exec("nuclei", args, {
+      timeout: options.timeoutMs ?? 120_000,
+      maxBuffer: 50 * 1024 * 1024,
+    });
 
     const findings = parseNucleiOutput(rawOutput);
 
@@ -160,9 +179,7 @@ export function parseNucleiOutput(raw: string): AdapterFinding[] {
     const cwe = firstOf(classification["cwe-id"]);
 
     const matchedAt = parsed["matched-at"] ?? parsed.host;
-    const location = matchedAt
-      ? { file: matchedAt }
-      : undefined;
+    const location = matchedAt ? { file: matchedAt } : undefined;
 
     findings.push({
       id,
