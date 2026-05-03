@@ -136,6 +136,8 @@ import { AnthropicProvider } from "./providers/anthropic";
 import { OpenAIProvider } from "./providers/openai";
 import { GoogleProvider } from "./providers/google";
 import { XAIProvider } from "./providers/xai";
+import { LyrieProviderRegistry, LyrieProvider } from "./providers/lyrie-provider";
+import { bootstrapLyrieProviders } from "./providers/index";
 
 export interface RouterConfig {
   anthropicApiKey?: string;
@@ -144,6 +146,8 @@ export interface RouterConfig {
   xaiApiKey?: string;
   minimaxApiKey?: string;
   preferLocal?: boolean;
+  /** Canonical provider name to prefer (e.g. 'hermes', 'ollama', 'lmstudio', 'anthropic'). */
+  provider?: string;
 }
 
 export class ModelRouter {
@@ -159,7 +163,14 @@ export class ModelRouter {
       this.preferLocal = config.preferLocal || false;
     }
 
-    // Instantiate real providers with API keys
+    // ── Independence layer: bootstrap the canonical LyrieProviderRegistry ──
+    // Always seed local providers (hermes, ollama, lmstudio).
+    // Then optionally register legacy cloud adapters for backwards compat.
+    const reg = bootstrapLyrieProviders();
+    LyrieProviderRegistry.setInstance(reg);
+    console.log("   ✓ LyrieProviderRegistry bootstrapped (hermes/ollama/lmstudio)");
+
+    // ── Legacy cloud provider map (kept for fallback dispatch) ──────────────
     if (this.config.anthropicApiKey) {
       this.providers.set("anthropic", new AnthropicProvider({ apiKey: this.config.anthropicApiKey }));
       console.log("   ✓ Anthropic provider connected");
@@ -180,33 +191,89 @@ export class ModelRouter {
     console.log(`   → ${this.models.length} models configured`);
     console.log(`   → Cloud: ${this.models.filter((m) => !m.isLocal).length} | Local: ${this.models.filter((m) => m.isLocal).length}`);
     console.log(`   → Active providers: ${Array.from(this.providers.keys()).join(", ") || "none"}`);
+    console.log(`   → Registry providers: ${reg.list().map((p) => p.id).join(", ")}`);
   }
 
   /**
    * Analyze the input and route to the best model.
+   *
+   * Priority (v1.0.0):
+   *   1. LyrieProviderRegistry path — canonical independence-layer dispatch
+   *      (hermes local-first, or whatever `config.provider` names)
+   *   2. Legacy cloud-provider map fallback (Anthropic, OpenAI, Google, xAI)
+   *   3. Empty stub when nothing is wired
    */
   async route(input: string): Promise<ModelInstance> {
     const taskType = this.classifyTask(input);
     const candidates = this.models.filter((m) => m.taskType === taskType);
-    
+
     // Prefer local if configured, otherwise use cloud
     const selected = this.preferLocal
       ? candidates.find((m) => m.isLocal) || candidates[0]
       : candidates.find((m) => !m.isLocal) || candidates[0];
 
-    // Find a real provider for the selected model
-    const provider = this.providers.get(selected.provider);
+    // ── Path 1: LyrieProviderRegistry (independence layer) ───────────────
+    const registry = LyrieProviderRegistry.getInstance();
+    const registryProvider: LyrieProvider | undefined =
+      registry.get(this.config.provider ?? "hermes") ||
+      registry.get("hermes") ||
+      registry.list()[0];
 
-    // If no provider for the selected model, fall back to first available provider
+    if (registryProvider) {
+      const modelId = registryProvider.defaultModel;
+      console.log(`[ModelRouter] Registry dispatch → provider=${registryProvider.id} model=${modelId}`);
+      return {
+        config: {
+          ...selected,
+          provider: registryProvider.id,
+          id: modelId,
+        },
+        complete: async (prompt: any, options?: any) => {
+          try {
+            const messages = [
+              ...(prompt.system
+                ? [{ role: "system" as const, content: prompt.system }]
+                : []),
+              ...(prompt.messages || []).map((m: any) => ({
+                role: m.role as "system" | "user" | "assistant" | "tool",
+                content: m.content ?? "",
+              })),
+            ];
+            const result = await registryProvider.complete(modelId, messages, {
+              maxTokens: options?.maxTokens ?? selected.maxTokens,
+              temperature: 0.7,
+              tools: options?.tools,
+            });
+            console.log(
+              `[ModelRouter] Registry response: content=${result.content?.substring(0, 100)},` +
+              ` toolCalls=${result.toolCalls?.length ?? 0}, stopReason=${result.stopReason}`
+            );
+            return { content: result.content, toolCalls: result.toolCalls };
+          } catch (err: any) {
+            console.error(`[ModelRouter] Registry provider error (${registryProvider.id}/${modelId}):`, err.message);
+            return { content: `⚠️ AI error: ${err.message}`, toolCalls: [] };
+          }
+        },
+      };
+    }
+
+    // ── Path 2: Legacy cloud-provider map ──────────────────────────────
+    const provider = this.providers.get(selected.provider);
     const fallbackProvider = provider || this.providers.values().next().value;
-    const fallbackModel = provider ? selected : this.models.find((m) => m.provider === this.providers.keys().next().value) || selected;
+    const fallbackModel =
+      provider
+        ? selected
+        : this.models.find((m) => m.provider === this.providers.keys().next().value) || selected;
 
     if (!fallbackProvider) {
       // No providers at all — return empty stub
       console.warn("[ModelRouter] No providers available! Returning empty response.");
       return {
         config: selected,
-        complete: async () => ({ content: "⚠️ No AI providers configured. Please set API keys in .env", toolCalls: [] }),
+        complete: async () => ({
+          content: "⚠️ No AI providers configured. Please set API keys in .env",
+          toolCalls: [],
+        }),
       };
     }
 
@@ -217,19 +284,21 @@ export class ModelRouter {
       config: actualModel,
       complete: async (prompt: any, options?: any) => {
         try {
-          // Route to the correct provider API
+          // Route to the correct legacy provider API
           if (actualModel.provider === "anthropic" || actualProvider instanceof AnthropicProvider) {
             const anthropic = actualProvider as AnthropicProvider;
-            const messages = (prompt.messages || []).filter((m: any) => m.role !== "system").map((m: any) => ({
-              role: m.role as "user" | "assistant",
-              content: m.content,
-            }));
+            const messages = (prompt.messages || [])
+              .filter((m: any) => m.role !== "system")
+              .map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content }));
             const result = await anthropic.complete(actualModel.id, messages, {
               system: prompt.system,
               maxTokens: options?.maxTokens || actualModel.maxTokens,
               temperature: 0.7,
             });
-            console.log(`[ModelRouter] Anthropic response: content=${result.content?.substring(0, 100)}, toolCalls=${result.toolCalls?.length || 0}, stopReason=${result.stopReason}`);
+            console.log(
+              `[ModelRouter] Anthropic response: content=${result.content?.substring(0, 100)},` +
+              ` toolCalls=${result.toolCalls?.length || 0}, stopReason=${result.stopReason}`
+            );
             return { content: result.content, toolCalls: result.toolCalls };
           }
 
@@ -272,7 +341,10 @@ export class ModelRouter {
 
           return { content: "⚠️ No matching provider for model: " + actualModel.id, toolCalls: [] };
         } catch (err: any) {
-          console.error(`[ModelRouter] Provider error (${actualModel.provider}/${actualModel.id}):`, err.message);
+          console.error(
+            `[ModelRouter] Provider error (${actualModel.provider}/${actualModel.id}):`,
+            err.message
+          );
           return { content: `⚠️ AI error: ${err.message}`, toolCalls: [] };
         }
       },
