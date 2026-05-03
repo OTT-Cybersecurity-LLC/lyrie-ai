@@ -12,8 +12,14 @@
  *   skills list         List auto-generated skills
  *   skills show <id>    Show a specific skill
  *   skills prune        Prune stale skills
- *   train               Prepare training batch from high-quality outcomes
+ *   train [options]     Export training data for H200 fine-tuning
  */
+// train subcommand options:
+//   --export atropos|openai-sft|sharegpt   format (default: atropos)
+//   --min-score 0.5                         minimum outcome score
+//   --domains cyber,code,...                comma-separated domain filter
+//   --out ./training.jsonl                  output path
+//   --status                                show ready-sample stats without exporting
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
@@ -25,7 +31,9 @@ import { SCORER_VERSION } from "../packages/core/src/evolve/scorer";
 import { EXTRACTOR_VERSION } from "../packages/core/src/evolve/skill-extractor";
 import { DREAM_VERSION } from "../packages/core/src/evolve/dream-cycle";
 import { CONTEXTURE_VERSION } from "../packages/core/src/evolve/contexture";
+import { TrainingExporter, TRAINING_EXPORTER_VERSION } from "../packages/core/src/evolve/training-exporter";
 import type { TaskOutcome } from "../packages/core/src/evolve/scorer";
+import type { ExportDomain, ExportFormat } from "../packages/core/src/evolve/training-exporter";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -61,6 +69,11 @@ Commands:
   skills show <id>    Show content of a specific skill file
   skills prune        Identify and remove stale skills
   train               Export high-quality outcomes as a training batch
+    --export <fmt>      Format: atropos | openai-sft | sharegpt (default: atropos)
+    --min-score <n>     Min score 0.0-1.0 (default: 0.5)
+    --domains <list>    Comma-separated: cyber,seo,trading,code,all (default: all)
+    --out <path>        Output JSONL file path
+    --status            Show ready-sample stats without exporting
 
 Options:
   --outcomes <path>   Override outcomes.jsonl path
@@ -198,14 +211,91 @@ async function cmdSkillsPrune(skillsDir: string, dryRun: boolean) {
   console.log(`\n   ${dryRun ? "Would have pruned" : "Pruned"} ${candidates.length} skill(s).\n`);
 }
 
-async function cmdTrain(outcomesPath: string) {
-  const outcomes = readOutcomes(outcomesPath);
-  const batch = outcomes.filter((o) => o.score >= 0.5);
-  console.log(`\n🎓 Training Batch\n`);
-  console.log(`   Total outcomes:  ${outcomes.length}`);
-  console.log(`   Training (>=0.5): ${batch.length}`);
+async function cmdTrain(
+  outcomesPath: string,
+  trainArgs: string[],
+) {
+  const exporter = new TrainingExporter({ outcomesPath });
+
+  // --status flag: print stats and exit
+  if (trainArgs.includes("--status")) {
+    const s = exporter.status();
+    const lastExport = s.lastExportTimestamp
+      ? new Date(s.lastExportTimestamp).toISOString()
+      : "never";
+    console.log(`\n🎓 LyrieEvolve Training Status\n`);
+    console.log(`   Version:       ${TRAINING_EXPORTER_VERSION}`);
+    console.log(`   Outcomes file: ${s.outcomesPath}`);
+    console.log(`   Total samples: ${s.totalOutcomes}`);
+    console.log(`   Ready (≥0.5):  ${s.readySamples}`);
+    console.log(`   Last outcome:  ${lastExport}`);
+    if (Object.keys(s.byDomain).length > 0) {
+      console.log(`\n   Domain breakdown:`);
+      for (const [domain, count] of Object.entries(s.byDomain)) {
+        console.log(`     ${domain.padEnd(10)} ${count} samples`);
+      }
+    } else {
+      console.log(`   (no ready samples — run lyrie evolve dream to process outcomes)`);
+    }
+    console.log(``);
+    return;
+  }
+
+  // Parse train-specific flags
+  const fmtIdx = trainArgs.indexOf("--export");
+  const format: ExportFormat =
+    fmtIdx >= 0 && trainArgs[fmtIdx + 1]
+      ? (trainArgs[fmtIdx + 1] as ExportFormat)
+      : "atropos";
+
+  const minScoreIdx = trainArgs.indexOf("--min-score");
+  const minScore = minScoreIdx >= 0 && trainArgs[minScoreIdx + 1]
+    ? parseFloat(trainArgs[minScoreIdx + 1]!)
+    : 0.5;
+
+  const domainsIdx = trainArgs.indexOf("--domains");
+  const domains: ExportDomain[] =
+    domainsIdx >= 0 && trainArgs[domainsIdx + 1]
+      ? (trainArgs[domainsIdx + 1]!.split(",").map((d) => d.trim()) as ExportDomain[])
+      : ["all"];
+
+  const outIdx = trainArgs.indexOf("--out");
+  const outputPath =
+    outIdx >= 0 && trainArgs[outIdx + 1]
+      ? trainArgs[outIdx + 1]!
+      : join(homedir(), ".lyrie", "evolve", `training-${Date.now()}.jsonl`);
+
+  const validFormats: ExportFormat[] = ["atropos", "openai-sft", "sharegpt"];
+  if (!validFormats.includes(format)) {
+    console.error(`❌ Unknown format: ${format}. Valid: ${validFormats.join(", ")}`);
+    process.exit(1);
+  }
+
+  console.log(`\n🎓 LyrieEvolve Training Export\n`);
+  console.log(`   Format:    ${format}`);
+  console.log(`   Min score: ${minScore}`);
+  console.log(`   Domains:   ${domains.join(", ")}`);
+  console.log(`   Output:    ${outputPath}`);
   console.log(``);
-  console.log(JSON.stringify(batch, null, 2));
+
+  const result = await exporter.export({
+    format,
+    minScore,
+    domains,
+    outputPath,
+    maxSamples: 10000,
+  });
+
+  console.log(`   ✅ Exported: ${result.samplesExported} samples`);
+  console.log(`   📁 Written:  ${result.outputPath}`);
+  console.log(`   💾 Size:     ${(result.sizeBytes / 1024).toFixed(1)} KB`);
+  if (Object.keys(result.domainsBreakdown).length > 0) {
+    console.log(`\n   Domain breakdown:`);
+    for (const [domain, count] of Object.entries(result.domainsBreakdown)) {
+      console.log(`     ${domain.padEnd(10)} ${count} samples`);
+    }
+  }
+  console.log(``);
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -263,7 +353,9 @@ try {
       }
       break;
     case "train":
-      await cmdTrain(outcomesPath);
+      // Pass all remaining args after "train" subcommand so train-specific
+      // flags (--export, --min-score, --domains, --out, --status) are available.
+      await cmdTrain(outcomesPath, args.slice(1));
       break;
     default:
       console.error(`❌ Unknown command: ${command}`);

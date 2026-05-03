@@ -83,6 +83,14 @@ export interface TrainingExporterOptions {
   dryRun?: boolean;
 }
 
+export interface TrainingStatus {
+  totalOutcomes: number;
+  readySamples: number;
+  byDomain: Record<string, number>;
+  lastExportTimestamp: number | undefined;
+  outcomesPath: string;
+}
+
 // ─── Domain system prompts ────────────────────────────────────────────────────
 
 const DOMAIN_SYSTEM_PROMPTS: Record<string, string> = {
@@ -116,18 +124,14 @@ export class TrainingExporter {
   async export(options: Partial<ExportOptions> & { outputPath: string }): Promise<ExportResult> {
     const opts = this._resolveOptions(options);
 
-    // Load + filter outcomes
     const outcomes = this._loadOutcomes();
     const filtered = this._filterOutcomes(outcomes, opts);
 
-    // Build records
     const records = filtered.map((o) => this._buildRecord(o, opts.format));
-
-    // Compute breakdown
     const domainsBreakdown = this._computeBreakdown(filtered);
 
-    // Write JSONL
     const jsonl = records.map((r) => JSON.stringify(r)).join("\n") + (records.length > 0 ? "\n" : "");
+
     if (!this.dryRun && records.length > 0) {
       this._ensureDir(opts.outputPath);
       writeFileSync(opts.outputPath, jsonl, "utf8");
@@ -143,6 +147,32 @@ export class TrainingExporter {
       domainsBreakdown,
       outputPath: opts.outputPath,
       sizeBytes,
+    };
+  }
+
+  /**
+   * Return a summary of training-ready data without exporting.
+   */
+  status(): TrainingStatus {
+    const outcomes = this._loadOutcomes();
+    const ready = outcomes.filter((o) => o.score >= 0.5);
+
+    const byDomain: Record<string, number> = {};
+    for (const o of ready) {
+      byDomain[o.domain] = (byDomain[o.domain] ?? 0) + 1;
+    }
+
+    const lastExportTimestamp =
+      outcomes.length > 0
+        ? Math.max(...outcomes.map((o) => o.timestamp))
+        : undefined;
+
+    return {
+      totalOutcomes: outcomes.length,
+      readySamples: ready.length,
+      byDomain,
+      lastExportTimestamp,
+      outcomesPath: this.outcomesPath,
     };
   }
 
@@ -180,8 +210,7 @@ export class TrainingExporter {
     opts: ExportOptions,
   ): TaskOutcome[] {
     const wantAll =
-      opts.domains.length === 0 ||
-      opts.domains.includes("all");
+      opts.domains.length === 0 || opts.domains.includes("all");
 
     return outcomes
       .filter((o) => o.score >= opts.minScore)
@@ -215,7 +244,7 @@ export class TrainingExporter {
           reward: outcome.score,
           domain: outcome.domain,
           task_id: outcome.id ?? randomUUID(),
-        } satisfies AtroposRecord;
+        } as AtroposRecord;
 
       case "openai-sft":
         return {
@@ -224,7 +253,7 @@ export class TrainingExporter {
             { role: "user", content: userContent },
             { role: "assistant", content: assistantContent },
           ],
-        } satisfies OpenAISFTRecord;
+        } as OpenAISFTRecord;
 
       case "sharegpt":
         return {
@@ -235,7 +264,7 @@ export class TrainingExporter {
           ],
           reward: outcome.score,
           domain: outcome.domain,
-        } satisfies ShareGPTRecord;
+        } as ShareGPTRecord;
     }
   }
 
@@ -253,42 +282,6 @@ export class TrainingExporter {
       mkdirSync(dir, { recursive: true });
     }
   }
-
-  // ─── Status helper (used by CLI) ───────────────────────────────────────────
-
-  /**
-   * Return a summary of training-ready data without exporting.
-   */
-  status(): TrainingStatus {
-    const outcomes = this._loadOutcomes();
-    const ready = outcomes.filter((o) => o.score >= 0.5);
-
-    const byDomain: Record<string, number> = {};
-    for (const o of ready) {
-      byDomain[o.domain] = (byDomain[o.domain] ?? 0) + 1;
-    }
-
-    const lastExportTimestamp =
-      outcomes.length > 0
-        ? Math.max(...outcomes.map((o) => o.timestamp))
-        : undefined;
-
-    return {
-      totalOutcomes: outcomes.length,
-      readySamples: ready.length,
-      byDomain,
-      lastExportTimestamp,
-      outcomesPath: this.outcomesPath,
-    };
-  }
-}
-
-export interface TrainingStatus {
-  totalOutcomes: number;
-  readySamples: number;
-  byDomain: Record<string, number>;
-  lastExportTimestamp: number | undefined;
-  outcomesPath: string;
 }
 
 // ─── Version ───────────────────────────────────────────────────────────────────
