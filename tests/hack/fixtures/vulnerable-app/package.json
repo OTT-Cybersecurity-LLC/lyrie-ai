@@ -1,0 +1,12 @@
+{
+  "name": "lyrie-hack-fixture-vulnerable-app",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Intentionally vulnerable test fixture for `lyrie hack`. Do NOT deploy.",
+  "license": "MIT",
+  "dependencies": {
+    "express": "4.17.1",
+    "lodash": "4.17.20",
+    "minimist": "1.2.5"
+  }
+}
