@@ -13,6 +13,54 @@ _Nothing yet — open a PR or file an issue at https://github.com/OTT-Cybersecur
 
 ---
 
+## [1.0.0] — 2026-05-04
+
+> **The Autonomous Security Agent — General Availability**
+>
+> 16 branches merged, 1362+ tests, 0 failures. ATP v1.0, `lyrie hack` 7-phase pentest,
+> provider independence, AGT bridge, Rust Shield wired, GCG/AutoDAN GPU attacks,
+> Crescendo+TAP multi-turn AAV, runnable PoC generation, Stage F code diffs,
+> scanner adapters, daemon mode, memory integrity, A2A bus, MCP scanner,
+> LyrieEvolve training pipeline, tools-catalog enforcement, OSS-scan service,
+> and Omega-Suite Tier-1 binary exploitation.
+
+### Added
+
+- **Agent Trust Protocol (ATP) v1.0** — `packages/atp/` — 5 primitives: Agent Identity Certificates, Action Receipts, Scope Declaration Language, Trust Chain Rules, Breach Attestation. Ed25519 signing, IETF-draft RFC spec.
+- **`lyrie hack <target>`** — 7-phase autonomous pentest: Recon → Scan → Validate → [AAV] → Remediate → Report → Self-scan. SARIF + Markdown + JSON output. `lyrie hack ./myapp`
+- **`@lyrie/agt-bridge`** — Microsoft AGT integration. 10/10 OWASP ASI 2026 with AGT, 7/10 standalone. Graceful degradation.
+- **Provider independence** — Hermes-3, Ollama, LMStudio as first-class local providers. `--require-local` flag. `lyrie.local.yml` zero-cloud config.
+- **Rust Shield wired** — `packages/shield/` binary now called by TS engine via JSON-RPC. File-write scan, outbound WAF, behavioral analysis.
+- **AAV: Crescendo + TAP** — multi-turn attack strategies (HarmBench baselines). Crescendo: 4 escalation styles. TAP: tree-of-attacks with pruning. No GPU required.
+- **AAV: GCG + AutoDAN** — GPU-accelerated adversarial suffixes. GCG on H200 (gradient-based). AutoDAN genetic algorithm (black-box). `lyrie redteam --strategy gcg|autodan`
+- **PoC generation** — Stage E generates runnable exploits for SQLi, XSS, SSRF, RCE, path traversal, deserialization. Operator approval gate.
+- **Stage F auto-remediation diffs** — code-level before/after patches across JS/Python/PHP. Wired into `lyrie hack` report.
+- **Scanner adapters** — Nuclei, Trivy, Semgrep CE, TruffleHog. Trivy binary hash verification (post-March-2026 supply-chain incident).
+- **`lyrie daemon`** — continuous operation with threat-watch and self-heal. `--interval 5m --threat-watch --self-heal --provider hermes`
+- **Memory integrity checker** — SHA-256 drift detection (OWASP ASI-06 defense). `lyrie memory integrity-check [--fix]`
+- **Sub-agent message bus** — A2A pub/sub mid-flight. Shield-filtered cross-agent messaging.
+- **MCP Security Scanner** — 8 pre-connection checks: tool-poisoning, rug-pull, shadow-tool, excessive-scope, cleartext-transport, untrusted-npx, unverified-server, prompt-in-tool-description.
+- **LyrieEvolve training pipeline** — `lyrie evolve train --export atropos` generates H200-ready GRPO training data. Full guide in `docs/h200-training.md`.
+- **Tools-Catalog enforcement** — risk-based policy: critical=block+approve, high=audit, medium=rate-limit. `lyrie tools audit`
+- **OSS-Scan service** — Dockerized public scanner (`deploy/oss-scan/`). URL validation, 50MB limit, rate limiting.
+- **7 Claude Code architectural patterns** — static/dynamic prompt boundary (−30-50% tokens), deferred tool loading (−15-25k tokens/call), coordinator mode, verification agent, fork/fresh spawns, KAIROS daemon, anti-false-claims rule.
+- **Omega-Suite Tier-1** — binary exploit feasibility (Z3 SMT solver, ROP analysis), CodeQL agent, crash analysis (rr replay), OSS forensics.
+
+### Changed
+
+- Default provider: Anthropic → Hermes-3 (local-first)
+- README: new tagline, honest OWASP matrix, Omega-Suite above the fold
+- OWASP ASI 2026 coverage: 10/10 (with AGT), 7/10 (standalone)
+
+### Fixed
+
+- Rust Shield compiled but never called — now wired via JSON-RPC
+- Stage E PoC was a stub — now generates runnable exploit scripts
+- Stage F remediation was text-only — now generates code diffs
+- LyrieEvolve GRPO training was documentation — now ships real pipeline
+
+---
+
 ## [0.9.0] — 2026-05-02
 
 > **Phase 3 Multi-Channel + AAV State-Actor Corpus + AI Governance**
