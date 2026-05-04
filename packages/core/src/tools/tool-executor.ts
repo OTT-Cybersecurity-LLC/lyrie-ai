@@ -5,19 +5,21 @@
  * Tools are the agent's hands — this is how Lyrie acts on the world.
  *
  * Built-in tools:
- *   exec          — Shell command execution (Shield-gated)
- *   read_file     — Read file contents (path-scoped)
- *   write_file    — Write/create files (path-scoped)
- *   list_directory— Directory listing
- *   web_search    — Brave Search API with DuckDuckGo fallback
- *   web_fetch     — Fetch & extract content from URLs
- *   threat_scan   — Shield-powered threat scanning
+ *   exec           — Shell command execution (Shield-gated)
+ *   read_file      — Read file contents (path-scoped)
+ *   write_file     — Write/create files (path-scoped)
+ *   list_directory — Directory listing
+ *   web_search     — Brave Search API with DuckDuckGo fallback
+ *   web_fetch      — Fetch & extract content from URLs
+ *   threat_scan    — Shield-powered threat scanning
+ *   spawn_subagent — Spawn an isolated sub-agent mid-conversation
  *
  * © OTT Cybersecurity LLC — https://lyrie.ai
  */
 
 import { ShieldManager } from "../engine/shield-manager";
 import { ShieldGuard, type ShieldGuardLike } from "../engine/shield-guard";
+import { spawnSubagentTool } from "./spawn-subagent";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -109,6 +111,9 @@ export class ToolExecutor {
   // ─── Built-in Tool Registration ──────────────────────────────────────────
 
   private registerBuiltinTools(): void {
+    // ── spawn_subagent ─────────────────────────────────────────────────────
+    this.register(spawnSubagentTool);
+
     // ── exec ──────────────────────────────────────────────────────────────
     this.register({
       // Shield Doctrine: shell stdout is untrusted text — redact prompt-injection.
