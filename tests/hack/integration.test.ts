@@ -4,7 +4,10 @@
  * Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai — MIT License
  */
 
-import { afterAll, describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it, setDefaultTimeout } from "bun:test";
+
+// Integration tests run real I/O — extend default timeout to 15s
+setDefaultTimeout(15000);
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
