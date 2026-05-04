@@ -298,6 +298,19 @@ export type { Tool, ToolCall, ToolResult, ToolParameter, AnthropicToolDef, OpenA
 export { CronManager } from "./cron/cron-manager";
 export type { CronTask, CronInterval, CronExecution, CronManagerConfig } from "./cron/cron-manager";
 
+// Lyrie Cron Scheduler (full OpenClaw-parity cron system)
+export { LyrieCronScheduler, nextCronTime, computeNextRunAt } from "./cron";
+export { CronStore } from "./cron";
+export { CronRunner } from "./cron";
+export type {
+  CronJob,
+  CronRun,
+  CronSchedule,
+  CronPayload,
+  CronDelivery,
+  CronEvent,
+} from "./cron";
+
 // Sub-Agents
 export { SubAgentManager } from "./agents/sub-agent";
 export type { SubAgentTask, SubAgentResult, SubAgentConfig, SubAgentStatus } from "./agents/sub-agent";
