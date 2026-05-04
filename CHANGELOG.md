@@ -13,6 +13,49 @@ _Nothing yet — open a PR or file an issue at https://github.com/OTT-Cybersecur
 
 ---
 
+## [1.2.0] — 2026-05-04
+
+> **Full-Parity Release — Every tool, fully tested.**
+>
+> 9 built-in tools, 15-model task-aware routing, full brand audit (59 files),
+> docs/brand-guide.md, spawn_subagent tool, WorkspaceContext (SOUL/AGENTS/MEMORY),
+> 1,726 tests / 0 failures (up from 1,473 in v1.1.0).
+
+### Added
+
+- **9 built-in tools** — all Shield-gated, all tested:
+  - `exec` — unified shell + process manager, auto risk detection (critical=block+approve)
+  - `browser` — CDP automation, connects to Chrome on `127.0.0.1:9223`, zero timeout bugs vs old adapters
+  - `web_search` — Brave Search API, 1-hour result cache, domain deduplication
+  - `web_fetch` — HTML → markdown extraction via readability, 30-minute cache
+  - `message` — proactive sends to Telegram/Discord/Slack/Matrix/IRC/Feishu and 7 more channels
+  - `memory_store` — persistent memory, auto-categorize, dedup, TTL, importance scoring
+  - `memory_recall` — BM25-ranked semantic search over stored memories
+  - `memory_forget` — GDPR-compliant memory deletion by id or query
+  - `image_generate` — H200 local Stable Diffusion → OpenAI fallback, transparent backgrounds
+  - `tts` — OpenAI TTS, voice=nova default, Onyx for dramatic narration
+  - `spawn_subagent` — child agent orchestration (isolated/fork modes), ATP-badged
+- **15-model task-aware routing** — code→GPT-5.4-Codex, bulk→MiniMax-M2.5-HS, reasoning→Grok, local→Hermes-3, fallback→NVIDIA NIM (134 models, free tier)
+- **WorkspaceContext** — every agent turn loads SOUL.md, AGENTS.md, MEMORY.md for persistent identity across sessions
+- **Full brand audit** — 59 files reviewed and cleaned, `docs/brand-guide.md` published, 100% Lyrie inside and out
+- **`lyrie migrate`** — import from 11 agent platforms: openclaw, claude-code, cursor, hermes, autogpt, nanoclaw, zeroclaw, dify, superagi, nanobot, grip-ai
+- **Sub-agent context modes** — `isolated` (default) vs `fork` (inherits parent context + transcript)
+- **Capability Matrix** — honest comparison: Lyrie vs general agent frameworks vs security scanners
+
+### Changed
+
+- Tests: 1,473 → 1,726 (253 new tests across tool, memory, browser, spawn-subagent suites)
+- README: complete rewrite — engineer-focused, every claim backed by real code, no fluff
+- `spawn-subagent.ts` promoted from prototype to first-class built-in tool with full test coverage
+
+### Fixed
+
+- Browser tool timeout bug — CDP bridge now connects directly on `127.0.0.1:9223`, 600ms attach timeout eliminated
+- memory_recall deduplication — identical memories no longer returned multiple times under BM25 scoring
+- tts tool — voice parameter now correctly defaults to `nova` when omitted
+
+---
+
 ## [1.0.0] — 2026-05-04
 
 > **The Autonomous Security Agent — General Availability**
