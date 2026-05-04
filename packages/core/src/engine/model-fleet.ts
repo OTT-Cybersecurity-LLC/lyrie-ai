@@ -1,7 +1,7 @@
 /**
  * ModelFleet — Task-aware multi-model routing for Lyrie v1.2.
  *
- * Better than OpenClaw's static routing table:
+ * Dynamic task-aware routing:
  *   - Auto-selects model from task description (no manual config)
  *   - Tracks cost + latency per model
  *   - Health checks all 15 providers on demand

@@ -2,7 +2,7 @@
  * cdp-client.ts — Pure CDP WebSocket client for Lyrie Browser Tool
  *
  * Zero external dependencies. Uses Node 22 native WebSocket.
- * Fixes the OpenClaw 600ms hardcoded timeout bug with:
+ * Reliable CDP client with:
  *   - Configurable timeouts (default 10s per operation)
  *   - Auto-retry on attach failure (3x exponential backoff)
  *   - Proper event-based architecture with cleanup
@@ -186,9 +186,8 @@ export class CDPSession {
  * High-level CDP client. Manages target listing, tab creation, and
  * session attachment with retry logic.
  *
- * Key differences from OpenClaw's browser tool:
- *   - No hardcoded 600ms timeout (was the root cause of silent failures)
- *   - All timeouts are configurable; default 10s per operation
+ * LyrieBrowser CDPClient design:
+ *   - No hardcoded timeouts — all fully configurable; default 10s per operation
  *   - Connection retries with exponential backoff (3x by default)
  *   - All sessions are tracked for safe cleanup
  */
@@ -256,7 +255,7 @@ export class CDPClient {
    * Attach a CDPSession to a target's WebSocket debugger URL.
    * Retries up to maxRetries times with exponential backoff.
    *
-   * This is the fix for OpenClaw's 600ms bug — we retry instead of failing.
+   * Retries with exponential backoff instead of failing on first timeout.
    */
   async attachSession(wsUrl: string): Promise<CDPSession> {
     let lastError: Error = new Error("CDPClient.attachSession: no attempts made");
@@ -295,7 +294,7 @@ export class CDPClient {
 
   private _connectWS(wsUrl: string): Promise<CDPSession> {
     return new Promise((resolve, reject) => {
-      // Use a configurable connection timeout — not the 600ms OpenClaw hardcodes
+      // Use a configurable connection timeout
       const connectTimeoutMs = this.defaultTimeoutMs;
       const timer = setTimeout(() => {
         reject(new Error(`CDP WebSocket connect timed out after ${connectTimeoutMs}ms: ${wsUrl}`));

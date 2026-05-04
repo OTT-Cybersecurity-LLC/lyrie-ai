@@ -1,7 +1,7 @@
 /**
  * memory_store / memory_recall / memory_forget — Lyrie v1.2 built-in tools.
  *
- * Better than OpenClaw's LanceDB-backed memory:
+ * Advanced memory system with:
  *   ✅ Auto-categorization — infers category from content
  *   ✅ Importance scoring  — auto-scores 0-1 from keywords
  *   ✅ Deduplication       — checks for similar entries before storing

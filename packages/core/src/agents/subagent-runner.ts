@@ -1,8 +1,7 @@
 /**
  * SubagentRunner — LLM-callable sub-agent orchestration for Lyrie v1.1.
  *
- * Gives the Lyrie engine the equivalent of OpenClaw's `sessions_spawn`:
- * spawn an isolated child agent mid-conversation, wait for its result,
+ * Spawn an isolated child agent mid-conversation, wait for its result,
  * and continue.  Two context modes are supported:
  *
  *   isolated — fresh LyrieEngine with no parent history

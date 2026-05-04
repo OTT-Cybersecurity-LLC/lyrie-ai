@@ -1,5 +1,5 @@
 /**
- * LyrieCoordinator — Pure-orchestrator mode (Claude Code v2.1.88 pattern).
+ * LyrieCoordinator — Pure-orchestrator mode.
  *
  * When coordinator mode is enabled:
  *   1. The MAIN agent can ONLY spawn sub-agents and aggregate results.

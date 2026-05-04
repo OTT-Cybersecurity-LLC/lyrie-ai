@@ -1,5 +1,5 @@
 /**
- * ToolRegistry — Deferred tool loading (Claude Code v2.1.88 ToolSearchTool pattern).
+ * ToolRegistry — Deferred tool loading.
  *
  * Problem: with 50+ tools registered, full schemas total ~25k tokens that
  * are paid on EVERY turn even if zero tools are called.

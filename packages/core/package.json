@@ -2,6 +2,8 @@
   "name": "@lyrie/core",
   "version": "0.9.0",
   "description": "Lyrie Agent Core — The brain",
+  "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
+  "homepage": "https://lyrie.ai",
   "main": "src/index.ts",
   "scripts": {
     "start": "bun run src/index.ts",

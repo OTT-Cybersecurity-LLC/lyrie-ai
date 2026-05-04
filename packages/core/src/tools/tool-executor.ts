@@ -130,7 +130,7 @@ export class ToolExecutor {
 
     // ── browser ───────────────────────────────────────────────────────────
     // CDP automation — connects to 127.0.0.1:9223 (lyrie-automation profile)
-    // Better than OpenClaw: no hardcoded 600ms timeout, auto-retry, auto-screenshot on error
+    // Configurable timeouts, auto-retry, auto-screenshot on error
     this.register(browserToolDefinition);
 
     // ── exec ──────────────────────────────────────────────────────────────

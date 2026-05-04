@@ -1,6 +1,6 @@
 /**
  * Lyrie web_search tool — Brave Search API
- * Better than OpenClaw: 1hr cache + domain dedup
+ * 1hr cache + domain dedup for high-quality results
  *
  * Lyrie.ai by OTT Cybersecurity LLC — MIT License
  */

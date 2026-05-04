@@ -43,7 +43,7 @@ _Nothing yet — open a PR or file an issue at https://github.com/OTT-Cybersecur
 - **LyrieEvolve training pipeline** — `lyrie evolve train --export atropos` generates H200-ready GRPO training data. Full guide in `docs/h200-training.md`.
 - **Tools-Catalog enforcement** — risk-based policy: critical=block+approve, high=audit, medium=rate-limit. `lyrie tools audit`
 - **OSS-Scan service** — Dockerized public scanner (`deploy/oss-scan/`). URL validation, 50MB limit, rate limiting.
-- **7 Claude Code architectural patterns** — static/dynamic prompt boundary (−30-50% tokens), deferred tool loading (−15-25k tokens/call), coordinator mode, verification agent, fork/fresh spawns, KAIROS daemon, anti-false-claims rule.
+- **7 Lyrie Engine architectural patterns** — static/dynamic prompt boundary (−30-50% tokens), deferred tool loading (−15-25k tokens/call), coordinator mode, verification agent, fork/fresh spawns, KAIROS daemon, anti-false-claims rule.
 - **Omega-Suite Tier-1** — binary exploit feasibility (Z3 SMT solver, ROP analysis), CodeQL agent, crash analysis (rr replay), OSS forensics.
 
 ### Changed
@@ -897,8 +897,7 @@ Total Lyrie suite: **346 / 0 / 1470** TS + 63 Py = **409 / 0**
 - **Unit tests**: 9 ShieldGuard, 9 FTS, 2 pairing-shield, 5 MCP-shield. All pass.
 
 ### Added — Phase 1 (Core Agent Absorption — part 1)
-- **DM pairing policy** (`packages/gateway/src/security/dm-pairing.ts`) inspired by
-  OpenClaw `dmPolicy="pairing"`. Three modes: `open` (back-compat default),
+- **DM pairing policy** (`packages/gateway/src/security/dm-pairing.ts`) — three modes: `open` (back-compat default),
   `pairing` (unknown DMs receive a one-time code; operator approves), `closed`
   (allowlist only). Wire-in is additive — existing channel configs without
   `dmPolicy` keep working unchanged.
@@ -925,7 +924,7 @@ Total Lyrie suite: **346 / 0 / 1470** TS + 63 Py = **409 / 0**
 - **Multi-platform release** workflow producing tarballs/zips for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, and `x86_64-pc-windows-msvc`.
 - **Dependabot** (npm, cargo, github-actions).
 - **Pre-commit config** (whitespace, YAML/JSON/TOML lint, gitleaks secret scan, codespell).
-- **Windows installer** at `scripts/install.ps1` (`irm | iex` parity with Claude Code).
+- **Windows installer** at `scripts/install.ps1` (`irm | iex` one-liner).
 - **CODE_OF_CONDUCT.md**, **CHANGELOG.md**, **CITATION.cff** files.
 - **`.npmignore`** for clean npm publishes.
 - **Release notes generator script** (`scripts/release/notes.sh`).

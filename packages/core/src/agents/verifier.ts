@@ -1,7 +1,7 @@
 /**
  * LyrieVerifier — Adversarial verification agent.
  *
- * Ported from Claude Code v2.1.88 verificationAgent + OpenClaw SELF-CHECK.md.
+ * Lyrie adversarial verification — built for correctness, not confidence.
  *
  * Contract: the verifier's job is NOT to confirm work — it is to TRY TO BREAK IT.
  *
