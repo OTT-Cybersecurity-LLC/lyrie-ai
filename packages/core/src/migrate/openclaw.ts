@@ -8,6 +8,12 @@
  *   ~/.openclaw/crons.json            — cron jobs
  *   ~/.openclaw/channels/             — channel configs (Telegram, etc.)
  *   ~/.openclaw/memory/               — structured memory entries
+ *
+ * Supports selective migration via ctx.only:
+ *   "memory"   — import only memory entries
+ *   "skills"   — import only skills
+ *   "crons"    — import only cron jobs
+ *   "channels" — import only channel configs
  * 
  * © OTT Cybersecurity LLC / Lyrie.ai
  */
@@ -48,8 +54,20 @@ export function detectOpenClaw(): boolean {
 
 export async function migrateFromOpenClaw(ctx: MigrationContext): Promise<MigrationResult> {
   const log = new MigrationLogger("openclaw", ctx.verbose);
+  const { only } = ctx as MigrationContext & { only?: string };
 
-  console.log("\n🦞 Migrating from OpenClaw...");
+  // Determine which sections to run
+  const runMemory  = !only || only === "memory";
+  const runSkills  = !only || only === "skills";
+  const runCrons   = !only || only === "crons";
+  const runChannels = !only || only === "channels";
+  const runConfig  = !only; // config always migrated on full run
+
+  if (only) {
+    console.log(`\n🦞 Migrating from OpenClaw (--only ${only})...`);
+  } else {
+    console.log("\n🦞 Migrating from OpenClaw...");
+  }
 
   const manifest: MigrationResult["manifest"] = {};
 
@@ -82,9 +100,10 @@ export async function migrateFromOpenClaw(ctx: MigrationContext): Promise<Migrat
   }
 
   // ── 2. Channel configs ─────────────────────────────────────────────────────
+  const channels: string[] = [];
+  if (runChannels) {
   log.step("Reading channel configs...");
   const channelsDir = join(OPENCLAW_DIR, "channels");
-  const channels: string[] = [];
 
   if (existsSync(channelsDir)) {
     const channelFiles = listFiles(channelsDir, ".json");
@@ -123,8 +142,10 @@ export async function migrateFromOpenClaw(ctx: MigrationContext): Promise<Migrat
 
   lyrieConfig.channels = channels.map((c) => ({ type: c }));
   manifest.channels = channels;
+  } // end runChannels
 
   // ── 3. Memory — markdown workspace files ───────────────────────────────────
+  if (runMemory) {
   log.step("Importing workspace memory...");
   const memoryEntries: LyrieMemoryEntry[] = [];
 
@@ -207,8 +228,10 @@ export async function migrateFromOpenClaw(ctx: MigrationContext): Promise<Migrat
     ctx.dryRun
   );
   manifest.memory = memoryEntries.length;
+  } // end runMemory
 
   // ── 4. Skills ──────────────────────────────────────────────────────────────
+  if (runSkills) {
   log.step("Importing skills...");
   const skills: LyrieSkill[] = [];
 
@@ -259,8 +282,10 @@ export async function migrateFromOpenClaw(ctx: MigrationContext): Promise<Migrat
     ctx.dryRun
   );
   manifest.skills = skills.length;
+  } // end runSkills
 
   // ── 5. Cron jobs ───────────────────────────────────────────────────────────
+  if (runCrons) {
   log.step("Importing cron jobs...");
   const cronJobs: LyrieCronJob[] = [];
 
@@ -312,13 +337,16 @@ export async function migrateFromOpenClaw(ctx: MigrationContext): Promise<Migrat
     ctx.dryRun
   );
   manifest.cronJobs = cronJobs.length;
+  } // end runCrons
 
   // ── 6. Write final config ──────────────────────────────────────────────────
+  if (runConfig) {
   writeJson(
     join(ctx.lyrieDir, "config", "lyrie.json"),
     lyrieConfig,
     ctx.dryRun
   );
+  } // end runConfig
 
   const totalErrors = log.getErrors();
   const success = totalErrors.length === 0;

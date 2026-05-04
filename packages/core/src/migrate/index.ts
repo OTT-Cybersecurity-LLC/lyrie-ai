@@ -44,6 +44,8 @@ export interface MigrationRunContext {
   lyrieDir: string;
   dryRun: boolean;
   verbose: boolean;
+  /** Restrict migration to a single section (openclaw only for now) */
+  only?: import("./types").MigrationOnly;
 }
 
 async function buildRegistry(): Promise<PlatformEntry[]> {

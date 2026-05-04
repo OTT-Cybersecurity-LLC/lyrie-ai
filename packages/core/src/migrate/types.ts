@@ -42,10 +42,14 @@ export interface MigrationManifest {
   [key: string]: unknown;
 }
 
+export type MigrationOnly = "memory" | "skills" | "crons" | "channels";
+
 export interface MigrationContext {
   lyrieDir: string;
   dryRun: boolean;
   verbose: boolean;
+  /** Restrict migration to a single section */
+  only?: MigrationOnly;
 }
 
 // ─── Lyrie native config format ───────────────────────────────────────────────

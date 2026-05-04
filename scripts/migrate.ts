@@ -58,6 +58,7 @@ ${color("  © OTT Cybersecurity LLC / Lyrie.ai", C.dim)}
 // ─── Argument parsing ─────────────────────────────────────────────────────────
 function parseArgs(argv: string[]): {
   from: string | null;
+  only: string | null;
   dryRun: boolean;
   verbose: boolean;
   detect: boolean;
@@ -69,6 +70,7 @@ function parseArgs(argv: string[]): {
   const args = argv.slice(2);
   const result = {
     from: null as string | null,
+    only: null as string | null,
     dryRun: false,
     verbose: false,
     detect: false,
@@ -104,6 +106,10 @@ function parseArgs(argv: string[]): {
       case "--dir":
         result.lyrieDir = args[++i] ?? result.lyrieDir;
         break;
+      case "--only":
+      case "-o":
+        result.only = args[++i] ?? null;
+        break;
       case "--secure":
       case "-s":
         result.secure = true;
@@ -126,6 +132,7 @@ ${color("USAGE", C.bold, C.white)}
 
 ${color("OPTIONS", C.bold, C.white)}
   ${color("--from <platform>", C.cyan)}    Migrate from a specific platform (or "all")
+  ${color("--only <section>", C.cyan)}     Restrict to one section: memory|skills|crons|channels
   ${color("--detect", C.cyan)}             Auto-detect installed platforms
   ${color("--list", C.cyan)}               List all supported platforms
   ${color("--dry-run", C.cyan)}            Preview what would be migrated (no writes)
@@ -315,6 +322,7 @@ async function main(): Promise<void> {
     lyrieDir: opts.lyrieDir,
     dryRun: opts.dryRun,
     verbose: opts.verbose,
+    ...(opts.only ? { only: opts.only as import("../packages/core/src/migrate/types").MigrationOnly } : {}),
   };
 
   if (opts.secure) {
