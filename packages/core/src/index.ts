@@ -303,8 +303,16 @@ export { SubAgentManager } from "./agents/sub-agent";
 export type { SubAgentTask, SubAgentResult, SubAgentConfig, SubAgentStatus } from "./agents/sub-agent";
 
 // Skills
+// SKILL.md runtime (OpenClaw-format skills)
+export { SkillLoader } from "./skills/skill-loader";
+export { SkillRegistry, buildSystemPromptBlock } from "./skills/skill-registry";
+export { SkillRunner } from "./skills/skill-runner";
+export { SkillSearch } from "./skills/skill-search";
+export type { SkillManifest, SkillContext, ActivatedSkill } from "./skills/skill-types";
+
+// Legacy JSON-skill manager
 export { SkillManager } from "./skills/skill-manager";
-export type { Skill } from "./skills/skill-manager";
+export type { SkillDefinition, SkillStep, SkillExecutionResult } from "./skills/skill-manager";
 
 // Config
 export {
