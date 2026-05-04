@@ -13,7 +13,7 @@
  *   xAI       : grok-3-fast, grok-4-1-fast-reasoning, grok-4-1-fast-non-reasoning
  *   MiniMax   : MiniMax-M2.7, MiniMax-M2.7-highspeed
  *   Google    : gemini-2.5-pro, gemini-2.5-flash
- *   Local     : hermes-3-70b, llama3.2:1b (via Hermes/Ollama providers)
+ *   Local     : hermes-3-70b (Hermes), llama3.2:1b (Ollama)
  *
  * © OTT Cybersecurity LLC — https://lyrie.ai
  */
@@ -99,7 +99,6 @@ class LatencyTracker {
     const arr = this.samples.get(providerId)!;
     const now = Date.now();
     arr.push({ ms, ts: now });
-    // Evict stale + trim to maxSamples
     const cutoff = now - this.windowMs;
     const trimmed = arr.filter((s) => s.ts > cutoff).slice(-this.maxSamples);
     this.samples.set(providerId, trimmed);
@@ -123,7 +122,7 @@ interface SpendRecord {
   calls: number;
 }
 
-class CostTracker {
+export class CostTracker {
   private spend: Map<string, SpendRecord> = new Map();
 
   record(providerId: string, tokens: number, costUsd: number): void {
@@ -227,7 +226,6 @@ export class ModelFleet {
   private latency = new LatencyTracker();
   readonly cost = new CostTracker();
 
-  // Singleton
   static getInstance(): ModelFleet {
     if (!ModelFleet._instance) ModelFleet._instance = new ModelFleet();
     return ModelFleet._instance;
@@ -246,12 +244,10 @@ export class ModelFleet {
   route(task: TaskDescription): ModelRoute {
     const base = autoRoute(task);
 
-    // If primary is registered and healthy latency, return as-is
     const primaryId = this._resolveProviderId(base.primary);
     if (primaryId) {
       const p95 = this.latency.p95(primaryId);
       if (p95 > 10_000 && base.fallbacks.length > 0) {
-        // Rotate: move primary to end, first fallback becomes primary
         const [first, ...rest] = base.fallbacks;
         return {
           primary: first,
@@ -332,15 +328,11 @@ export class ModelFleet {
     this.cost.record(providerId, tokens, costUsd);
   }
 
-  // ── Private helpers ──────────────────────────────────────────────────────
-
   private _toProviderId(provider: LyrieProvider): string {
-    // Use first model to build "provider/model" key
-    return provider.models[0] ? `${provider.name.toLowerCase().replace(/\s+/g, "-")}` : provider.name;
+    return provider.name.toLowerCase().replace(/\s+/g, "-");
   }
 
   private _resolveProviderId(routeKey: string): string | null {
-    // routeKey = "anthropic/claude-sonnet-4-6" — map to registered id
     const prefix = routeKey.split("/")[0];
     for (const id of this.entries.keys()) {
       if (id.includes(prefix)) return id;
@@ -349,5 +341,4 @@ export class ModelFleet {
   }
 }
 
-// ─── Re-export routing fn for CLI/tests ──────────────────────────────────────
 export { autoRoute };

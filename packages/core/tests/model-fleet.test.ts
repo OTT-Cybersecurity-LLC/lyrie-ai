@@ -1,5 +1,5 @@
 /**
- * ModelFleet Tests — 35+ tests for model routing, cost tracking,
+ * ModelFleet Tests — 39 tests for model routing, cost tracking,
  * latency tracking, health checks, and provider registration.
  *
  * © OTT Cybersecurity LLC — https://lyrie.ai
@@ -133,7 +133,7 @@ describe("autoRoute", () => {
     }
   });
 
-  it("all routes have a primary string", () => {
+  it("all routes have a primary string with slash", () => {
     const types: TaskDescription["type"][] = ["chat", "code", "bulk", "reasoning", "creative", "simple"];
     for (const type of types) {
       const r = autoRoute({ type });
@@ -286,9 +286,7 @@ describe("ModelFleet.healthCheck", () => {
 // ─── Cost estimation ──────────────────────────────────────────────────────────
 
 describe("Cost estimation", () => {
-  it("MiniMax is the cheapest cloud provider", () => {
-    // MiniMax: $0.08/MTok, Google Flash: $0.075/MTok — both very cheap
-    // Haiku: $0.25/MTok, Sonnet: $3/MTok
+  it("MiniMax is cheapest among bulk providers", () => {
     const minimax = (1_000_000 / 1_000_000) * 0.08;
     const sonnet = (1_000_000 / 1_000_000) * 3;
     expect(minimax).toBeLessThan(sonnet);

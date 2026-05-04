@@ -42,7 +42,6 @@ export class AnthropicFleetProvider implements LyrieProvider {
 
   async isAvailable(): Promise<boolean> {
     try {
-      // Cheapest possible call: minimal message
       await this.inner.complete("claude-haiku-4-5", [{ role: "user", content: "hi" }], { maxTokens: 1 });
       return true;
     } catch {
@@ -51,12 +50,12 @@ export class AnthropicFleetProvider implements LyrieProvider {
   }
 
   async complete(messages: Message[], options: CompletionOptions): Promise<string> {
-    const model = options.system?.startsWith("__model:") ? options.system.slice(8) : "claude-sonnet-4-6";
+    const model = "claude-sonnet-4-6";
     const safeMessages = messages
       .filter((m) => m.role !== "system")
       .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
     const result = await this.inner.complete(model, safeMessages, {
-      system: options.system?.startsWith("__model:") ? undefined : options.system,
+      system: options.system,
       maxTokens: options.maxTokens ?? 8192,
       temperature: options.temperature,
       tools: options.tools,
@@ -65,7 +64,7 @@ export class AnthropicFleetProvider implements LyrieProvider {
   }
 
   estimateCost(tokens: number): number {
-    // claude-haiku-4-5: $0.25/MTok in — cheapest Anthropic
+    // claude-haiku-4-5: $0.25/MTok in
     return (tokens / 1_000_000) * 0.25;
   }
 }
@@ -155,7 +154,6 @@ export class XAIFleetProvider implements LyrieProvider {
   }
 
   estimateCost(tokens: number): number {
-    // grok-4-1: ~$2/MTok in
     return (tokens / 1_000_000) * 2;
   }
 }
@@ -198,7 +196,6 @@ export class MiniMaxFleetProvider implements LyrieProvider {
   }
 
   estimateCost(tokens: number): number {
-    // MiniMax M2.7-highspeed: $0.08/MTok in — cheapest in fleet
     return (tokens / 1_000_000) * 0.08;
   }
 }
@@ -238,7 +235,6 @@ export class GoogleFleetProvider implements LyrieProvider {
   }
 
   estimateCost(tokens: number): number {
-    // gemini-2.5-flash: $0.075/MTok in
     return (tokens / 1_000_000) * 0.075;
   }
 }
@@ -273,7 +269,7 @@ export class HermesFleetProvider implements LyrieProvider {
   }
 
   estimateCost(_tokens: number): number {
-    return 0; // local — no cost
+    return 0;
   }
 }
 
@@ -306,7 +302,7 @@ export class OllamaFleetProvider implements LyrieProvider {
   }
 
   estimateCost(_tokens: number): number {
-    return 0; // local — no cost
+    return 0;
   }
 }
 
@@ -321,14 +317,9 @@ export interface FleetConfig {
   googleApiKey?: string;
   hermesEndpoint?: string;
   ollamaEndpoint?: string;
-  /** Skip local providers (useful in fully-cloud test environments) */
   skipLocal?: boolean;
 }
 
-/**
- * Build all fleet providers from config.
- * Only providers with a configured API key are instantiated.
- */
 export function buildFleetProviders(cfg: FleetConfig = {}): LyrieProvider[] {
   const providers: LyrieProvider[] = [];
 

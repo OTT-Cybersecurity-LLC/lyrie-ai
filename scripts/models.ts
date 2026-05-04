@@ -45,38 +45,37 @@ function bootstrapFleet(): ModelFleet {
 // ─── Commands ─────────────────────────────────────────────────────────────────
 
 function cmdList(): void {
-  console.log("\n🤖 Lyrie Model Fleet — 15 Models\n");
+  console.log("\n🤖 Lyrie Model Fleet — Guy's 15 Models\n");
 
-  // Static catalog (no live check — just display)
   const catalog = [
     // Anthropic
-    { provider: "Anthropic", model: "claude-haiku-4-5",           type: "simple/chat", cost: "$0.25/MTok", local: false },
-    { provider: "Anthropic", model: "claude-sonnet-4-6",          type: "chat (default)", cost: "$3/MTok", local: false },
-    { provider: "Anthropic", model: "claude-opus-4-7",            type: "reasoning (fallback)", cost: "$15/MTok", local: false },
+    { provider: "Anthropic", model: "claude-haiku-4-5",             type: "simple/chat",       cost: "$0.25/MTok", local: false },
+    { provider: "Anthropic", model: "claude-sonnet-4-6",            type: "chat (default)",    cost: "$3/MTok",    local: false },
+    { provider: "Anthropic", model: "claude-opus-4-7",              type: "reasoning fallback", cost: "$15/MTok",   local: false },
     // OpenAI
-    { provider: "OpenAI",    model: "gpt-5.4-codex",              type: "code",         cost: "$2/MTok",  local: false },
-    { provider: "OpenAI",    model: "gpt-5",                      type: "general",      cost: "$2.5/MTok", local: false },
-    { provider: "OpenAI",    model: "o3",                         type: "reasoning",    cost: "$10/MTok", local: false },
-    { provider: "OpenAI",    model: "o4-mini",                    type: "reasoning (cheap)", cost: "$1/MTok", local: false },
+    { provider: "OpenAI",    model: "gpt-5.4-codex",                type: "code",              cost: "$2/MTok",    local: false },
+    { provider: "OpenAI",    model: "gpt-5",                        type: "general",           cost: "$2.5/MTok",  local: false },
+    { provider: "OpenAI",    model: "o3",                           type: "reasoning",         cost: "$10/MTok",   local: false },
+    { provider: "OpenAI",    model: "o4-mini",                      type: "reasoning (cheap)", cost: "$1/MTok",    local: false },
     // xAI
-    { provider: "xAI",       model: "grok-3-fast",                type: "general",      cost: "$2/MTok",  local: false },
-    { provider: "xAI",       model: "grok-4-1-fast-reasoning",    type: "reasoning",    cost: "$2/MTok",  local: false },
-    { provider: "xAI",       model: "grok-4-1-fast-non-reasoning", type: "code",        cost: "$2/MTok",  local: false },
+    { provider: "xAI",       model: "grok-3-fast",                  type: "general",           cost: "$2/MTok",    local: false },
+    { provider: "xAI",       model: "grok-4-1-fast-reasoning",      type: "reasoning",         cost: "$2/MTok",    local: false },
+    { provider: "xAI",       model: "grok-4-1-fast-non-reasoning",  type: "code",              cost: "$2/MTok",    local: false },
     // MiniMax
-    { provider: "MiniMax",   model: "MiniMax-M2.7",               type: "bulk",         cost: "$0.08/MTok", local: false },
-    { provider: "MiniMax",   model: "MiniMax-M2.7-highspeed",     type: "bulk (fast)",  cost: "$0.08/MTok", local: false },
+    { provider: "MiniMax",   model: "MiniMax-M2.7",                 type: "bulk",              cost: "$0.08/MTok", local: false },
+    { provider: "MiniMax",   model: "MiniMax-M2.7-highspeed",       type: "bulk (fast)",       cost: "$0.08/MTok", local: false },
     // Google
-    { provider: "Google",    model: "gemini-2.5-pro",             type: "reasoning",    cost: "$1.25/MTok", local: false },
-    { provider: "Google",    model: "gemini-2.5-flash",           type: "simple/fast",  cost: "$0.075/MTok", local: false },
+    { provider: "Google",    model: "gemini-2.5-pro",               type: "reasoning",         cost: "$1.25/MTok", local: false },
+    { provider: "Google",    model: "gemini-2.5-flash",             type: "simple/fast",       cost: "$0.075/MTok", local: false },
     // Local
-    { provider: "Hermes",    model: "hermes-3-70b",               type: "local/agentic", cost: "FREE",    local: true },
-    { provider: "Ollama",    model: "llama3.2:1b",                type: "local/fast",    cost: "FREE",    local: true },
+    { provider: "Hermes",    model: "hermes-3-70b",                 type: "local/agentic",     cost: "FREE",       local: true },
+    { provider: "Ollama",    model: "llama3.2:1b",                  type: "local/fast",        cost: "FREE",       local: true },
   ];
 
   const maxProvider = Math.max(...catalog.map((r) => r.provider.length));
   const maxModel = Math.max(...catalog.map((r) => r.model.length));
 
-  const header = `${"Provider".padEnd(maxProvider)}  ${"Model".padEnd(maxModel)}  ${"Type".padEnd(22)}  Cost`;
+  const header = `${"Provider".padEnd(maxProvider)}  ${"Model".padEnd(maxModel)}  ${"Type".padEnd(24)}  Cost`;
   console.log(header);
   console.log("─".repeat(header.length + 4));
 
@@ -86,11 +85,13 @@ function cmdList(): void {
     lastProvider = row.provider;
     const localTag = row.local ? " 🏠" : "";
     console.log(
-      `${prefix.padEnd(maxProvider)}  ${row.model.padEnd(maxModel)}  ${row.type.padEnd(22)}  ${row.cost}${localTag}`,
+      `${prefix.padEnd(maxProvider)}  ${row.model.padEnd(maxModel)}  ${row.type.padEnd(24)}  ${row.cost}${localTag}`,
     );
   }
 
-  console.log(`\n📊 Total: ${catalog.length} models | Local: ${catalog.filter((r) => r.local).length} | Cloud: ${catalog.filter((r) => !r.local).length}`);
+  const cloudCount = catalog.filter((r) => !r.local).length;
+  const localCount = catalog.filter((r) => r.local).length;
+  console.log(`\n📊 ${catalog.length} models | ☁️  ${cloudCount} cloud | 🏠 ${localCount} local`);
   console.log('💡 Run "bun run scripts/models.ts health" to check live availability\n');
 }
 
@@ -102,10 +103,9 @@ async function cmdHealth(): Promise<void> {
 
   if (report.providers.length === 0) {
     console.log("⚠️  No providers registered. Set API keys in environment:\n");
-    console.log("  ANTHROPIC_API_KEY, OPENAI_API_KEY, XAI_API_KEY");
-    console.log("  MINIMAX_API_KEY, GOOGLE_API_KEY");
-    console.log("  HERMES_ENDPOINT (default: http://localhost:11434)");
-    console.log("  OLLAMA_BASE_URL (default: http://localhost:11434)\n");
+    console.log("  ANTHROPIC_API_KEY  OPENAI_API_KEY   XAI_API_KEY");
+    console.log("  MINIMAX_API_KEY    GOOGLE_API_KEY");
+    console.log("  HERMES_ENDPOINT    OLLAMA_BASE_URL\n");
     return;
   }
 
@@ -130,7 +130,6 @@ async function cmdTest(modelArg: string): Promise<void> {
     return;
   }
 
-  // Find provider that has this model
   const match = providers.find((p) => p.models.some((m) => m.includes(modelArg) || modelArg.includes(m)));
   if (!match) {
     console.log(`❌ No registered provider has model "${modelArg}"`);
@@ -139,15 +138,10 @@ async function cmdTest(modelArg: string): Promise<void> {
   }
 
   console.log(`Provider: ${match.name}`);
-  console.log(`Sending: "hello"`);
-
   const start = Date.now();
   try {
-    const entry = fleet.list().find((p) => p.id === match.id);
-    if (!entry) throw new Error("provider not found");
-    // Just check availability as a proxy for ping
-    const available = await fleet.healthCheck();
-    const result = available.providers.find((p) => p.id === match.id);
+    const report = await fleet.healthCheck();
+    const result = report.providers.find((p) => p.id === match.id);
     const latency = Date.now() - start;
     if (result?.available) {
       console.log(`✅ ${match.name} responded in ${latency}ms`);
@@ -223,12 +217,8 @@ Examples:
 const [, , cmd, arg] = process.argv;
 
 switch (cmd) {
-  case "list":
-    cmdList();
-    break;
-  case "health":
-    await cmdHealth();
-    break;
+  case "list":    cmdList(); break;
+  case "health":  await cmdHealth(); break;
   case "test":
     if (!arg) { console.log("Usage: lyrie models test <model>"); process.exit(1); }
     await cmdTest(arg);
@@ -237,9 +227,6 @@ switch (cmd) {
     if (!arg) { console.log("Usage: lyrie models route <task-type>"); process.exit(1); }
     cmdRoute(arg);
     break;
-  case "cost":
-    cmdCost();
-    break;
-  default:
-    printHelp();
+  case "cost":    cmdCost(); break;
+  default:        printHelp();
 }
