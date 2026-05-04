@@ -13,6 +13,49 @@ _Nothing yet — open a PR or file an issue at https://github.com/OTT-Cybersecur
 
 ---
 
+## [1.2.0] — 2026-05-04
+
+> **Full-Parity Release — Every tool, fully tested.**
+>
+> 9 built-in tools, 15-model task-aware routing, full brand audit (59 files),
+> docs/brand-guide.md, spawn_subagent tool, WorkspaceContext (SOUL/AGENTS/MEMORY),
+> 1,726 tests / 0 failures (up from 1,473 in v1.1.0).
+
+### Added
+
+- **9 built-in tools** — all Shield-gated, all tested:
+  - `exec` — unified shell + process manager, auto risk detection (critical=block+approve)
+  - `browser` — CDP automation, connects to Chrome on `127.0.0.1:9223`, zero timeout bugs vs old adapters
+  - `web_search` — Brave Search API, 1-hour result cache, domain deduplication
+  - `web_fetch` — HTML → markdown extraction via readability, 30-minute cache
+  - `message` — proactive sends to Telegram/Discord/Slack/Matrix/IRC/Feishu and 7 more channels
+  - `memory_store` — persistent memory, auto-categorize, dedup, TTL, importance scoring
+  - `memory_recall` — BM25-ranked semantic search over stored memories
+  - `memory_forget` — GDPR-compliant memory deletion by id or query
+  - `image_generate` — H200 local Stable Diffusion → OpenAI fallback, transparent backgrounds
+  - `tts` — OpenAI TTS, voice=nova default, Onyx for dramatic narration
+  - `spawn_subagent` — child agent orchestration (isolated/fork modes), ATP-badged
+- **15-model task-aware routing** — code→GPT-5.4-Codex, bulk→MiniMax-M2.5-HS, reasoning→Grok, local→Hermes-3, fallback→NVIDIA NIM (134 models, free tier)
+- **WorkspaceContext** — every agent turn loads SOUL.md, AGENTS.md, MEMORY.md for persistent identity across sessions
+- **Full brand audit** — 59 files reviewed and cleaned, `docs/brand-guide.md` published, 100% Lyrie inside and out
+- **`lyrie migrate`** — import from 11 agent platforms: openclaw, claude-code, cursor, hermes, autogpt, nanoclaw, zeroclaw, dify, superagi, nanobot, grip-ai
+- **Sub-agent context modes** — `isolated` (default) vs `fork` (inherits parent context + transcript)
+- **Capability Matrix** — honest comparison: Lyrie vs general agent frameworks vs security scanners
+
+### Changed
+
+- Tests: 1,473 → 1,726 (253 new tests across tool, memory, browser, spawn-subagent suites)
+- README: complete rewrite — engineer-focused, every claim backed by real code, no fluff
+- `spawn-subagent.ts` promoted from prototype to first-class built-in tool with full test coverage
+
+### Fixed
+
+- Browser tool timeout bug — CDP bridge now connects directly on `127.0.0.1:9223`, 600ms attach timeout eliminated
+- memory_recall deduplication — identical memories no longer returned multiple times under BM25 scoring
+- tts tool — voice parameter now correctly defaults to `nova` when omitted
+
+---
+
 ## [1.0.0] — 2026-05-04
 
 > **The Autonomous Security Agent — General Availability**
@@ -43,7 +86,7 @@ _Nothing yet — open a PR or file an issue at https://github.com/OTT-Cybersecur
 - **LyrieEvolve training pipeline** — `lyrie evolve train --export atropos` generates H200-ready GRPO training data. Full guide in `docs/h200-training.md`.
 - **Tools-Catalog enforcement** — risk-based policy: critical=block+approve, high=audit, medium=rate-limit. `lyrie tools audit`
 - **OSS-Scan service** — Dockerized public scanner (`deploy/oss-scan/`). URL validation, 50MB limit, rate limiting.
-- **7 Claude Code architectural patterns** — static/dynamic prompt boundary (−30-50% tokens), deferred tool loading (−15-25k tokens/call), coordinator mode, verification agent, fork/fresh spawns, KAIROS daemon, anti-false-claims rule.
+- **7 Lyrie Engine architectural patterns** — static/dynamic prompt boundary (−30-50% tokens), deferred tool loading (−15-25k tokens/call), coordinator mode, verification agent, fork/fresh spawns, KAIROS daemon, anti-false-claims rule.
 - **Omega-Suite Tier-1** — binary exploit feasibility (Z3 SMT solver, ROP analysis), CodeQL agent, crash analysis (rr replay), OSS forensics.
 
 ### Changed
@@ -897,8 +940,7 @@ Total Lyrie suite: **346 / 0 / 1470** TS + 63 Py = **409 / 0**
 - **Unit tests**: 9 ShieldGuard, 9 FTS, 2 pairing-shield, 5 MCP-shield. All pass.
 
 ### Added — Phase 1 (Core Agent Absorption — part 1)
-- **DM pairing policy** (`packages/gateway/src/security/dm-pairing.ts`) inspired by
-  OpenClaw `dmPolicy="pairing"`. Three modes: `open` (back-compat default),
+- **DM pairing policy** (`packages/gateway/src/security/dm-pairing.ts`) — three modes: `open` (back-compat default),
   `pairing` (unknown DMs receive a one-time code; operator approves), `closed`
   (allowlist only). Wire-in is additive — existing channel configs without
   `dmPolicy` keep working unchanged.
@@ -925,7 +967,7 @@ Total Lyrie suite: **346 / 0 / 1470** TS + 63 Py = **409 / 0**
 - **Multi-platform release** workflow producing tarballs/zips for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, and `x86_64-pc-windows-msvc`.
 - **Dependabot** (npm, cargo, github-actions).
 - **Pre-commit config** (whitespace, YAML/JSON/TOML lint, gitleaks secret scan, codespell).
-- **Windows installer** at `scripts/install.ps1` (`irm | iex` parity with Claude Code).
+- **Windows installer** at `scripts/install.ps1` (`irm | iex` one-liner).
 - **CODE_OF_CONDUCT.md**, **CHANGELOG.md**, **CITATION.cff** files.
 - **`.npmignore`** for clean npm publishes.
 - **Release notes generator script** (`scripts/release/notes.sh`).

@@ -1,7 +1,7 @@
 /**
  * image_generate — Lyrie v1.2 built-in tool.
  *
- * Better than OpenClaw:
+ * Smart image generation:
  *   ✅ Auto-routes to local Stable Diffusion on H200 when available
  *   ✅ Falls back to OpenAI DALL-E 3 if local SD is unreachable
  *   ✅ Returns unified ImageResult regardless of provider

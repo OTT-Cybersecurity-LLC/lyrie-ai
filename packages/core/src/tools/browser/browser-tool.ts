@@ -1,8 +1,8 @@
 /**
  * browser-tool.ts — LyrieBrowser: the main browser automation class
  *
- * Better than OpenClaw's browser tool in 5 key ways:
- *   1. No hardcoded timeouts (OpenClaw had 600ms bug on CDP attach)
+ * LyrieBrowser capabilities:
+ *   1. No hardcoded timeouts — fully configurable CDP attach
  *   2. Auto-retry on attach failure (3x exponential backoff)
  *   3. Auto-screenshot on error (attach path/screenshot saved for debugging)
  *   4. Smart element detection (CSS → text content → aria-label fallback)
@@ -131,7 +131,7 @@ export class LyrieBrowser {
 
   /**
    * Returns the page's accessibility tree as markdown-like text.
-   * Equivalent to OpenClaw's snapshot action.
+   * Returns the accessibility tree as structured markdown text.
    */
   async snapshot(tab: Tab): Promise<string> {
     try {

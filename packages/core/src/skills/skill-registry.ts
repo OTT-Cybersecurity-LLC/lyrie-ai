@@ -1,8 +1,8 @@
 /**
  * SkillRegistry — Singleton registry for SKILL.md manifests.
  *
- * Loads from the default paths (which include ~/.openclaw/workspace/skills/
- * for backward-compatibility), indexes by name, and exposes search.
+ * Loads from ~/.lyrie/skills/ (and legacy skill directories for backward-compat),
+ * indexes by name, and exposes search.
  *
  * © OTT Cybersecurity LLC — https://lyrie.ai
  */

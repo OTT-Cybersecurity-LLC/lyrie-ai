@@ -1,7 +1,7 @@
 /**
  * PromptBuilder — Static/Dynamic system-prompt boundary.
  *
- * Ported pattern from Claude Code v2.1.88 (`__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__`).
+ * Static/Dynamic system-prompt boundary implementation (`__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__`).
  *
  * Why it matters:
  *   Without a boundary, every call sends the entire system prompt and pays
@@ -15,8 +15,7 @@
  *
  * Anti-False-Claims Rule:
  *   This builder always injects the "Report Outcomes Faithfully" paragraph
- *   in the static section. Anthropic ships this in Claude Code; we should
- *   too — false-completion claims jump from ~16% → ~30% without it.
+ *   in the static section — false-completion claims jump from ~16% → ~30% without it.
  *
  * © OTT Cybersecurity LLC — https://lyrie.ai
  */

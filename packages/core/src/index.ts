@@ -303,7 +303,7 @@ export { SubAgentManager } from "./agents/sub-agent";
 export type { SubAgentTask, SubAgentResult, SubAgentConfig, SubAgentStatus } from "./agents/sub-agent";
 
 // Skills
-// SKILL.md runtime (OpenClaw-format skills)
+// SKILL.md runtime
 export { SkillLoader } from "./skills/skill-loader";
 export { SkillRegistry, buildSystemPromptBlock } from "./skills/skill-registry";
 export { SkillRunner } from "./skills/skill-runner";

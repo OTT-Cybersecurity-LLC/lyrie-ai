@@ -2,9 +2,8 @@
  * SkillRunner — Activates a skill by injecting its SKILL.md instructions
  * into the agent's context.
  *
- * This mirrors how OpenClaw works: skills are not code executors, they are
- * system-prompt injections that give the agent specialised instructions for
- * a particular task domain.
+ * Skills are system-prompt injections that give the agent specialised
+ * instructions for a particular task domain — not code executors.
  *
  * © OTT Cybersecurity LLC — https://lyrie.ai
  */

@@ -2,8 +2,7 @@
  * spawn_subagent — LLM-callable built-in tool for Lyrie v1.1.
  *
  * Gives the running LLM the ability to spawn an isolated sub-agent
- * mid-conversation, wait for its result, and continue.  Equivalent to
- * OpenClaw's `sessions_spawn`.
+ * mid-conversation, wait for its result, and continue.
  *
  * Usage (as a tool call):
  *   spawn_subagent({

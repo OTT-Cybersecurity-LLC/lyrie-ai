@@ -1,7 +1,7 @@
 /**
  * exec-tool.ts — LyrieExec: unified shell execution tool.
  *
- * Single tool vs OpenClaw's split exec+process pair.
+ * Single unified tool for foreground + background execution.
  * action="run"        — foreground, returns output when done
  * action="background" — spawns in background, returns sessionId immediately
  * action="poll"       — wait for a background session to finish

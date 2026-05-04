@@ -2,8 +2,8 @@
  * approval.ts — Risk detection and approval workflow for LyrieExec.
  *
  * Auto-detects dangerous commands and raises ApprovalRequired before
- * any subprocess is spawned. Better than OpenClaw's passive ask=on-miss
- * pattern — Lyrie actively analyzes the command.
+ * any subprocess is spawned. Lyrie actively analyzes the command before
+ * execution rather than waiting for a passive prompt.
  *
  * © OTT Cybersecurity LLC — https://lyrie.ai
  */

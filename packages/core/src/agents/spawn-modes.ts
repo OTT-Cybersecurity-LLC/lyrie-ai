@@ -1,7 +1,7 @@
 /**
  * SpawnModes — Fork vs Fresh sub-agent spawning + ATP scope narrowing.
  *
- * Ported from Claude Code v2.1.88 AgentTool patterns.
+ * Lyrie sub-agent spawning with ATP scope narrowing.
  *
  * Two spawn modes:
  *   - "fork"  → inherits parent context, shares prompt cache, cheaper.

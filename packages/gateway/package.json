@@ -3,6 +3,7 @@
   "version": "0.9.0",
   "description": "Multi-channel messaging gateway for Lyrie Agent — Telegram, WhatsApp, Discord",
   "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
+  "homepage": "https://lyrie.ai",
   "license": "MIT",
   "type": "module",
   "main": "src/index.ts",

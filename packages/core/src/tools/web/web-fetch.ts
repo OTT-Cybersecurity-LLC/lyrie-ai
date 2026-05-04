@@ -1,6 +1,6 @@
 /**
  * Lyrie web_fetch tool — fetch URL and extract readable content
- * Better than OpenClaw: readability extraction, 30min cache, PDF detection
+ * Readability extraction, 30min cache, PDF detection
  *
  * Lyrie.ai by OTT Cybersecurity LLC — MIT License
  */
