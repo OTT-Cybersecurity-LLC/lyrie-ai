@@ -13,6 +13,7 @@
  *   web_fetch      — Fetch & extract content from URLs
  *   threat_scan    — Shield-powered threat scanning
  *   spawn_subagent — Spawn an isolated sub-agent mid-conversation
+ *   browser        — CDP browser automation (lyrie-automation Chrome profile)
  *
  * © OTT Cybersecurity LLC — https://lyrie.ai
  */
@@ -20,6 +21,10 @@
 import { ShieldManager } from "../engine/shield-manager";
 import { ShieldGuard, type ShieldGuardLike } from "../engine/shield-guard";
 import { spawnSubagentTool } from "./spawn-subagent";
+import { memoryStoreTool, memoryRecallTool, memoryForgetTool } from "./memory/memory-tools";
+import { imageGenerateTool } from "./media/image-generate";
+import { ttsTool } from "./media/tts";
+import { browserToolDefinition } from "./browser";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -113,6 +118,20 @@ export class ToolExecutor {
   private registerBuiltinTools(): void {
     // ── spawn_subagent ─────────────────────────────────────────────────────
     this.register(spawnSubagentTool);
+
+    // ── memory tools ───────────────────────────────────────────────────────
+    this.register(memoryStoreTool);
+    this.register(memoryRecallTool);
+    this.register(memoryForgetTool);
+
+    // ── media tools ────────────────────────────────────────────────────────
+    this.register(imageGenerateTool);
+    this.register(ttsTool);
+
+    // ── browser ───────────────────────────────────────────────────────────
+    // CDP automation — connects to 127.0.0.1:9223 (lyrie-automation profile)
+    // Better than OpenClaw: no hardcoded 600ms timeout, auto-retry, auto-screenshot on error
+    this.register(browserToolDefinition);
 
     // ── exec ──────────────────────────────────────────────────────────────
     this.register({
