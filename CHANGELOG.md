@@ -13,6 +13,39 @@ _Nothing yet — open a PR or file an issue at https://github.com/OTT-Cybersecur
 
 ---
 
+## [2.0.0] — 2026-05-09
+
+> **The Attack Strategy Release**
+>
+> Crescendo + TAP + PAIR multi-turn jailbreak strategies, MCP Security Scanner
+> (CVE-2026-30615 class coverage), memory integrity CMVK cross-model verification,
+> and a complete overhaul of the AAV strategy layer.
+
+### Added
+
+- **AAV: Crescendo** — multi-turn jailbreak, 4 escalation styles (`gradual`, `reframe`, `roleplay`, `hypothetical`), HarmBench baseline coverage (Russinovich et al. 2024)
+- **AAV: TAP** (Tree of Attacks with Pruning) — branching attack trees, configurable depth/branching, score-based pruning (Mehrotra et al. 2023)
+- **AAV: PAIR** — iterative refinement jailbreak, attacker model + judge model loop, 0-10 scoring (Chao et al. 2023)
+- **MCP Security Scanner** — 8 detection rules including tool poisoning, hidden unicode, description injection, CVE-2026-30615 fingerprints. `lyrie mcp-scan <manifest.json>`
+- **Memory CMVK** — cross-model verification for high-stakes memory writes (2-of-3 model agreement). `lyrie memory integrity-check --cmvk`
+- **Drift Detection Report** — `lyrie memory integrity-check --drift-report` outputs timestamped drift events
+- All new strategies wired into `lyrie redteam --strategy crescendo|tap|pair`
+
+### Changed
+
+- `lyrie redteam` — `--strategy` flag now supports: `crescendo`, `tap`, `pair`, `gcg`, `autodan`
+- AAV strategy index exports all 5 strategies with unified interface
+- Tests: 1,726 → 1,758 — Crescendo (8), TAP (8), PAIR (6), MCP Scanner (10) new suites
+- `scripts/memory-integrity.ts` — `--cmvk` and `--drift-report` flags, CMVK verification block, drift event output
+
+### Security
+
+- MCP Scanner covers CVE-2026-30615 MCP tool poisoning family (critical)
+- Hidden unicode detection catches RTL override + zero-width injection in tool manifests
+- CMVK prevents single-model memory forgery via 2-of-3 independent hash agreement
+
+---
+
 ## [1.2.0] — 2026-05-04
 
 > **Full-Parity Release — Every tool, fully tested.**

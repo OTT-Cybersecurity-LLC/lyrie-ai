@@ -22,3 +22,12 @@ export type { GCGConfig, GCGResult } from "./gcg";
 
 export { AutoDANStrategy } from "./autodan";
 export type { AutoDANConfig, AutoDANResult } from "./autodan";
+
+export { runCrescendo } from "./crescendo";
+export type { CrescendoConfig, CrescendoResult, CrescendoTurn } from "./crescendo";
+
+export { runTap } from "./tap";
+export type { TapConfig, TapResult, TapNode } from "./tap";
+
+export { runPair } from "./pair";
+export type { PairConfig, PairResult } from "./pair";

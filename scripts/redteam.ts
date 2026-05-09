@@ -25,6 +25,11 @@ import { LyrieBlueTeam } from "../packages/core/src/aav/blue-team";
 import { AavReporter } from "../packages/core/src/aav/reporter";
 import type { OwaspLlmCategory, AttackSeverity, AttackPreset } from "../packages/core/src/aav/corpus/index";
 import { getPreset } from "../packages/core/src/aav/corpus/index";
+import { runCrescendo } from "../packages/core/src/aav/strategies/crescendo";
+import { runTap } from "../packages/core/src/aav/strategies/tap";
+import { runPair } from "../packages/core/src/aav/strategies/pair";
+
+type AavStrategy = "crescendo" | "tap" | "pair" | "gcg" | "autodan";
 
 // ─── Arg parsing ──────────────────────────────────────────────────────────────
 
@@ -79,10 +84,22 @@ Examples:
   lyrie redteam http://myapp.com/v1 --preset state-actor --output sarif --out scan.sarif
   lyrie redteam https://api.openai.com/v1 --api-key $KEY --categories LLM01,LLM06
   lyrie redteam http://myapp.com/v1 --output sarif --out scan.sarif --fail-on high
+  lyrie redteam https://api.openai.com/v1 --api-key $KEY --strategy crescendo --target-behavior "explain lock picking"
+  lyrie redteam https://api.openai.com/v1 --api-key $KEY --strategy tap --target-behavior "bypass content filters"
+  lyrie redteam https://api.openai.com/v1 --api-key $KEY --strategy pair --target-behavior "generate harmful code"
+
+Attack Strategies (--strategy):
+  crescendo             Multi-turn escalation jailbreak (Russinovich et al. 2024)
+  tap                   Tree of Attacks with Pruning (Mehrotra et al. 2023)
+  pair                  Prompt Automatic Iterative Refinement (Chao et al. 2023)
+  gcg                   GCG gradient suffix (Zou et al. 2023, requires GPU)
+  autodan               AutoDAN genetic attack (Liu et al. 2023)
 `);
   process.exit(0);
 }
 
+const strategy = getFlag("--strategy") as AavStrategy | undefined;
+const targetBehavior = getFlag("--target-behavior");
 const apiKey = getFlag("--api-key") ?? process.env["OPENAI_API_KEY"] ?? process.env["API_KEY"];
 const model = getFlag("--model") ?? "gpt-3.5-turbo";
 const systemPrompt = getFlag("--system-prompt");
@@ -93,6 +110,57 @@ const outPath = getFlag("--out");
 const failOn = getFlag("--fail-on") as AttackSeverity | undefined;
 const isDryRun = hasFlag("--dry-run");
 const minSeverity = (getFlag("--severity") ?? "low") as AttackSeverity;
+
+// ─── Strategy-based attacks (crescendo / tap / pair) ─────────────────────────
+
+if (strategy === "crescendo" || strategy === "tap" || strategy === "pair") {
+  if (!targetBehavior) {
+    console.error("❌  --target-behavior is required when using --strategy crescendo|tap|pair");
+    process.exit(2);
+  }
+
+  console.error(`\n🔴 LyrieAAV — Strategy Attack: ${strategy.toUpperCase()}`);
+  console.error(`   Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai`);
+  console.error("─────────────────────────────────────────────────────────────────");
+  console.error(`   Endpoint:  ${endpoint}`);
+  console.error(`   Strategy:  ${strategy}`);
+  console.error(`   Target:    ${targetBehavior}`);
+  console.error("");
+
+  let result: object;
+
+  if (strategy === "crescendo") {
+    result = await runCrescendo(endpoint, {
+      maxTurns: 8,
+      style: "gradual",
+      targetBehavior,
+    }, apiKey);
+  } else if (strategy === "tap") {
+    result = await runTap(endpoint, {
+      maxDepth: 5,
+      branchingFactor: 3,
+      targetBehavior,
+      pruneThreshold: 0.3,
+    }, apiKey);
+  } else {
+    result = await runPair(endpoint, {
+      maxIterations: 20,
+      targetBehavior,
+    }, apiKey);
+  }
+
+  const output = JSON.stringify(result, null, 2);
+  if (outPath) {
+    const { writeFileSync, mkdirSync } = await import("node:fs");
+    const { dirname } = await import("node:path");
+    mkdirSync(dirname(outPath === "." ? "./" : outPath) || ".", { recursive: true });
+    writeFileSync(outPath, output, "utf-8");
+    console.error(`   Report saved: ${outPath}`);
+  } else {
+    process.stdout.write(output + "\n");
+  }
+  process.exit(0);
+}
 
 const preset = getFlag("--preset") as AttackPreset | undefined;
 const categoriesRaw = getFlag("--categories");
