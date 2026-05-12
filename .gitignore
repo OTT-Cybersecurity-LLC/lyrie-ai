@@ -62,3 +62,19 @@ Thumbs.db
 
 # Semgrep registry cache (auto-regenerable)
 packages/omega-suite/engine/semgrep/rules/registry-cache/
+
+# Python bytecode — never commit
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Next.js build output — never commit
+**/.next/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.npmrc
+.pypirc
