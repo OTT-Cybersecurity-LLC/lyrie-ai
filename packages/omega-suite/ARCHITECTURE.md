@@ -6,6 +6,23 @@
 
 ---
 
+## v1.0.0 Release
+
+**Released:** 2026-05-12  
+**PyPI package:** [`lyrie-omega`](https://pypi.org/project/lyrie-omega/)  
+**Install:** `pip install lyrie-omega`
+
+This is the **first stable PyPI release** of Omega-Suite. Key milestones:
+
+- 📦 **PyPI-publishable** via `pyproject.toml` + Hatchling build backend
+- 🔒 **Security patch**: `requests` upgraded from `>=2.31.0` to `>=2.32.0` (fixes CVE-2024-35195 — proxy credential leakage via case-insensitive scheme check)
+- 🐍 **`omega` installable package** added with `omega/__init__.py` and `omega/cli.py` (`lyrie-omega` CLI entry point)
+- 🗂️ **`MANIFEST.in`** added for sdist completeness
+- Supports Python 3.10, 3.11, 3.12
+- Optional dependency groups: `openai`, `anthropic`, `full`, `analysis`
+
+---
+
 ## Overview
 
 Lyrie OMEGA is architected as a modular autonomous security intelligence platform. Each subsystem is independently deployable and integrates with the Lyrie.ai core engine.

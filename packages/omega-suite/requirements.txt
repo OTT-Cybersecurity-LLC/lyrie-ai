@@ -5,7 +5,11 @@
 # ============================================================
 # Core dependencies (required)
 # ============================================================
-requests>=2.31.0
+
+# Upgraded from >=2.31.0 — fixes CVE-2024-35195 (proxy credential leak via
+# case-insensitive scheme check; affected requests < 2.32.0)
+requests>=2.32.0
+
 pydantic>=2.9.2
 
 # Structured LLM output (works with OpenAI and Anthropic SDKs)
