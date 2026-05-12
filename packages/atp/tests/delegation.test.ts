@@ -234,6 +234,86 @@ describe("verifyDelegationChain", () => {
     expect(result.reason).toMatch(/maxDepth/);
   });
 
+  test("verifies a valid 2-hop chain with publicKeyMap", () => {
+    const kpA = generateKeyPair(); // root
+    const kpB = generateKeyPair(); // intermediate
+    const kpC = generateKeyPair(); // leaf (unused for signing)
+
+    const cert0 = createDelegation({
+      parentKeyPair: kpA,
+      parentAgentId: "agent-A",
+      childAgentId: "agent-B",
+      delegatedScope: FULL_SCOPE,
+      maxDepth: 2,
+    });
+
+    const cert1 = createDelegation({
+      parentKeyPair: kpB,
+      parentAgentId: "agent-B",
+      childAgentId: "agent-C",
+      delegatedScope: ["read_file"],
+      maxDepth: 1,
+    });
+
+    const publicKeyMap = new Map([["agent-B", kpB.publicKey]]);
+    const result = verifyDelegationChain([cert0, cert1], kpA.publicKey, publicKeyMap);
+    expect(result.valid).toBe(true);
+    expect(result.depth).toBe(1);
+  });
+
+  test("rejects 2-hop chain when intermediate key is missing from publicKeyMap", () => {
+    const kpA = generateKeyPair();
+    const kpB = generateKeyPair();
+
+    const cert0 = createDelegation({
+      parentKeyPair: kpA,
+      parentAgentId: "agent-A",
+      childAgentId: "agent-B",
+      delegatedScope: FULL_SCOPE,
+      maxDepth: 2,
+    });
+
+    const cert1 = createDelegation({
+      parentKeyPair: kpB,
+      parentAgentId: "agent-B",
+      childAgentId: "agent-C",
+      delegatedScope: ["read_file"],
+    });
+
+    // Empty publicKeyMap — agent-B key not provided
+    const result = verifyDelegationChain([cert0, cert1], kpA.publicKey, new Map());
+    expect(result.valid).toBe(false);
+    expect(result.reason).toMatch(/publicKeyMap/);
+  });
+
+  test("rejects 2-hop chain with forged intermediate signature", () => {
+    const kpA = generateKeyPair();
+    const kpB = generateKeyPair();
+    const impostor = generateKeyPair(); // signs cert1 instead of kpB
+
+    const cert0 = createDelegation({
+      parentKeyPair: kpA,
+      parentAgentId: "agent-A",
+      childAgentId: "agent-B",
+      delegatedScope: FULL_SCOPE,
+      maxDepth: 2,
+    });
+
+    // cert1 is signed by impostor, not by kpB
+    const cert1 = createDelegation({
+      parentKeyPair: impostor,
+      parentAgentId: "agent-B",
+      childAgentId: "agent-C",
+      delegatedScope: ["read_file"],
+    });
+
+    // publicKeyMap has the REAL kpB — verification should fail
+    const publicKeyMap = new Map([["agent-B", kpB.publicKey]]);
+    const result = verifyDelegationChain([cert0, cert1], kpA.publicKey, publicKeyMap);
+    expect(result.valid).toBe(false);
+    expect(result.reason).toMatch(/parentSignature/);
+  });
+
   test("rejects chain with scope widening", () => {
     const kpA = generateKeyPair();
     const kpB = generateKeyPair();

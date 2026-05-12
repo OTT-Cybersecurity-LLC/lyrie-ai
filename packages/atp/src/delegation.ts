@@ -172,19 +172,20 @@ export function verifyDelegationChain(
       }
     }
 
-    // Full Ed25519 verification: look up the parent's public key in the map.
-    // chain[i] is signed by chain[i].parentAgentId.
-    const parentPubKey = i === 1
-      ? rootPublicKey                          // root signed chain[1]
-      : publicKeyMap.get(prev.parentAgentId);  // intermediate parent
+    // Full Ed25519 verification: chain[i] was signed by curr.parentAgentId.
+    // rootPublicKey belongs to chain[0].parentAgentId (the root delegator).
+    // Every other signer must be in publicKeyMap.
+    const signerAgentId = curr.parentAgentId;
+    const parentPubKey =
+      signerAgentId === chain[0].parentAgentId
+        ? rootPublicKey
+        : publicKeyMap.get(signerAgentId);
 
     if (!parentPubKey) {
-      // No key supplied for this hop — structural checks passed but sig unverified.
-      // Treat as invalid to enforce strict verification.
       return {
         valid: false,
         depth: i,
-        reason: `chain[${i}]: no public key for parent agent "${curr.parentAgentId}" in publicKeyMap — cannot verify signature`,
+        reason: `chain[${i}]: no public key for signer "${signerAgentId}" in publicKeyMap — cannot verify signature`,
       };
     }
 
