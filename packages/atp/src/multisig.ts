@@ -56,6 +56,9 @@ export function createMultiSigRequest(
   signers: string[],
   requiredSigners: number,
 ): MultiSigRequest {
+  if (signers.length === 0) {
+    throw new RangeError("ATP multisig: signers list must not be empty");
+  }
   if (requiredSigners < 1) {
     throw new RangeError(`ATP multisig: requiredSigners must be >= 1, got ${requiredSigners}`);
   }
@@ -63,9 +66,6 @@ export function createMultiSigRequest(
     throw new RangeError(
       `ATP multisig: requiredSigners (${requiredSigners}) exceeds signers count (${signers.length})`,
     );
-  }
-  if (signers.length === 0) {
-    throw new RangeError("ATP multisig: signers list must not be empty");
   }
 
   return {

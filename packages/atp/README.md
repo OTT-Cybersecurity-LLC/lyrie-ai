@@ -578,3 +578,112 @@ the standard verifier.
 ---
 
 *Author: Lyrie Engineering · OTT Cybersecurity LLC · `dev@lyrie.ai` · `https://lyrie.ai`*
+
+---
+
+## ATP v2.0.0 — New Primitives
+
+ATP v2 adds three new modules that extend the protocol with advanced trust
+management capabilities, aligned with IETF ATP Draft §6–8.
+
+### 1. Delegation Chains (`delegation.ts`) — §6.2
+
+Parent agents can delegate a **scoped subset** of their authority to child
+agents using a cryptographically signed `DelegationCertificate`.
+
+**Key invariants:**
+- `delegatedScope` must be a subset of the parent's scope (no widening).
+- `maxDepth` controls how many further re-delegation hops are allowed (`0` = terminal).
+- Certificates expire (`expiresAt`) and the parent Ed25519 signature covers all fields.
+
+```typescript
+import { createDelegation, verifyDelegation, verifyDelegationChain } from "@lyrie/atp";
+import { generateKeyPair } from "@lyrie/atp";
+
+const parentKp = generateKeyPair();
+const cert = createDelegation({
+  parentKeyPair: parentKp,
+  parentAgentId: "agent-parent-001",
+  childAgentId:  "agent-child-001",
+  delegatedScope: ["read_file", "web_search"],
+  maxDepth: 0,       // terminal — child cannot re-delegate
+  ttlSeconds: 3600,  // 1 hour
+});
+
+// Verify a single cert
+const { valid, reason } = verifyDelegation(cert, parentKp.publicKey);
+
+// Verify a multi-hop chain [root, ..., leaf]
+const { valid: chainValid, depth } = verifyDelegationChain([cert], parentKp.publicKey);
+```
+
+### 2. Certificate Revocation (`revocation.ts`) — §7.1
+
+CRL-style revocation for any ATP certificate (AIC, delegation cert, etc.).
+The `RevocationList` is signed by an issuer key and can be appended to
+immutably using `addRevocation`.
+
+**Revocation reasons:** `key_compromise`, `agent_compromised`, `scope_violation`,
+`expired`, `superseded`, `unspecified`.
+
+```typescript
+import { createRevocationList, isRevoked, addRevocation } from "@lyrie/atp";
+import { generateKeyPair } from "@lyrie/atp";
+
+const issuerKp = generateKeyPair();
+const issuerKeyPair = { privateKey: issuerKp.privateKey, issuerAgentId: "crl-issuer" };
+
+// Create an empty CRL
+let crl = createRevocationList([], issuerKeyPair);
+
+// Revoke a certificate
+crl = addRevocation(crl, {
+  certId: "atp:del:abc-123",
+  reason: "key_compromise",
+  revokedBy: "security-team",
+}, issuerKeyPair);
+
+// Check revocation
+if (isRevoked("atp:del:abc-123", crl)) {
+  console.log("Certificate is revoked — reject this delegation");
+}
+```
+
+### 3. Multi-Party Trust (`multisig.ts`) — §8
+
+M-of-N co-signing for high-stakes agent actions. A `MultiSigRequest`
+collects Ed25519 signatures from designated signers; `isAuthorized` verifies
+that at least `M` valid, distinct signatures have been gathered.
+
+```typescript
+import { createMultiSigRequest, addSignature, isAuthorized } from "@lyrie/atp";
+import { generateKeyPair } from "@lyrie/atp";
+
+const [alice, bob, carol] = [generateKeyPair(), generateKeyPair(), generateKeyPair()];
+const signerIds = ["alice", "bob", "carol"];
+
+const payload = { action: "deploy_contract", target: "prod", version: "3.1.4" };
+
+// Require 2-of-3 approvals
+let req = createMultiSigRequest(payload, signerIds, 2);
+
+// Each signer adds their approval
+req = addSignature(req, "alice", alice);
+req = addSignature(req, "bob",   bob);
+
+// Check authorization
+const pubKeys = new Map([
+  ["alice", alice.publicKey],
+  ["bob",   bob.publicKey],
+  ["carol", carol.publicKey],
+]);
+
+const { authorized, signaturesCollected, required } = isAuthorized(req, pubKeys);
+// authorized === true (2 of 2 required)
+```
+
+### Compliance Level Update
+
+With v2.0.0, implementations that use all three new primitives alongside the
+v1 core (`AIC + Receipts + SDL + Attestation`) may advertise **ATP-Full-v2**.
+
