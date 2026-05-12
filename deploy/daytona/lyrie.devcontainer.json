@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
   "name": "Lyrie Agent (Daytona)",
-  "image": "ghcr.io/overthetopseo/lyrie-agent:latest",
+  "image": "ghcr.io/OTT-Cybersecurity-LLC/lyrie-ai:latest",
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/common-utils:2": {}
