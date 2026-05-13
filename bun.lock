@@ -10,16 +10,21 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/atp": {
+      "name": "@lyrie/atp",
+      "version": "2.0.0",
+    },
     "packages/core": {
       "name": "@lyrie/core",
-      "version": "0.9.0",
+      "version": "3.0.0",
       "dependencies": {
+        "@noble/ciphers": "^2.2.0",
         "zod": "^3.23.0",
       },
     },
     "packages/gateway": {
       "name": "@lyrie/gateway",
-      "version": "0.9.0",
+      "version": "3.0.0",
       "dependencies": {
         "@lyrie/core": "workspace:*",
       },
@@ -30,7 +35,7 @@
     },
     "packages/mcp": {
       "name": "@lyrie/mcp",
-      "version": "0.9.0",
+      "version": "3.0.0",
       "dependencies": {
         "@lyrie/core": "workspace:*",
       },
@@ -41,8 +46,9 @@
     },
     "packages/ui": {
       "name": "@lyrie/ui",
-      "version": "0.9.0",
+      "version": "1.0.0",
       "dependencies": {
+        "@lyrie/atp": "workspace:*",
         "clsx": "^2.1.1",
         "framer-motion": "^12.38.0",
         "lucide-react": "^0.468.0",
@@ -131,6 +137,8 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
+    "@lyrie/atp": ["@lyrie/atp@workspace:packages/atp"],
+
     "@lyrie/core": ["@lyrie/core@workspace:packages/core"],
 
     "@lyrie/gateway": ["@lyrie/gateway@workspace:packages/gateway"],
@@ -156,6 +164,8 @@
     "@next/swc-win32-arm64-msvc": ["@next/swc-win32-arm64-msvc@16.2.6", "", { "os": "win32", "cpu": "arm64" }, "sha512-LZXpTlPyS5v7HhSmnvsLGP3iIYgYOBnc8r8ArlT55sGHV89bR2HlDdBjWQ+PY6SJMmk8TuVGFuxalnP3k/0Dwg=="],
 
     "@next/swc-win32-x64-msvc": ["@next/swc-win32-x64-msvc@16.2.6", "", { "os": "win32", "cpu": "x64" }, "sha512-F0+4i0h9J6C4eE3EAPWsoCk7UW/dbzOjyzxY0qnDUOYFu6FFmdZ6l97/XdV3/Nz3VYyO7UWjyEJUXkGqcoXfMA=="],
+
+    "@noble/ciphers": ["@noble/ciphers@2.2.0", "", {}, "sha512-Z6pjIZ/8IJcCGzb2S/0Px5J81yij85xASuk1teLNeg75bfT07MV3a/O2Mtn1I2se43k3lkVEcFaR10N4cgQcZA=="],
 
     "@swc/helpers": ["@swc/helpers@0.5.15", "", { "dependencies": { "tslib": "^2.8.0" } }, "sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g=="],
 

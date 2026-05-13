@@ -1,6 +1,6 @@
 {
   "name": "@lyrie/gateway",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Multi-channel messaging gateway for Lyrie Agent — Telegram, WhatsApp, Discord",
   "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
   "repository": {

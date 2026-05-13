@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.0] - 2026-05-13
+
+### Added
+- XChaCha20-Poly1305 memory encryption module (`packages/core/src/memory/encryption.ts`) using `@noble/ciphers` for threat-data protection at rest
+- **7 new PoC generators**: prompt-injection, auth-bypass, CSRF, open-redirect, race-condition, secret-exposure, XXE (`packages/core/src/pentest/poc-gen/generators/`)
+- **3 advanced security scanners**: Rust analysis, taint engine, AI deep analysis (`packages/core/src/pentest/scanners/`)
+- Domain verification module (`packages/core/src/security/domain-verify.ts`)
+- ML-based classifier for threat intent analysis (`packages/core/src/security/ml-classifier.ts`)
+- URL guardianship system (`packages/core/src/security/url-guard.ts`)
+- Builtin skill executors (`packages/core/src/skills/builtin-executors.ts`)
+- OAST (Out-of-band Application Security Testing) module (`packages/core/src/pentest/oast/`)
+- Pentest benchmarking harness (`packages/core/src/pentest/benchmark/`)
+- OSS scan service server (`packages/core/src/pentest/oss-scan/server.ts`)
+- `packages/atp` added to root `workspaces` so `@lyrie/atp` resolves as a workspace dependency from `@lyrie/ui`
+- `@noble/ciphers ^2.2.0` dependency in `@lyrie/core`
+
+### Fixed
+- UI workspace dependency resolution (`@lyrie/atp` now resolvable from `@lyrie/ui`)
+- Test infrastructure alignment across pentest scanners and PoC generators
+
+### Improved
+- Memory encryption security posture (authenticated encryption for sensitive entries)
+- Scanner accuracy and coverage (Rust support, taint propagation, AI-assisted deep pass)
+- Test coverage: **1,737 tests passing** across `@lyrie/atp` (143), `@lyrie/core` (1,455), `@lyrie/gateway` (74), `@lyrie/mcp` (12), `@lyrie/ui` (53)
+
+### Breaking Changes
+None — fully backward compatible with v3.0.0.
+
+### Migration
+No migration required. Update via `npm install @lyrie/core@3.1.0` or pull from source.
+
+---
+
 ## [Unreleased]
 
 _Nothing yet — open a PR or file an issue at https://github.com/OTT-Cybersecurity-LLC/lyrie-ai/issues_

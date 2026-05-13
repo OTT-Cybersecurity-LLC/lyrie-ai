@@ -1,17 +1,3 @@
-/**
- * MemoryCore — Persistent, self-healing memory system for Lyrie Agent.
- *
- * Architecture:
- * - SQLite via bun:sqlite for structured, durable storage
- * - Tables: conversations, memories, rules, projects, entities
- * - Real keyword + fuzzy search (vector search ready to plug in later)
- * - Hourly auto-backup to archive directory
- * - Self-healing: detects and repairs corrupted database
- * - Import from MASTER-MEMORY.md into SQLite
- *
- * © OTT Cybersecurity LLC — Production quality.
- */
-
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, copyFileSync, statSync } from "fs";
 import { join, basename } from "path";
@@ -27,6 +13,7 @@ import {
 } from "./fts-search";
 import type { ShieldGuardLike } from "../engine/shield-guard";
 import { ShieldGuard } from "../engine/shield-guard";
+import { MemoryEncryption } from "./encryption";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -260,6 +247,16 @@ export function applyEmbeddingPrefix(
   return prefix + text;
 }
 
+export interface MemoryCoreOptions {
+  /**
+   * Enable XChaCha20-Poly1305 encryption-at-rest for memory `content`.
+   * When set, `content` rows are wrapped as `enc:v1:<base64>` on store and
+   * transparently decrypted on read. Conversation messages are also
+   * encrypted (via `storeMessage`).
+   */
+  encryptionKey?: string;
+}
+
 export class MemoryCore {
   private basePath: string;
   private dbPath: string;
@@ -268,15 +265,45 @@ export class MemoryCore {
   private initialized = false;
   private backupIntervalId: ReturnType<typeof setInterval> | null = null;
 
+  /** Optional XChaCha20-Poly1305 wrapper. `null` = encryption disabled. */
+  private encryption: MemoryEncryption | null = null;
+
   /** Number of assistant turns between incremental ingestion cycles. */
   ingestIntervalTurns: number = 5;
   /** Counter for assistant turns since last ingest. */
   private _assistantTurnCount = 0;
 
-  constructor(basePath?: string) {
-    this.basePath = basePath || join(process.env.HOME || "~", ".lyrie", "memory");
+  constructor(basePathOrOpts?: string | (MemoryCoreOptions & { basePath?: string })) {
+    const opts: MemoryCoreOptions & { basePath?: string } =
+      typeof basePathOrOpts === "string" ? { basePath: basePathOrOpts } : basePathOrOpts ?? {};
+    this.basePath = opts.basePath || join(process.env.HOME || "~", ".lyrie", "memory");
     this.dbPath = join(this.basePath, "lyrie-memory.db");
     this.archivePath = join(this.basePath, "archive");
+    const key = opts.encryptionKey ?? process.env.LYRIE_MEMORY_KEY;
+    if (key) {
+      this.encryption = new MemoryEncryption({ keyBase64: key });
+    }
+  }
+
+  /** Returns true when memory rows are encrypted at rest. */
+  isEncryptionEnabled(): boolean {
+    return this.encryption !== null;
+  }
+
+  private encrypt(text: string): string {
+    return this.encryption ? this.encryption.encrypt(text) : text;
+  }
+
+  private decryptMaybe(text: string | null | undefined): string {
+    if (text == null) return "";
+    if (!this.encryption) return text;
+    try {
+      return this.encryption.decrypt(text);
+    } catch {
+      // Allow legacy cleartext rows to pass through untouched so an
+      // operator opting in mid-stream doesn't lose old data.
+      return text;
+    }
   }
 
   // ─── Lifecycle ───────────────────────────────────────────────────────────
@@ -364,11 +391,11 @@ export class MemoryCore {
       const corruptPath = join(this.archivePath, `corrupted-${Date.now()}.db`);
       try {
         copyFileSync(this.dbPath, corruptPath);
-      } catch {}
+      } catch (err) { console.warn("[memory] Failed to archive corrupted DB:", err instanceof Error ? err.message : err); }
       try {
         const { unlinkSync } = require("fs");
         unlinkSync(this.dbPath);
-      } catch {}
+      } catch (err) { console.warn("[memory] Failed to remove corrupted DB:", err instanceof Error ? err.message : err); }
       console.log(`♻️ Corrupted DB archived to ${basename(corruptPath)}`);
     }
 
@@ -452,31 +479,60 @@ export class MemoryCore {
 
   // ─── Backup ──────────────────────────────────────────────────────────────
 
-  private createBackup(): void {
+  /**
+   * Public backup API used by external schedulers (cron, CLI, etc.).
+   *
+   * Performs a `VACUUM INTO` to a fresh file in `archivePath`, prunes old
+   * backups to a rolling window, and returns metadata so callers can log /
+   * report success. Never throws — failures are returned as `{ ok:false }`.
+   */
+  async backup(opts: { keepLast?: number } = {}): Promise<{
+    ok: boolean;
+    path?: string;
+    sizeBytes?: number;
+    keptBackups?: number;
+    error?: string;
+  }> {
+    const keepLast = Math.max(1, opts.keepLast ?? 48);
     try {
       const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
       const backupPath = join(this.archivePath, `backup-${ts}.db`);
-      if (existsSync(backupPath)) return; // Already backed up this second
-      // Use SQLite's built-in backup (safe for WAL mode)
+      if (existsSync(backupPath)) {
+        // Already backed up this second; treat as a successful no-op so cron
+        // tasks running on aligned boundaries don't spuriously alert.
+        return { ok: true, path: backupPath, keptBackups: this.getBackupFiles().length };
+      }
       this.db.exec(`VACUUM INTO '${backupPath.replace(/'/g, "''")}'`);
 
-      // Keep only last 48 backups (2 days of hourly)
       const backups = this.getBackupFiles();
-      if (backups.length > 48) {
-        const { unlinkSync } = require("fs");
-        for (const old of backups.slice(0, backups.length - 48)) {
-          try { unlinkSync(old); } catch {}
+      if (backups.length > keepLast) {
+        const { unlinkSync } = await import("fs");
+        for (const old of backups.slice(0, backups.length - keepLast)) {
+          try { unlinkSync(old); } catch { /* best effort */ }
         }
       }
+
+      let sizeBytes: number | undefined;
+      try { sizeBytes = statSync(backupPath).size; } catch { /* non-fatal */ }
+      return {
+        ok: true,
+        path: backupPath,
+        sizeBytes,
+        keptBackups: Math.min(backups.length + 1, keepLast),
+      };
     } catch (err) {
-      console.warn("⚠️ Backup failed:", err);
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   }
 
+  /** Internal: legacy synchronous wrapper kept for the integrity-check path. */
+  private createBackup(): void {
+    this.backup().catch((err) => console.warn("[memory] backup failed:", err instanceof Error ? err.message : err));
+  }
+
   private startAutoBackup(): void {
-    // Backup every hour
     this.backupIntervalId = setInterval(() => {
-      this.createBackup();
+      this.backup().catch((err) => console.warn("[memory] scheduled backup failed:", err instanceof Error ? err.message : err));
     }, 60 * 60 * 1000);
   }
 
@@ -493,7 +549,8 @@ export class MemoryCore {
     const now = nowISO();
     this.db.prepare(
       "INSERT INTO memories (id, key, content, importance, source, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(id, key, content, importance, source, tags.join(","), now, now);
+    ).run(id, key, this.encrypt(content), importance, source, tags.join(","), now, now);
+    this._updateHash(id, content);
     return id;
   }
 
@@ -504,7 +561,7 @@ export class MemoryCore {
     const sets: string[] = [];
     const vals: any[] = [];
     if (updates.key !== undefined) { sets.push("key = ?"); vals.push(updates.key); }
-    if (updates.content !== undefined) { sets.push("content = ?"); vals.push(updates.content); }
+    if (updates.content !== undefined) { sets.push("content = ?"); vals.push(this.encrypt(updates.content)); }
     if (updates.importance !== undefined) { sets.push("importance = ?"); vals.push(updates.importance); }
     if (updates.tags !== undefined) { sets.push("tags = ?"); vals.push(updates.tags.join(",")); }
     sets.push("updated_at = ?");
@@ -512,6 +569,9 @@ export class MemoryCore {
     vals.push(id);
 
     this.db.prepare(`UPDATE memories SET ${sets.join(", ")} WHERE id = ?`).run(...vals);
+    if (updates.content !== undefined) {
+      this._updateHash(id, updates.content);
+    }
     return true;
   }
 
@@ -523,12 +583,16 @@ export class MemoryCore {
   async get(id: string): Promise<MemoryEntry | null> {
     const row = this.db.query("SELECT * FROM memories WHERE id = ?").get(id) as any;
     if (!row) return null;
-    return { ...row, tags: row.tags ? row.tags.split(",") : [] };
+    return {
+      ...row,
+      content: this.decryptMaybe(row.content),
+      tags: row.tags ? row.tags.split(",") : [],
+    };
   }
 
   /**
-   * Search memories with keyword + fuzzy matching.
-   * Ranked by relevance score (importance + match quality).
+   * Search memories with cosine-similarity vector recall (primary) or
+   * keyword + fuzzy matching (fallback). Ranked by relevance.
    */
   async recall(query: string, options: MemorySearchConfig = {}): Promise<MemoryEntry[]> {
     const limit = options.limit || 10;
@@ -546,9 +610,28 @@ export class MemoryCore {
     }
 
     const rows = this.db.query(sql).all(...params) as any[];
+    const decrypted = rows.map((r) => ({ ...r, content: this.decryptMaybe(r.content) }));
 
-    // Filter by fuzzy match and score
-    return rows
+    // Vector recall path: compute cosine similarity between query and each row.
+    try {
+      const { tokenize, cosineSimilarity } = await import("../evolve/skill-extractor");
+      const queryVec = tokenize(query);
+      const scored = decrypted.map((r) => {
+        const docVec = tokenize(`${r.key} ${r.content} ${r.tags || ""}`);
+        const sim = cosineSimilarity(queryVec, docVec);
+        return { row: r, sim };
+      });
+      scored.sort((a, b) => b.sim - a.sim);
+      const threshold = 0.05;
+      return scored
+        .filter((s) => s.sim >= threshold)
+        .slice(0, limit)
+        .map((s) => ({ ...s.row, tags: s.row.tags ? s.row.tags.split(",") : [] }));
+    } catch {
+      // Fallback: fuzzy keyword match
+    }
+
+    return decrypted
       .filter((r) => fuzzyMatch(`${r.key} ${r.content} ${r.tags || ""}`, query))
       .sort((a, b) => scoreResult(b, query) - scoreResult(a, query))
       .slice(0, limit)
@@ -571,7 +654,7 @@ export class MemoryCore {
   ): Promise<number> {
     const result = this.db.prepare(
       "INSERT INTO conversations (user_id, role, content, channel, timestamp) VALUES (?, ?, ?, ?, ?)"
-    ).run(userId, role, content, channel, nowISO());
+    ).run(userId, role, this.encrypt(content), channel, nowISO());
 
     // Incremental ingestion: trigger every N assistant turns
     if (role === "assistant") {
@@ -913,4 +996,79 @@ export class MemoryCore {
   getDb(): Database {
     return this.db;
   }
+
+  /** Best-effort hash update; silently skips if memory_hashes table hasn't been created yet. */
+  private _updateHash(id: string, plaintext: string): void {
+    try {
+      this.db.prepare(
+        "INSERT OR REPLACE INTO memory_hashes (id, content_hash, hashed_at) VALUES (?, ?, ?)",
+      ).run(id, sha256Hex(plaintext), Date.now());
+    } catch { /* table may not exist until verifyIntegrity() is first called */ }
+  }
+
+  // ─── Integrity checking (MemoryIntegrityChecker integration) ────────────
+
+  /**
+   * Run a SHA-256 integrity check across all memory entries.
+   *
+   * On first run for a given DB, all entries are hashed and stored in
+   * the `memory_hashes` table. Subsequent runs compare stored hashes
+   * against current content to detect tampering.
+   */
+  async verifyIntegrity(): Promise<{
+    totalEntries: number;
+    passedEntries: number;
+    failedIds: string[];
+    durationMs: number;
+  }> {
+    const start = Date.now();
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS memory_hashes (
+        id TEXT PRIMARY KEY,
+        content_hash TEXT NOT NULL,
+        hashed_at INTEGER NOT NULL
+      )
+    `);
+
+    const rows = this.db.query(
+      "SELECT id, content FROM memories",
+    ).all() as Array<{ id: string; content: string }>;
+
+    const failedIds: string[] = [];
+    let passed = 0;
+
+    for (const row of rows) {
+      const plaintext = this.decryptMaybe(row.content);
+      const hash = sha256Hex(plaintext);
+
+      const existing = this.db.query(
+        "SELECT content_hash FROM memory_hashes WHERE id = ?",
+      ).get(row.id) as { content_hash: string } | undefined;
+
+      if (!existing) {
+        // First-time: store the hash (trusting current content).
+        this.db.prepare(
+          "INSERT INTO memory_hashes (id, content_hash, hashed_at) VALUES (?, ?, ?)",
+        ).run(row.id, hash, Date.now());
+        passed++;
+      } else if (existing.content_hash === hash) {
+        passed++;
+      } else {
+        failedIds.push(row.id);
+      }
+    }
+
+    return {
+      totalEntries: rows.length,
+      passedEntries: passed,
+      failedIds,
+      durationMs: Date.now() - start,
+    };
+  }
+}
+
+function sha256Hex(content: string): string {
+  const { createHash } = require("crypto") as typeof import("crypto");
+  return createHash("sha256").update(content, "utf8").digest("hex");
 }

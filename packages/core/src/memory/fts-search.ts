@@ -1,28 +1,3 @@
-/**
- * FTS5 Cross-Session Search
- *
- * Adds full-text search across the conversations table using SQLite's FTS5
- * virtual table. Replaces LIKE-based search for ranked, fast cross-session
- * recall — Lyrie's purpose-built memory recall layer with LLM summarization.
- *
- * Lyrie.ai by OTT Cybersecurity LLC.
- *
- * Key design choices:
- *   - The FTS index is a SECONDARY virtual table — the canonical data still
- *     lives in `conversations`. If FTS is missing/corrupt we fall back to
- *     LIKE so memory recall keeps working.
- *   - Triggers keep the FTS index in sync on INSERT/UPDATE/DELETE.
- *   - All recalled snippets pass through `ShieldGuard.scanRecalled()` before
- *     being returned to the agent — no recalled prompt-injection payloads
- *     can hijack the model. (The Shield is Layer 1 in every Lyrie surface.)
- *
- * Migration is idempotent: calling `ensureFtsIndex()` on a database that
- * already has FTS5 set up is a no-op. Calling it on a fresh DB creates the
- * virtual table + triggers + backfills existing rows.
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import type { Database } from "bun:sqlite";
 
 import type { ConversationMessage } from "./memory-core";

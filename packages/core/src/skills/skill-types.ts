@@ -1,13 +1,3 @@
-/**
- * Skill Types — Interfaces for the SKILL.md runtime.
- *
- * These types represent Lyrie skill format (SKILL.md files with YAML
- * frontmatter + markdown instructions). Backward-compatible with legacy
- * SKILL.md skills — no migration needed to import existing collections.
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 // ─── Manifest ────────────────────────────────────────────────────────────────
 
 /**

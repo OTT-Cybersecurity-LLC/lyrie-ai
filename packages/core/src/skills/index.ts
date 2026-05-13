@@ -1,9 +1,3 @@
-/**
- * SKILL.md Runtime — Public exports
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 export { SkillLoader } from "./skill-loader";
 export { SkillRegistry, buildSystemPromptBlock } from "./skill-registry";
 export { SkillRunner } from "./skill-runner";

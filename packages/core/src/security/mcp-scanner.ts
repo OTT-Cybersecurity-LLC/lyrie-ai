@@ -1,28 +1,3 @@
-/**
- * MCPSecurityScanner — Pre-connection safety checks for MCP servers.
- *
- * Background: In April 2026 an Anthropic disclosure identified a family of
- * MCP RCE/data-exfil vulnerabilities that hit 7,000+ servers. The attack
- * surface breaks into eight OWASP-catalogued MCP risk classes. This scanner
- * checks all eight before Lyrie connects to ANY MCP server so a rogue or
- * compromised server cannot:
- *   - Poison the agent's context via tool-description injection
- *   - Swap out a known-good tool with a shadow implementation
- *   - Redirect npm installs via unverified npx packages
- *   - Exfiltrate data over cleartext HTTP
- *   - Pull from non-pinned/non-verified dependency registries
- *
- * Integration:
- *   const scanner = new MCPSecurityScanner({ knownGoodRegistry });
- *   const result  = await scanner.scan(serverConfig);
- *   if (!result.safe) {
- *     if (result.riskLevel === "critical") throw new Error("blocked");
- *     // else: warn operator
- *   }
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 // ─── Public types ─────────────────────────────────────────────────────────────
 
 export type MCPRiskLevel = "critical" | "high" | "medium" | "low" | "safe";

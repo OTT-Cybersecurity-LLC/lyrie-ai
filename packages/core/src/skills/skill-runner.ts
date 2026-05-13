@@ -1,13 +1,3 @@
-/**
- * SkillRunner — Activates a skill by injecting its SKILL.md instructions
- * into the agent's context.
- *
- * Skills are system-prompt injections that give the agent specialised
- * instructions for a particular task domain — not code executors.
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import type { SkillContext, ActivatedSkill } from "./skill-types";
 import { SkillRegistry, buildSystemPromptBlock } from "./skill-registry";
 

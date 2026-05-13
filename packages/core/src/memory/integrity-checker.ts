@@ -1,18 +1,3 @@
-/**
- * MemoryIntegrityChecker — ASI06 memory-poisoning defense for Lyrie v1.0.0.
- *
- * Threat model: an adversary poisons Lyrie's memory by injecting false facts.
- * This checker catches drift by:
- *   1. Hashing every memory entry at write time (SHA-256).
- *   2. Periodically re-hashing all entries and flagging mismatches.
- *   3. Optionally running cross-model verification for high-stakes entries.
- *
- * The checker is intentionally stateless between runs so it can be called
- * from a cron job or on-demand CLI without holding open DB handles.
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import { createHash } from "crypto";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

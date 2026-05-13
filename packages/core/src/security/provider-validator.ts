@@ -1,14 +1,3 @@
-/**
- * LyrieProviderValidator — CVE-aware validation for providers and MCP servers.
- *
- * CVE classes checked:
- *  - CVE-2026-41391 class: PIP_INDEX_URL / UV_INDEX_URL env poisoning
- *  - CVE-2026-7314/7315/7319 class: MCP path-traversal (unsanitized filename args)
- *  - CVE-2026-42428 class: missing integrity verification on downloads
- *
- * © OTT Cybersecurity LLC / Lyrie.ai
- */
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ProviderConfig {

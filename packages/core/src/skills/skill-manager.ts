@@ -1,19 +1,3 @@
-/**
- * SkillManager — Self-improving skill system for Lyrie Agent.
- *
- * Skills are persistent, tracked, and improve over time.
- * Stored as JSON in ~/.lyrie/skills/ for portability and sharing.
- *
- * Features:
- * - Built-in skills: web-search, code-writer, file-manager, threat-scanner, system-monitor
- * - Persistent storage as JSON files
- * - Usage tracking with success/failure rates
- * - Pattern extraction from successful complex tasks
- * - Export/import for skill sharing
- *
- * © OTT Cybersecurity LLC — Production quality.
- */
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from "fs";
 import { join, basename } from "path";
 
@@ -218,6 +202,16 @@ export class SkillManager {
     // Load user skills from disk
     this.loadUserSkills();
 
+    // Register real executors for the 7 built-in skills so `execute()` does
+    // something meaningful out-of-the-box. Imported lazily to avoid pulling
+    // the whole network stack on cold start.
+    try {
+      const { registerBuiltInExecutors } = await import("./builtin-executors");
+      registerBuiltInExecutors(this);
+    } catch (err) {
+      console.warn("[SkillManager] Built-in executors not loaded:", err);
+    }
+
     this.initialized = true;
     const builtIn = Array.from(this.skills.values()).filter((s) => s.builtIn).length;
     const user = this.skills.size - builtIn;
@@ -247,7 +241,7 @@ export class SkillManager {
             lastUsed: onDisk.lastUsed,
             lastImproved: onDisk.lastImproved,
           });
-        } catch {}
+        } catch (err) { console.warn(`[skills] Failed to load ${path}:`, err instanceof Error ? err.message : err); }
       }
     }
   }

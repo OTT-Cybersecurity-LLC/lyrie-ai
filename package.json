@@ -1,6 +1,6 @@
 {
   "name": "lyrie-agent",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "The world's first autonomous AI agent with built-in cybersecurity",
   "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
   "license": "MIT",
@@ -11,6 +11,7 @@
   },
   "homepage": "https://lyrie.ai",
   "workspaces": [
+    "packages/atp",
     "packages/core",
     "packages/gateway",
     "packages/mcp",

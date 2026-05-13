@@ -1,18 +1,3 @@
-/**
- * ConversationStore — Per-user, per-channel conversation history for Lyrie Agent.
- *
- * Features:
- * - Store messages per user per channel
- * - Retrieve last N messages for LLM context window
- * - Full-text search across all conversations
- * - Auto-summarize old conversations to save space
- * - Thread support for grouped interactions
- *
- * Backed by MemoryCore's SQLite database.
- *
- * © OTT Cybersecurity LLC — Production quality.
- */
-
 import type { MemoryCore, ConversationMessage } from "./memory-core";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -162,7 +147,8 @@ export class ConversationStore {
   // ─── Search ──────────────────────────────────────────────────────────────
 
   /**
-   * Search across all conversations with relevance scoring.
+   * Search across all conversations. Uses FTS5 (porter stemming + BM25
+   * ranking) when available, falls back to LIKE for basic substring matching.
    */
   async search(
     query: string,
@@ -171,22 +157,30 @@ export class ConversationStore {
     const limit = options.limit || 20;
     const db = this.memory.getDb();
 
-    let sql = "SELECT * FROM conversations WHERE content LIKE ?";
-    const params: any[] = [`%${query}%`];
+    let rows: ConversationMessage[];
 
-    if (options.userId) {
-      sql += " AND user_id = ?";
-      params.push(options.userId);
+    // Try FTS5 first (ranked by BM25 relevance)
+    const ftsOk = this._ftsAvailable(db);
+    if (ftsOk) {
+      const sanitized = this._sanitizeFtsQuery(query);
+      if (!sanitized) {
+        rows = this._likeFallback(db, query, options, limit);
+      } else {
+        let fts = `SELECT c.* FROM conversations_fts JOIN conversations c ON c.id = conversations_fts.conv_id WHERE conversations_fts MATCH ?`;
+        const ftsParams: any[] = [sanitized];
+        if (options.userId) { fts += " AND conversations_fts.user_id = ?"; ftsParams.push(options.userId); }
+        if (options.channel) { fts += " AND conversations_fts.channel = ?"; ftsParams.push(options.channel); }
+        fts += ` ORDER BY bm25(conversations_fts) LIMIT ?`;
+        ftsParams.push(limit);
+        try {
+          rows = db.query(fts).all(...ftsParams) as ConversationMessage[];
+        } catch {
+          rows = this._likeFallback(db, query, options, limit);
+        }
+      }
+    } else {
+      rows = this._likeFallback(db, query, options, limit);
     }
-    if (options.channel) {
-      sql += " AND channel = ?";
-      params.push(options.channel);
-    }
-
-    sql += " ORDER BY timestamp DESC LIMIT ?";
-    params.push(limit);
-
-    const rows = db.query(sql).all(...params) as ConversationMessage[];
 
     // Score results by match quality
     const queryLower = query.toLowerCase();
@@ -339,6 +333,47 @@ export class ConversationStore {
     const msgs = db.prepare("DELETE FROM conversations WHERE user_id = ?").run(userId);
     const sums = db.prepare("DELETE FROM conversation_summaries WHERE user_id = ?").run(userId);
     return { messagesDeleted: msgs.changes, summariesDeleted: sums.changes };
+  }
+
+  private _sanitizeFtsQuery(raw: string): string | null {
+    const cleaned = raw
+      .replace(/[\u0000-\u001f]/g, " ")
+      .replace(/["()]/g, " ")
+      .replace(/[-*:]/g, " ")
+      .trim();
+    if (!cleaned) return null;
+    const tokens = cleaned.split(/\s+/).filter((t) => t.length > 0);
+    if (tokens.length === 0) return null;
+    return tokens.map((t) => `"${t}"`).join(" ");
+  }
+
+  private _ftsChecked = false;
+  private _ftsOk = false;
+  private _ftsAvailable(db: any): boolean {
+    if (this._ftsChecked) return this._ftsOk;
+    this._ftsChecked = true;
+    try {
+      db.query("SELECT COUNT(*) FROM conversations_fts LIMIT 1").get();
+      this._ftsOk = true;
+    } catch {
+      this._ftsOk = false;
+    }
+    return this._ftsOk;
+  }
+
+  private _likeFallback(
+    db: any,
+    query: string,
+    options: { userId?: string; channel?: string },
+    limit: number,
+  ): ConversationMessage[] {
+    let sql = "SELECT * FROM conversations WHERE content LIKE ?";
+    const params: any[] = [`%${query}%`];
+    if (options.userId) { sql += " AND user_id = ?"; params.push(options.userId); }
+    if (options.channel) { sql += " AND channel = ?"; params.push(options.channel); }
+    sql += " ORDER BY timestamp DESC LIMIT ?";
+    params.push(limit);
+    return db.query(sql).all(...params) as ConversationMessage[];
   }
 }
 

@@ -1,12 +1,3 @@
-/**
- * SkillRegistry — Singleton registry for SKILL.md manifests.
- *
- * Loads from ~/.lyrie/skills/ (and legacy skill directories for backward-compat),
- * indexes by name, and exposes search.
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import type { SkillManifest } from "./skill-types";
 import { SkillLoader } from "./skill-loader";
 import { SkillSearch } from "./skill-search";

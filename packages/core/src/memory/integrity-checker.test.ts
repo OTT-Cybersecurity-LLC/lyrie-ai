@@ -1,17 +1,3 @@
-/**
- * integrity-checker.test.ts — MemoryIntegrityChecker tests.
- *
- * Coverage:
- *   - hashAndStore: deterministic SHA-256, round-trip storage
- *   - runIntegrityCheck: pass/fail on unchanged/modified content
- *   - fixHashes: re-hashes drifted entries
- *   - crossModelVerify: agreement / disagreement scenarios
- *   - IntegrityReport structure
- *   - InMemoryIntegrityStore
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import { describe, expect, test, beforeEach } from "bun:test";
 import {
   MemoryIntegrityChecker,

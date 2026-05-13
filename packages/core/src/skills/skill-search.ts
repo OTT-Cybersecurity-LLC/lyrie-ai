@@ -1,15 +1,3 @@
-/**
- * SkillSearch — Fuzzy/keyword search over skill descriptions and names.
- *
- * No external dependencies. Scores candidates by:
- *   1. Exact substring match in name (highest weight)
- *   2. Exact substring match in description
- *   3. Partial word overlap in name
- *   4. Partial word overlap in description / triggers
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import type { SkillManifest } from "./skill-types";
 
 export interface SearchResult {

@@ -1,9 +1,3 @@
-/**
- * MCPSecurityScanner — unit tests.
- *
- * Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import { describe, expect, test } from "bun:test";
 import {
   MCPSecurityScanner,

@@ -21,6 +21,20 @@ _Pentests apps. Defends agents. Researches binaries. Trains itself. One daemon._
 
 ---
 
+## 🆕 What's New in v3.1.0
+
+- **Memory Encryption**: XChaCha20-Poly1305 implementation for sensitive threat data (`@noble/ciphers`)
+- **7 New PoC Generators**: prompt injection, auth bypass, CSRF, open redirect, race condition, secret exposure, XXE
+- **3 New Deep Scanners**: Rust analysis, taint engine, AI deep analysis
+- **UI Workspace Fix**: Proper `@lyrie/atp` workspace resolution
+- **Expanded Test Suite**: 1,737 tests passing across `@lyrie/atp`, `@lyrie/core`, `@lyrie/gateway`, `@lyrie/mcp`, `@lyrie/ui`
+- **New Security Modules**: Domain verification, ML-based threat classifier, URL guardianship
+- **Fully backward compatible** with v3.0.0 — no migration required
+
+See [CHANGELOG.md](CHANGELOG.md) for the complete list.
+
+---
+
 ## What is Lyrie?
 
 Lyrie is an autonomous security agent built by [OTT Cybersecurity LLC](https://overthetop.ae). It runs end-to-end pentests, red-teams LLM endpoints, scans code and live URLs, and ships with the **Agent Trust Protocol (ATP)** — the first open cryptographic standard for AI agent identity.
@@ -267,6 +281,10 @@ Known keys: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GITHUB_TOKEN`, `LYRIE_LICENS
 ## ✅ Quality
 
 - **ATP:** 143 tests passing
+- **Core:** 1,455 tests passing (memory, pentest, scanners, PoC-gen, threat-intel, providers)
+- **Gateway:** 74 tests passing
+- **MCP:** 12 tests passing
+- **UI:** 53 tests passing
 - **Shield:** 31 tests passing
 - **CLI:** 25 commands, all functional
 - **Security audit:** 39 findings closed (see [SECURITY.md](SECURITY.md))

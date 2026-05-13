@@ -1,18 +1,3 @@
-/**
- * SkillLoader — Discovers and loads SKILL.md files.
- *
- * Default search paths (in order):
- *   1. ~/.lyrie/skills/                        (Lyrie-native skills)
- *   2. ~/.openclaw/workspace/skills/           (OpenClaw compatibility — all 129 skills)
- *   3. ./skills/                               (project-local)
- *
- * Each SKILL.md may have optional YAML frontmatter between `---` delimiters.
- * Skills without frontmatter are still loaded; `name` defaults to the
- * directory name.
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { homedir } from "node:os";

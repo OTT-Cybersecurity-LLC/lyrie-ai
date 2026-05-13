@@ -1,10 +1,3 @@
-/**
- * FTS5 cross-session search tests — uses an in-memory SQLite DB so the test
- * is hermetic and runs in milliseconds.
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 

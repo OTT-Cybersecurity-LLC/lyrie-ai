@@ -1,12 +1,3 @@
-/**
- * SkillManager — Shield Doctrine output filter tests.
- *
- * Skills frequently shell out, scrape pages, or call third-party APIs.
- * Their outputs MUST pass through the Shield before reaching the agent.
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import { describe, expect, test, beforeEach } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

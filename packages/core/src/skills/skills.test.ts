@@ -1,17 +1,3 @@
-/**
- * SKILL.md Runtime — Test Suite
- *
- * Covers:
- *   - SkillLoader: discover, load, frontmatter parsing, fallbacks
- *   - SkillRegistry: loadAll, get, search, list, system prompt
- *   - SkillRunner: activate, error on missing skill
- *   - SkillSearch: scoring, partial match, empty query
- *   - OpenClaw compatibility: loads from ~/.openclaw/workspace/skills/
- *   - CLI output shape
- *
- * © OTT Cybersecurity LLC — https://lyrie.ai
- */
-
 import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
