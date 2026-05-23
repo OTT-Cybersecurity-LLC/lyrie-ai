@@ -29,9 +29,13 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      # Build only publishable packages (skip Next.js UI which is not on npm)
-      - run: bunx turbo run build --filter=./packages/core --filter=./packages/gateway --filter=./packages/mcp
-      - name: Publish (provenance)
+
+      # Build publishable packages (skip UI/shield which are not on npm)
+      - name: Build packages
+        run: bunx turbo run build --filter=./packages/core --filter=./packages/gateway --filter=./packages/mcp
+
+      # Publish each package separately from its own directory
+      - name: Publish packages to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -39,7 +43,20 @@ jobs:
             echo "::warning::NPM_TOKEN secret not set; skipping publish."
             exit 0
           fi
-          npm publish --provenance --access public || { code=$?; if npm view $(node -p "require('./package.json').name")@$(node -p "require('./package.json').version") version > /dev/null 2>&1; then echo "::notice::Version already published, skipping."; else exit $code; fi; }
+          FAILED=0
+          for pkg in packages/core packages/gateway packages/mcp; do
+            echo "--- Publishing $pkg ---"
+            pushd "$pkg" > /dev/null
+            NAME=$(node -p "require('./package.json').name")
+            VERSION=$(node -p "require('./package.json').version")
+            if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+              echo "::notice::${NAME}@${VERSION} already published, skipping."
+            else
+              npm publish --provenance --access public || { echo "::error::Failed to publish ${NAME}@${VERSION}"; FAILED=1; }
+            fi
+            popd > /dev/null
+          done
+          exit $FAILED
 
   build-binaries:
     name: Build Binary (${{ matrix.os }} / ${{ matrix.target }})

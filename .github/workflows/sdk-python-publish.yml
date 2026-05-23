@@ -26,16 +26,34 @@ jobs:
         working-directory: sdk/python
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install build
+
+      - name: Install build tools
         run: python -m pip install --upgrade pip build twine
+
       - name: Build
         run: python -m build
+
       - name: Verify with twine
         run: python -m twine check dist/*
-      - name: Publish to PyPI (trusted publishing)
+
+      # Token-based publish (primary) — requires PYPI_API_TOKEN secret
+      - name: Publish to PyPI (token)
+        if: ${{ secrets.PYPI_API_TOKEN != '' }}
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: python -m twine upload --skip-existing dist/*
+
+      # Trusted publishing fallback (OIDC) — only if token not set
+      # Requires: pypi.org → Account → Publishing → Add Trusted Publisher
+      #   owner: OTT-Cybersecurity-LLC | repo: lyrie-ai
+      #   workflow: sdk-python-publish.yml | environment: pypi
+      - name: Publish to PyPI (trusted publishing fallback)
+        if: ${{ secrets.PYPI_API_TOKEN == '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: sdk/python/dist/
