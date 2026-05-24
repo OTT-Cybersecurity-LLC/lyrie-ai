@@ -40,21 +40,14 @@ jobs:
       - name: Verify with twine
         run: python -m twine check dist/*
 
-      # Token-based publish (primary) — requires PYPI_API_TOKEN secret
-      - name: Publish to PyPI (token)
-        if: ${{ secrets.PYPI_API_TOKEN != '' }}
+      # Publish to PyPI using PYPI_API_TOKEN secret
+      - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: python -m twine upload --skip-existing dist/*
-
-      # Trusted publishing fallback (OIDC) — only if token not set
-      # Requires: pypi.org → Account → Publishing → Add Trusted Publisher
-      #   owner: OTT-Cybersecurity-LLC | repo: lyrie-ai
-      #   workflow: sdk-python-publish.yml | environment: pypi
-      - name: Publish to PyPI (trusted publishing fallback)
-        if: ${{ secrets.PYPI_API_TOKEN == '' }}
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: sdk/python/dist/
-          skip-existing: true
+        run: |
+          if [ -z "$TWINE_PASSWORD" ]; then
+            echo "::warning::PYPI_API_TOKEN not set — skipping publish."
+            exit 0
+          fi
+          python -m twine upload --skip-existing dist/*
