@@ -27,7 +27,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: '1.2.14'  # pinned — avoids GitHub API 401 on Dependabot PRs
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

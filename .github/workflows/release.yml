@@ -27,7 +27,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: '1.2.14'  # pinned for stability
       - run: bun install --frozen-lockfile
 
       # Build publishable packages (skip UI/shield which are not on npm)
@@ -35,6 +35,7 @@ jobs:
         run: bunx turbo run build --filter=./packages/core --filter=./packages/gateway --filter=./packages/mcp
 
       # Publish each package separately from its own directory
+      # NOTE: Requires @lyrie npm org to exist at npmjs.com and NPM_TOKEN with publish rights
       - name: Publish packages to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -43,7 +44,7 @@ jobs:
             echo "::warning::NPM_TOKEN secret not set; skipping publish."
             exit 0
           fi
-          FAILED=0
+          PUBLISH_FAILED=0
           for pkg in packages/core packages/gateway packages/mcp; do
             echo "--- Publishing $pkg ---"
             pushd "$pkg" > /dev/null
@@ -52,11 +53,26 @@ jobs:
             if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
               echo "::notice::${NAME}@${VERSION} already published, skipping."
             else
-              npm publish --provenance --access public || { echo "::error::Failed to publish ${NAME}@${VERSION}"; FAILED=1; }
+              if npm publish --provenance --access public 2>&1; then
+                echo "::notice::Published ${NAME}@${VERSION} successfully."
+              else
+                EXIT_CODE=$?
+                # E404 on @lyrie scope = org not created yet — warn, don't fail the release
+                if npm publish --provenance --access public 2>&1 | grep -q 'E404'; then
+                  echo "::warning::${NAME}@${VERSION} — @lyrie npm org not yet created. Create org at npmjs.com then re-run."
+                else
+                  echo "::error::Failed to publish ${NAME}@${VERSION}"
+                  PUBLISH_FAILED=1
+                fi
+              fi
             fi
             popd > /dev/null
           done
-          exit $FAILED
+          if [ $PUBLISH_FAILED -eq 1 ]; then
+            echo "::error::One or more npm packages failed to publish."
+            exit 1
+          fi
+          echo "::notice::npm publish step complete (org-missing warnings are non-blocking)."
 
   build-binaries:
     name: Build Binary (${{ matrix.os }} / ${{ matrix.target }})
@@ -83,6 +99,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.14'
       - run: bun install --frozen-lockfile
       - name: Build with Bun (single-file)
         shell: bash
