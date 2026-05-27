@@ -26,3 +26,4 @@ hex = "0.4"
 walkdir = "2"
 notify = "8"
 reqwest = { version = "0.12", features = ["json"] }
+aho-corasick = "1"

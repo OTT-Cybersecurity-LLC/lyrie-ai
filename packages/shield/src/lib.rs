@@ -95,7 +95,7 @@ impl LyrieShield {
     pub fn new() -> Self {
         LyrieShield {
             scanner: scanner::Scanner::new(),
-            waf: waf::WAF::new(),
+            waf: waf::WAF::new().expect("WAF regex patterns must compile"),
             behavioral: behavioral::BehavioralAnalyzer::new(),
             malware: malware::MalwareDetector::new(),
             rogue_ai: rogue_ai::RogueAIDetector::new(),
