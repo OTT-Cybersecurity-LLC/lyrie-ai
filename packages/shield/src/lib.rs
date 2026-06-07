@@ -19,10 +19,14 @@ pub mod waf;
 pub mod behavioral;
 pub mod malware;
 pub mod rogue_ai;
+pub mod agentic_threat;
 
 // Re-export scanner's public types so consumers can use `lyrie_shield::SignatureMatch` etc.
 pub use scanner::{SignatureMatch, HeuristicFlag, LyrieRule, RuleCondition};
 pub use scanner::{scan_file_hash, scan_heuristic, apply_rule, apply_rules, builtin_rules};
+
+// Re-export agentic threat types
+pub use agentic_threat::{AgenticThreatDetector, AttackPhase, AttackCompressionSignature, BehavioralEvent};
 
 use serde::{Deserialize, Serialize};
 
