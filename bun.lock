@@ -37,6 +37,7 @@
       "name": "@lyrie/mcp",
       "version": "3.1.0",
       "dependencies": {
+        "@lyrie/atp": "workspace:*",
         "@lyrie/core": "workspace:*",
       },
       "devDependencies": {

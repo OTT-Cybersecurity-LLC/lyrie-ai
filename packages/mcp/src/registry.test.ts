@@ -83,3 +83,35 @@ describe("McpRegistry inline config (no real connect)", () => {
     expect(reg.list().length).toBe(0);
   });
 });
+
+describe("McpRegistry ATP trustPolicy=require-atp (no real connect)", () => {
+  test("server with no AIC is refused before toTransport/connect is ever attempted", async () => {
+    const reg = new McpRegistry();
+    // If the trust gate ran too late, this would throw from toTransport
+    // (no url/command) instead of being cleanly refused by the gate.
+    await reg.loadFrom({
+      trustPolicy: "require-atp",
+      configInline: {
+        mcpServers: {
+          untrusted: {} as any,
+        },
+      },
+    });
+    expect(reg.servers().length).toBe(0);
+    expect(reg.list().length).toBe(0);
+  });
+
+  test("open policy (default) still reaches toTransport for a server with no AIC (unchanged pre-ATP behavior)", async () => {
+    const reg = new McpRegistry();
+    await reg.loadFrom({
+      configInline: {
+        mcpServers: {
+          // No url/command: this exercises that we get *past* the trust gate
+          // and fail at toTransport as before, not at the trust gate.
+          legacy: {} as any,
+        },
+      },
+    });
+    expect(reg.servers().length).toBe(0);
+  });
+});

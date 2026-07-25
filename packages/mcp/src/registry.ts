@@ -22,6 +22,7 @@ import type {
 } from "./types";
 import { ShieldGuard, type ShieldGuardLike, MCPSecurityScanner, AgenticThreatBridge } from "@lyrie/core";
 import type { MCPScannerOptions } from "@lyrie/core";
+import { evaluateMcpTrust, type McpServerTrustConfig, type McpTrustPolicy } from "./trust";
 
 export interface RegisteredTool {
   /** Fully-qualified name surfaced to the agent: mcp:<server>:<tool> */
@@ -55,6 +56,14 @@ export interface McpRegistryOptions {
   mode?: "redact" | "block";
   /** Agentic-threat bridge instance (Rust detector via subprocess). Injectable for tests. */
   agenticBridge?: AgenticThreatBridge;
+  /**
+   * ATP trust enforcement policy for MCP server connections. Default "open"
+   * preserves pre-ATP behavior — servers without an `aic` field connect
+   * exactly as before. See `trust.ts` for full semantics of each mode.
+   */
+  trustPolicy?: McpTrustPolicy;
+  /** Revocation predicate for AIC checks (e.g. `RevocationRegistry.isRevoked`). */
+  isRevoked?: (certId: string) => boolean;
 }
 
 export class McpRegistry {
@@ -64,6 +73,8 @@ export class McpRegistry {
   private scanner = new MCPSecurityScanner();
   private agenticBridge: AgenticThreatBridge = new AgenticThreatBridge();
   private mode: "redact" | "block" = "redact";
+  private trustPolicy: McpTrustPolicy = "open";
+  private isRevoked?: (certId: string) => boolean;
 
   static defaultConfigPath(): string {
     return join(homedir(), ".lyrie", "mcp.json");
@@ -106,6 +117,8 @@ export class McpRegistry {
     if (opts.shield) this.shield = opts.shield;
     if (opts.agenticBridge) this.agenticBridge = opts.agenticBridge;
     if (opts.mode) this.mode = opts.mode;
+    if (opts.trustPolicy) this.trustPolicy = opts.trustPolicy;
+    if (opts.isRevoked) this.isRevoked = opts.isRevoked;
     const path = opts.configPath ?? McpRegistry.defaultConfigPath();
     const config = opts.configInline ?? McpRegistry.loadConfig(path);
     if (!config?.mcpServers) return;
@@ -113,7 +126,7 @@ export class McpRegistry {
     const onCritical = opts.onCritical ?? "block";
     this.scanner = new MCPSecurityScanner(opts.scannerOptions ?? {});
 
-    for (const [name, cfg] of Object.entries(config.mcpServers)) {
+    for (const [name, cfg] of Object.entries(config.mcpServers) as Array<[string, McpServerTrustConfig]>) {
       if (cfg.disabled) continue;
       try {
         // ── Pre-connection security scan ─────────────────────────────────
@@ -138,14 +151,45 @@ export class McpRegistry {
         }
         // ── End security scan ─────────────────────────────────────────────
 
+        // ── ATP trust gate: identity check (no declared tools yet) ────────
+        const identityDecision = evaluateMcpTrust(name, cfg, {
+          policy: this.trustPolicy,
+          isRevoked: this.isRevoked,
+        });
+        if (identityDecision.outcome === "refuse") {
+          console.error(`[mcp] BLOCKED server "${name}" — ATP trust check failed: ${identityDecision.reason}`);
+          continue;
+        }
+        // ── End ATP trust gate (identity) ──────────────────────────────────
+
         const client = new McpClient({
           name,
           transport: McpRegistry.toTransport(cfg),
         });
         await client.connect();
-        const tools = (await client.listTools()).filter((t) => {
+        const listed = await client.listTools();
+
+        // ── ATP trust gate: scope coverage (now tools are known) ──────────
+        const scopeDecision = evaluateMcpTrust(name, cfg, {
+          policy: this.trustPolicy,
+          isRevoked: this.isRevoked,
+          declaredTools: listed.map((t) => t.name),
+        });
+        if (scopeDecision.outcome === "refuse") {
+          console.error(`[mcp] BLOCKED server "${name}" — ATP trust check failed: ${scopeDecision.reason}`);
+          await client.disconnect();
+          continue;
+        }
+        if (scopeDecision.reason) {
+          console.warn(`[mcp] ${scopeDecision.reason}`);
+        }
+        const atpAllowedTools = scopeDecision.allowedTools;
+        // ── End ATP trust gate (scope) ─────────────────────────────────────
+
+        const tools = listed.filter((t) => {
           if (cfg.denyTools?.includes(t.name)) return false;
           if (cfg.allowTools && !cfg.allowTools.includes(t.name)) return false;
+          if (atpAllowedTools && !atpAllowedTools.includes(t.name)) return false;
           return true;
         });
         this.clients.set(name, client);
