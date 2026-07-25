@@ -19,9 +19,14 @@
  *   --dry-run             plan only, no HTTP requests or file writes
  *   --json                emit final summary as JSON
  *   --quiet               suppress progress output
+ *   --trust-score         print the aggregate 0-100 trust score breakdown in
+ *                        the human-readable summary (always included in
+ *                        --json output regardless of this flag — it's a
+ *                        pure, cheap, offline function of the report's
+ *                        findings, so JSON consumers always get it)
  */
 
-import { HackOrchestrator } from "../packages/core/src/hack";
+import { HackOrchestrator, computeTrustScore } from "../packages/core/src/hack";
 import type {
   FindingEvent,
   HackEvent,
@@ -30,6 +35,7 @@ import type {
   OutputFormat,
   PhaseEvent,
   Severity,
+  TrustScoreBreakdown,
 } from "../packages/core/src/hack";
 
 const COLORS = {
@@ -78,6 +84,7 @@ interface Args {
   json: boolean;
   quiet: boolean;
   help: boolean;
+  trustScore: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -92,6 +99,7 @@ function parseArgs(argv: string[]): Args {
     json: false,
     quiet: false,
     help: false,
+    trustScore: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -131,6 +139,9 @@ function parseArgs(argv: string[]): Args {
       case "--json":
         out.json = true;
         break;
+      case "--trust-score":
+        out.trustScore = true;
+        break;
       case "-q":
       case "--quiet":
         out.quiet = true;
@@ -158,6 +169,7 @@ function printHelp(): void {
   --dry-run             plan only, no HTTP requests or file writes
   --json                emit final summary as JSON to stdout
   --quiet               suppress progress output
+  --trust-score         print the aggregate 0-100 trust score breakdown
 
   Lyrie.ai by OTT Cybersecurity LLC — https://lyrie.ai
 `);
@@ -218,11 +230,18 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // Trust score is cheap/deterministic/offline to compute (pure function of
+  // report.validatedFindings + report.secretFindings) — so it's always
+  // attached to --json output; the --trust-score flag only controls
+  // whether it's printed in the human-readable summary.
+  const trustScore = computeTrustScore(report);
+
   // Final summary.
   if (args.json) {
-    process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+    process.stdout.write(JSON.stringify({ ...report, trustScore }, null, 2) + "\n");
   } else if (!args.quiet) {
     printSummary(report, useColor);
+    if (args.trustScore) printTrustScore(trustScore, useColor);
   }
 
   // Exit code: --fail-on
@@ -314,6 +333,38 @@ function printSummary(report: HackReport, useColor: boolean): void {
       v === "clean" ? "green" : v === "suspicious" ? "yellow" : "red";
     console.log(`  self-scan:    ${colorize(v, c, useColor)}`);
   }
+  console.log("");
+}
+
+function trustScoreColor(score: number): keyof typeof COLORS {
+  if (score >= 80) return "green";
+  if (score >= 50) return "yellow";
+  return "red";
+}
+
+function printTrustScore(bd: TrustScoreBreakdown, useColor: boolean): void {
+  console.log(colorize("🛡️  Trust Score", "bold", useColor));
+  console.log(
+    colorize("────────────────────────────────────────────────────", "dim", useColor),
+  );
+  console.log(`  score: ${colorize(`${bd.score}/100`, trustScoreColor(bd.score), useColor)}`);
+  for (const d of bd.deductions) {
+    if (d.count === 0) continue;
+    console.log(
+      `    ${colorize(d.severity.padEnd(8), severityColor(d.severity), useColor)} ×${d.count}` +
+        colorize(`  (-${d.subtotal} pts, weight ${d.weight})`, "dim", useColor),
+    );
+  }
+  if (bd.excludedUnconfirmed > 0) {
+    console.log(
+      colorize(
+        `    (${bd.excludedUnconfirmed} unconfirmed finding${bd.excludedUnconfirmed === 1 ? "" : "s"} excluded — leads, not verified risk)`,
+        "dim",
+        useColor,
+      ),
+    );
+  }
+  console.log(colorize(`  formula: ${bd.version}`, "dim", useColor));
   console.log("");
   console.log(`  ${colorize("signature:", "dim", useColor)} Lyrie.ai by OTT Cybersecurity LLC`);
   console.log("");

@@ -54,3 +54,12 @@ export {
   type SarifLog,
   type Severity,
 } from "./report-engine";
+
+export {
+  computeTrustScore,
+  formatTrustScoreSummary,
+  TRUST_SCORE_VERSION,
+  TRUST_SCORE_WEIGHTS,
+  type TrustScoreBreakdown,
+  type TrustScoreDeduction,
+} from "./trust-score";
