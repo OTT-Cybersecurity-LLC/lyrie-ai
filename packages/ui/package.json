@@ -25,13 +25,13 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.4",
-    "@types/node": "^25.6.0",
+    "@types/node": "^26.1.1",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "happy-dom": "^20.9.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^4.1.4",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "postcss": ">=8.5.14"
