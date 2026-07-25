@@ -16,6 +16,17 @@ updates:
         update-types: ["minor", "patch"]
     labels: ["dependencies"]
 
+  # Intentionally vulnerable test fixture for `lyrie hack` scanner integration
+  # tests (tests/hack/integration.test.ts asserts exact CVE-affected versions,
+  # e.g. express === "4.17.1"). Do NOT let Dependabot bump these — bumping
+  # breaks the scanner's own detection tests. See fixture package.json header.
+  - package-ecosystem: "npm"
+    directory: "/tests/hack/fixtures/vulnerable-app"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    labels: ["dependencies", "ignore-intentional-fixture"]
+
   - package-ecosystem: "cargo"
     directory: "/packages/shield"
     schedule:
