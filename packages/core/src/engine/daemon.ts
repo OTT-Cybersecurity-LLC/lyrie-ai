@@ -500,7 +500,7 @@ export class DaemonEngine {
       findings.push({
         id: `agentic-prompt-injection-${Date.now()}`,
         title: "Prompt injection detected in agent telemetry",
-        severity: resp.prompt_injection.severity,
+        severity: normalizeAgenticSeverity(resp.prompt_injection.severity),
         description: resp.prompt_injection.description,
         source: "agentic-threat",
         timestamp: Date.now(),
@@ -521,6 +521,11 @@ function severityFromRust(level: "None" | "Low" | "Medium" | "High" | "Critical"
     case "Low": return "low";
     default: return "info";
   }
+}
+
+/** Maps an `AgenticFinding.severity` (lowercase, includes "none") to the daemon's finding severity. */
+function normalizeAgenticSeverity(severity: "none" | "low" | "medium" | "high" | "critical"): AdapterFinding["severity"] {
+  return severity === "none" ? "info" : severity;
 }
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────

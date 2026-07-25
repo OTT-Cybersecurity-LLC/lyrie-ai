@@ -20,7 +20,7 @@ import type {
   Tool,
   Transport,
 } from "./types";
-import { ShieldGuard, type ShieldGuardLike, MCPSecurityScanner } from "@lyrie/core";
+import { ShieldGuard, type ShieldGuardLike, MCPSecurityScanner, AgenticThreatBridge } from "@lyrie/core";
 import type { MCPScannerOptions } from "@lyrie/core";
 
 export interface RegisteredTool {
@@ -44,6 +44,17 @@ export interface McpRegistryOptions {
    *   "warn"   — log a warning but continue connecting
    */
   onCritical?: "block" | "warn";
+  /**
+   * How `shieldFilter` reacts to a critical verdict from the Rust
+   * agentic-threat bridge (self-propagation write paths, base64/unicode-
+   * confusable prompt injection):
+   *   "redact" — replace the offending block with a Shield notice (default,
+   *              matches existing ShieldGuard.scanRecalled behavior)
+   *   "block"  — throw, rejecting the entire tool call
+   */
+  mode?: "redact" | "block";
+  /** Agentic-threat bridge instance (Rust detector via subprocess). Injectable for tests. */
+  agenticBridge?: AgenticThreatBridge;
 }
 
 export class McpRegistry {
@@ -51,6 +62,8 @@ export class McpRegistry {
   private tools: RegisteredTool[] = [];
   private shield: ShieldGuardLike = ShieldGuard.fallback();
   private scanner = new MCPSecurityScanner();
+  private agenticBridge: AgenticThreatBridge = new AgenticThreatBridge();
+  private mode: "redact" | "block" = "redact";
 
   static defaultConfigPath(): string {
     return join(homedir(), ".lyrie", "mcp.json");
@@ -91,6 +104,8 @@ export class McpRegistry {
 
   async loadFrom(opts: McpRegistryOptions = {}): Promise<void> {
     if (opts.shield) this.shield = opts.shield;
+    if (opts.agenticBridge) this.agenticBridge = opts.agenticBridge;
+    if (opts.mode) this.mode = opts.mode;
     const path = opts.configPath ?? McpRegistry.defaultConfigPath();
     const config = opts.configInline ?? McpRegistry.loadConfig(path);
     if (!config?.mcpServers) return;
@@ -163,39 +178,93 @@ export class McpRegistry {
     if (!client) throw new Error(`unknown MCP server: ${server}`);
 
     const raw = await client.callTool(tool, args);
-    return this.shieldFilter(qualifiedName, raw);
+    return this.shieldFilter(qualifiedName, raw, args);
   }
 
   /**
    * Shield-gate tool results. MCP servers are third-party processes — they
    * can absolutely return prompt-injection payloads (intentionally or
    * accidentally). Every text/resource block is scanned before it reaches
-   * the agent. Blocked content is replaced with a Shield notice; non-text
-   * content (images, binaries) passes through.
+   * the agent, through two layers:
+   *
+   *   1. `ShieldGuard.scanRecalled()` (JS heuristics) — unchanged behavior,
+   *      catches classic prompt-injection/credential patterns.
+   *   2. The Rust `AgenticThreatDetector` bridge (broader regex set,
+   *      base64/unicode-confusable injection, self-propagation write-path
+   *      detection). Runs on tool-result text/resource blocks AND on any
+   *      string-valued tool-call argument that looks like a file path
+   *      (covers e.g. a filesystem-write MCP tool being pointed at
+   *      `.cursorrules`/`AGENTS.md`/a vector-store path).
+   *
+   * In `"redact"` mode (default) a blocked/critical block is replaced with
+   * a Shield notice; non-text content (images, binaries) always passes
+   * through untouched. In `"block"` mode, a critical verdict from either
+   * layer throws instead, rejecting the whole tool call.
    */
-  private shieldFilter(qualifiedName: string, result: CallToolResult): CallToolResult {
+  private async shieldFilter(
+    qualifiedName: string,
+    result: CallToolResult,
+    args?: Record<string, unknown>,
+  ): Promise<CallToolResult> {
+    // ── Tool-call argument scan: self-propagation / AI-sink write paths ──
+    if (args && this.agenticBridge.isAvailable()) {
+      for (const [key, value] of Object.entries(args)) {
+        if (typeof value !== "string" || value.length === 0) continue;
+        const resp = await this.agenticBridge.run({ writePath: value, sensitiveRead: true });
+        const finding = resp?.self_propagation ?? resp?.ai_sink_write;
+        if (finding && finding.severity === "critical") {
+          const msg = `⚠️ Lyrie Shield blocked MCP call ${qualifiedName} — argument "${key}" is a self-propagation write path: ${finding.description}`;
+          if (this.mode === "block") {
+            throw new Error(msg);
+          }
+          return { content: [{ type: "text", text: msg }] };
+        }
+      }
+    }
+
     if (!result?.content) return result;
-    const filtered = result.content.map((block: any) => {
-      if (block?.type === "text" && typeof block.text === "string") {
-        const verdict = this.shield.scanRecalled(block.text);
-        if (verdict.blocked) {
-          return {
-            type: "text",
-            text: `⚠️ Lyrie Shield redacted MCP output from ${qualifiedName}: ${verdict.reason ?? "unsafe content"}`,
-          };
+
+    const filtered: CallToolResult["content"] = [];
+    for (const block of result.content as any[]) {
+      const text: string | undefined =
+        block?.type === "text" && typeof block.text === "string"
+          ? block.text
+          : block?.type === "resource" && typeof block?.resource?.text === "string"
+            ? block.resource.text
+            : undefined;
+
+      if (text === undefined) {
+        filtered.push(block);
+        continue;
+      }
+
+      // Layer 1: JS heuristic ShieldGuard (unchanged existing behavior).
+      const verdict = this.shield.scanRecalled(text);
+      if (verdict.blocked) {
+        const msg = `⚠️ Lyrie Shield redacted MCP ${block.type === "resource" ? "resource" : "output"} from ${qualifiedName}: ${verdict.reason ?? "unsafe content"}`;
+        if (this.mode === "block" && verdict.severity === "critical") {
+          throw new Error(msg);
+        }
+        filtered.push({ type: "text", text: msg });
+        continue;
+      }
+
+      // Layer 2: Rust AgenticThreatDetector bridge — broader pattern set.
+      if (this.agenticBridge.isAvailable()) {
+        const finding = await this.agenticBridge.scanForPromptInjection(text);
+        if (finding) {
+          const msg = `⚠️ Lyrie Shield redacted MCP ${block.type === "resource" ? "resource" : "output"} from ${qualifiedName}: ${finding.description}`;
+          if (this.mode === "block" && finding.severity === "critical") {
+            throw new Error(msg);
+          }
+          filtered.push({ type: "text", text: msg });
+          continue;
         }
       }
-      if (block?.type === "resource" && typeof block?.resource?.text === "string") {
-        const verdict = this.shield.scanRecalled(block.resource.text);
-        if (verdict.blocked) {
-          return {
-            type: "text",
-            text: `⚠️ Lyrie Shield redacted MCP resource from ${qualifiedName}: ${verdict.reason ?? "unsafe content"}`,
-          };
-        }
-      }
-      return block;
-    });
+
+      filtered.push(block);
+    }
+
     return { ...result, content: filtered };
   }
 
