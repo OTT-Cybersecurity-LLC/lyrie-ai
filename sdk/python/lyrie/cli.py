@@ -20,6 +20,7 @@ from lyrie import (
     scan_files,
 )
 from lyrie.threat_intel import ThreatIntelClient
+from lyrie.atp_bridge import AtpBridgeError, AtpBridgeUnavailable, get_status, verify_file
 
 
 def _print_header(title: str) -> None:
@@ -118,6 +119,54 @@ def _validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _atp_verify(args: argparse.Namespace) -> int:
+    try:
+        result = verify_file(args.file)
+    except (AtpBridgeUnavailable, AtpBridgeError) as exc:
+        if args.json:
+            print(json.dumps({"kind": None, "valid": False, "code": "ATP_BRIDGE_ERROR", "reason": str(exc)}, indent=2))
+        else:
+            print(f"\u2717 {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result.__dict__, indent=2))
+        return 0 if result.valid else 1
+    _print_header("Lyrie ATP verify")
+    print(f"  file: {args.file}")
+    print(f"  kind: {result.kind or '(unknown)'}")
+    if result.valid:
+        print("  \u2705 VALID")
+    else:
+        print("  \u274c INVALID")
+        print(f"  code:   {result.code or '(none)'}")
+        print(f"  reason: {result.reason or '(none)'}")
+    print()
+    return 0 if result.valid else 1
+
+
+def _atp_status(args: argparse.Namespace) -> int:
+    try:
+        result = get_status(args.file)
+    except (AtpBridgeUnavailable, AtpBridgeError) as exc:
+        if args.json:
+            print(json.dumps({"kind": None, "valid": False, "code": "ATP_BRIDGE_ERROR", "reason": str(exc)}, indent=2))
+        else:
+            print(f"\u2717 {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result.__dict__, indent=2))
+        return 0
+    _print_header("Lyrie ATP status")
+    print(f"  file:  {args.file}")
+    print(f"  kind:  {result.kind or '(unknown)'}")
+    print(f"  valid: {result.valid}")
+    if not result.valid:
+        print(f"  code:   {result.code or '(none)'}")
+        print(f"  reason: {result.reason or '(none)'}")
+    print()
+    return 0
+
+
 def _intel(args: argparse.Namespace) -> int:
     client = ThreatIntelClient(offline=args.offline)
     ads = client.get_advisories()
@@ -175,6 +224,23 @@ def main(argv: list[str] | None = None) -> int:
     p_intel.add_argument("--offline", action="store_true")
     p_intel.add_argument("--json", action="store_true")
     p_intel.set_defaults(func=_intel)
+
+    p_atp = sub.add_parser("atp", help="Agent Trust Protocol (ATP) artifact verification")
+    atp_sub = p_atp.add_subparsers(dest="atp_cmd", required=True)
+
+    p_atp_verify = atp_sub.add_parser(
+        "verify", help="Verify an ATP artifact JSON file (exit 1 if invalid)"
+    )
+    p_atp_verify.add_argument("file", help="Path to an ATP artifact JSON file")
+    p_atp_verify.add_argument("--json", action="store_true")
+    p_atp_verify.set_defaults(func=_atp_verify)
+
+    p_atp_status = atp_sub.add_parser(
+        "status", help="Check an ATP artifact's status (always exits 0)"
+    )
+    p_atp_status.add_argument("file", help="Path to an ATP artifact JSON file")
+    p_atp_status.add_argument("--json", action="store_true")
+    p_atp_status.set_defaults(func=_atp_status)
 
     args = parser.parse_args(argv)
     return args.func(args)

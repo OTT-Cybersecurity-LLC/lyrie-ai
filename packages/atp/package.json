@@ -6,9 +6,12 @@
   "license": "MIT",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "bin": {
+    "lyrie-atp": "src/cli.ts"
+  },
   "scripts": {
     "test": "bun test",
-    "build": "bun build src/index.ts --outdir dist --target node"
+    "build": "bun build src/index.ts --outdir dist --target node && bun build src/cli.ts --outdir dist --target node"
   },
   "keywords": [
     "atp",
