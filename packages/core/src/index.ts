@@ -290,6 +290,28 @@ export type {
   DaemonTickResult,
   AdapterFinding,
 } from "./engine/daemon";
+
+// Continuous exposure monitoring (`lyrie watch <domain>`)
+export {
+  probeDomain,
+  realTlsInspector,
+  diffPostureSnapshots,
+  loadLastSnapshot,
+  saveSnapshot,
+  snapshotPath,
+  watchDir,
+  WatchEngine,
+  WATCHED_HEADERS,
+  COMMON_EXPOSED_PATHS,
+} from "./watch";
+export type {
+  WatchEngineConfig,
+  PostureSnapshot,
+  ProbeOptions,
+  ExposedPathResult,
+  TlsInfo,
+  WatchedHeader,
+} from "./watch";
 export {
   ensureFtsIndex,
   searchAcrossSessions,
