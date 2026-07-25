@@ -21,6 +21,13 @@ export type {
   Transport,
 } from "./types";
 
+// ─── Standalone Shield middleware ────────────────────────────────────────────
+// For MCP clients that don't want the full McpRegistry/daemon stack — wrap
+// your own tool-call handler with `createShieldGuard()` in ~2 lines. See
+// shield-middleware.ts for a usage example.
+export { createShieldGuard, runShieldFilter } from "./shield-middleware";
+export type { ShieldGuardOptions, ShieldGuardFn, RunShieldFilterInput } from "./shield-middleware";
+
 const isDirectRun =
   typeof Bun !== "undefined"
     ? Bun.main === import.meta.path
