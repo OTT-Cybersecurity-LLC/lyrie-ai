@@ -34,6 +34,20 @@ export type { ThreatScanResult, ToolCallValidation } from "./engine/shield-manag
 export { ShieldGuard, FallbackShieldGuard } from "./engine/shield-guard";
 export type { ShieldGuardLike, ShieldVerdict } from "./engine/shield-guard";
 
+// Agentic Threat Bridge — TS client for the Rust AgenticThreatDetector
+// (packages/shield). Used by DaemonEngine and the MCP shield filter to
+// run broader Rust-side pattern detection (self-propagation write paths,
+// base64/unicode-confusable prompt injection) beyond ShieldGuard's JS heuristics.
+export { AgenticThreatBridge } from "./engine/agentic-threat-bridge";
+export type {
+  AgenticThreatBridgeOptions,
+  AgenticBridgeResponse,
+  AgenticFinding,
+  AttackPhase,
+  BehavioralEvent,
+  AttackCompressionSignature,
+} from "./engine/agentic-threat-bridge";
+
 // Lyrie Pentest — attack-surface mapper (`/understand`)
 export { buildAttackSurface, MAPPER_VERSION as ATTACK_SURFACE_MAPPER_VERSION } from "./pentest/attack-surface";
 

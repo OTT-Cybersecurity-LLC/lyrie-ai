@@ -20,6 +20,7 @@
 
 use crate::{Severity, ThreatReport};
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -28,7 +29,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 // ──────────────────────────────────────────────
 
 /// The phases of a cyber attack lifecycle.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AttackPhase {
     /// DNS lookups, port scans, OSINT queries, credential enumeration.
     Recon,
@@ -78,7 +79,7 @@ impl AttackPhase {
 }
 
 /// A single observed behavioral event fed into the detector.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BehavioralEvent {
     /// Unix timestamp in milliseconds.
     pub timestamp_ms: u64,
@@ -91,7 +92,7 @@ pub struct BehavioralEvent {
 }
 
 /// The result of an attack compression analysis.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AttackCompressionSignature {
     /// Ordered list of distinct phases observed in the window.
     pub phases_observed: Vec<AttackPhase>,

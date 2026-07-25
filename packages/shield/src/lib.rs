@@ -20,6 +20,7 @@ pub mod behavioral;
 pub mod malware;
 pub mod rogue_ai;
 pub mod agentic_threat;
+pub mod bridge;
 
 // Re-export scanner's public types so consumers can use `lyrie_shield::SignatureMatch` etc.
 pub use scanner::{SignatureMatch, HeuristicFlag, LyrieRule, RuleCondition};
@@ -27,6 +28,9 @@ pub use scanner::{scan_file_hash, scan_heuristic, apply_rule, apply_rules, built
 
 // Re-export agentic threat types
 pub use agentic_threat::{AgenticThreatDetector, AttackPhase, AttackCompressionSignature, BehavioralEvent};
+
+// Re-export the JSON stdin/stdout bridge used by the TS daemon/MCP integration
+pub use bridge::{run_bridge_request, AgenticBridgeRequest, AgenticBridgeResponse};
 
 use serde::{Deserialize, Serialize};
 
