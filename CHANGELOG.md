@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.1] - 2026-07-25
+
+### Fixed
+- **`MemoryCore.recall()` ignored `importance` on its primary (vector-similarity) ranking path.** `recall()` has two ranking strategies: a primary cosine-similarity path (via `tokenize`/`skill-extractor`) and a keyword fallback (`scoreResult()`) used only if the vector import throws. Only the fallback weighted results by `importance` (critical/high/medium/low) — the primary path, which runs on every normal call, ignored it entirely. A `critical` memory and a `low` memory with equal semantic similarity to a query would rank arbitrarily instead of the critical one winning, silently defeating the purpose of the `importance` field in real usage. Fixed by blending an importance bonus into the vector path's sort key (critical +0.4, high +0.2, medium +0.1, low +0); the relevance floor (`sim >= threshold`) is untouched, so importance only reorders among already-relevant results, never forces an irrelevant one through.
+- Stale test in `skill-manager.test.ts`: `"execute returns an error when no executor is registered"` asserted against the `device-protect` skill, which has had a real registered executor since `builtin-executors.ts` was added — the test predated that and was silently exercising the wrong path. Updated to register a fresh executor-less skill so the no-executor error path is actually covered again.
+
+### Verified
+- `packages/core`: 1558/1558 tests passing (was 1556/1558 before this fix).
+- Full monorepo (`atp`+`core`+`gateway`+`mcp`+`ui`): **1894/1894 tests passing, 0 failures.**
+- `sdk/python`: 123/123 tests passing.
+
+### Breaking Changes
+None — fully backward compatible with v3.2.0.
+
+### Migration
+No migration required. Update via `npm install @lyrie/core@3.2.1` / `pip install lyrie-agent==0.4.1` or pull from source.
+
+---
+
 ## [3.2.0] - 2026-07-25
 
 ### Added
