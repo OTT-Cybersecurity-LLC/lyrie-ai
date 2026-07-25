@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.0] - 2026-07-25
+
+### Added
+- **ATP CLI verify/status** — offline command-line verification for any ATP artifact (AIC, receipt, scope, trust-chain, attestation). TypeScript: `lyrie-atp verify <file>` / `lyrie-atp status <file>` via a new `bin` entry in `@lyrie/atp` (`packages/atp/src/cli.ts`), using the existing `detectArtifactKind()` + `verifyArtifact()`. Python: `lyrie atp verify <file>` / `lyrie atp status <file>` subcommands in `sdk/python/lyrie/cli.py`, bridging to the TS verifier via a documented JSON stdin/stdout call rather than reimplementing Ed25519 crypto in Python. Works fully offline, no server required.
+- **Standalone importable MCP Shield middleware** (`createShieldGuard`) — `packages/mcp/src/shield-middleware.ts`, exported from `@lyrie/mcp`. Lets any Node/Bun MCP client wrap their own tool-call handler with Lyrie's prompt-injection/credential/self-propagation filtering in ~2 lines, without adopting the full `McpRegistry`/daemon stack. Reuses the existing `shield.ts` detection logic — no duplicated rules, no behavioral divergence from the `McpRegistry`-integrated path.
+- **Trust score for `lyrie hack`** — deterministic 0-100 aggregate score computed from `HackReport` findings, with a transparent per-severity `TrustScoreBreakdown` (no black-box number). New `--trust-score` CLI flag. Same findings always produce the same score.
+- **OAST module test coverage** — `packages/core/src/pentest/oast/server.test.ts` (35 tests), the module's first test coverage since it was added in v3.1.0.
+
+### Fixed
+- OAST server: `start()` only attached a one-shot `error` listener during the initial `listen()` call; any async server error afterward (e.g. `EMFILE`) would have been an unhandled `error` event on an `EventEmitter` with zero listeners, which Node re-throws as an uncaught exception capable of crashing the whole pentest process. Added a permanent post-startup handler.
+- OAST `generateSqliOobPayloads()`: the MySQL `LOAD_FILE` payload interpolated the DNS hostname unquoted inside a SQL `CONCAT()`, unlike every sibling payload in the same generator — produced syntactically invalid SQL. Fixed to quote consistently.
+- Dependabot: `sharp` bumped `0.34.5` → `0.35.3` (critical libvips CVEs). Added a Dependabot ignore rule for `tests/hack/fixtures/vulnerable-app` — an intentionally vulnerable test fixture used by the `lyrie hack` scanner's own integration test, which Dependabot was incorrectly flagging for updates that would break the test's purpose.
+
+### Documented (audit, no code risk)
+- OAST module completeness audit (see header comment in `packages/core/src/pentest/oast/server.ts`): no DNS-OOB listener exists today (HTTP callback confirmation only — closing this needs either a delegated DNS zone + public IP or a third-party DNS-OOB provider, both new infra out of scope); token/callback state isn't pruned except on `stop()` (non-issue for the current one-shot-server call pattern, flagged for any future long-lived-server use); module is fully built and tested but not yet wired into `HackOrchestrator`'s finding-confirmation flow.
+
+### Breaking Changes
+None — fully backward compatible with v3.1.0.
+
+### Migration
+No migration required. Update via `npm install @lyrie/core@3.2.0` / `pip install lyrie-agent==0.4.0` or pull from source.
+
+---
+
 ## [3.1.0] - 2026-05-13
 
 ### Added
