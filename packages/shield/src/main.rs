@@ -8,15 +8,25 @@
 //!   lyrie-shield url <url>          Check if a URL is safe
 
 use lyrie_shield::{
-    scan_file_hash, scan_heuristic, apply_rules, builtin_rules, LyrieShield,
+    scan_file_hash, scan_heuristic, apply_rules, builtin_rules, run_bridge_request,
+    AgenticBridgeRequest, LyrieShield,
 };
+use std::io::Read;
 use std::path::Path;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
-    println!("🛡️  Lyrie Shield v1.0.0 GA — by OTT Cybersecurity LLC");
-    println!();
+    // The `agentic-bridge` subcommand is machine-consumed (JSON on stdout via
+    // a TS subprocess bridge) — keep stdout pure JSON; the banner still goes
+    // to stderr so humans piping this interactively still see it.
+    let is_bridge = args.get(1).map(|s| s.as_str()) == Some("agentic-bridge");
+    if is_bridge {
+        eprintln!("🛡️  Lyrie Shield v1.0.0 GA — by OTT Cybersecurity LLC");
+    } else {
+        println!("🛡️  Lyrie Shield v1.0.0 GA — by OTT Cybersecurity LLC");
+        println!();
+    }
 
     if args.len() < 2 {
         print_usage();
@@ -49,7 +59,40 @@ fn main() {
             println!("  Malware:    ✅ Ready");
             println!("  Rogue AI:   ✅ Ready");
         }
+        "agentic-bridge" => {
+            run_agentic_bridge();
+        }
         _ => print_usage(),
+    }
+}
+
+/// JSON stdin/stdout bridge for `AgenticThreatDetector` — consumed by the
+/// TS daemon (`packages/core/src/engine/agentic-threat-bridge.ts`) and the
+/// MCP shield filter. Reads one JSON request object from stdin, writes one
+/// JSON response object to stdout. Stateless per-process: the caller
+/// resends the full sliding-window event history on every invocation.
+fn run_agentic_bridge() {
+    let mut input = String::new();
+    if let Err(e) = std::io::stdin().read_to_string(&mut input) {
+        eprintln!("agentic-bridge: failed to read stdin: {}", e);
+        std::process::exit(1);
+    }
+
+    let req: AgenticBridgeRequest = match serde_json::from_str(&input) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("agentic-bridge: invalid JSON request: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let resp = run_bridge_request(req);
+    match serde_json::to_string(&resp) {
+        Ok(json) => println!("{}", json),
+        Err(e) => {
+            eprintln!("agentic-bridge: failed to serialize response: {}", e);
+            std::process::exit(1);
+        }
     }
 }
 
@@ -128,9 +171,10 @@ fn scan_and_report(path_str: &str, shield: &LyrieShield) {
 
 fn print_usage() {
     println!("Usage:");
-    println!("  lyrie-shield scan <file>     Full scan (hash + heuristics + LyrieRules)");
-    println!("  lyrie-shield url <url>       Check if a URL is safe");
-    println!("  lyrie-shield watch <dir>     Monitor directory in real-time");
-    println!("  lyrie-shield waf <port>      Start WAF proxy");
-    println!("  lyrie-shield status          Show shield status");
+    println!("  lyrie-shield scan <file>       Full scan (hash + heuristics + LyrieRules)");
+    println!("  lyrie-shield url <url>         Check if a URL is safe");
+    println!("  lyrie-shield watch <dir>       Monitor directory in real-time");
+    println!("  lyrie-shield waf <port>        Start WAF proxy");
+    println!("  lyrie-shield status            Show shield status");
+    println!("  lyrie-shield agentic-bridge    Read JSON request from stdin, write JSON verdict to stdout");
 }

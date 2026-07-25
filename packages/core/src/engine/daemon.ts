@@ -53,6 +53,8 @@ export interface TickResult {
   notes?: string;
 }
 
+import { AgenticThreatBridge, type BehavioralEvent } from "./agentic-threat-bridge";
+
 export const LYRIE_TICK_PROMPT = `# Tick Mode
 
 You are running autonomously. You will receive periodic <tick> prompts as check-ins.
@@ -220,6 +222,16 @@ export class DaemonEngine {
     action: [],
   };
 
+  /**
+   * Bridge to the Rust `AgenticThreatDetector` (packages/shield). Feeds
+   * observed tool-call/command events into its sliding window and
+   * surfaces `AttackCompressionSignature` / prompt-injection findings as
+   * `AdapterFinding[]` on each tick when `config.threatWatch` is true.
+   * Public so callers (tool executor, MCP registry) can push real
+   * command telemetry via `recordAgentCommand()`.
+   */
+  private _agenticBridge: AgenticThreatBridge = new AgenticThreatBridge();
+
   /** The tick prompt used when calling the LLM for contextual analysis. */
   tickPrompt: string = DAEMON_TICK_PROMPT;
 
@@ -250,6 +262,23 @@ export class DaemonEngine {
 
   /** Number of ticks fired since the last start() call. */
   ticksFired(): number { return this._tickCount; }
+
+  // ─── Agentic threat telemetry ingestion ────────────────────────────────────
+
+  /**
+   * Feed an observed tool-call/command into the agentic-threat detector's
+   * sliding window. Call this from the tool executor / MCP registry as
+   * commands are actually run so `_checkAgenticThreats` has real signal
+   * to analyse on the next tick.
+   */
+  recordAgentCommand(command: string, toolFingerprint?: string): void {
+    this._agenticBridge.ingestCommand(command, toolFingerprint);
+  }
+
+  /** True if the Rust agentic-threat-detector bridge binary was found. */
+  agenticBridgeAvailable(): boolean {
+    return this._agenticBridge.isAvailable();
+  }
 
   // ─── Core: single tick ─────────────────────────────────────────────────────
 
@@ -303,6 +332,21 @@ export class DaemonEngine {
           severity: "low",
           description: String(err),
           source: "threat-intel",
+          timestamp: Date.now(),
+        });
+      }
+
+      // ── 2b. Agentic threat detection (Rust AgenticThreatDetector bridge) ──
+      try {
+        const agenticFindings = await this._checkAgenticThreats(config);
+        findings.push(...agenticFindings);
+      } catch (err) {
+        findings.push({
+          id: `agentic-err-${Date.now()}`,
+          title: "Agentic threat detector unavailable",
+          severity: "low",
+          description: String(err),
+          source: "agentic-threat",
           timestamp: Date.now(),
         });
       }
@@ -419,6 +463,63 @@ export class DaemonEngine {
     // Default: empty (no real feed wired — avoids network calls in tests).
     // Real implementation: fetch NVD/OSV/GitHub Advisory feed, parse, cross-ref.
     return [];
+  }
+
+  /**
+   * Run the sliding-window agentic-threat detector (Rust bridge) against
+   * commands recorded via `recordAgentCommand()` since the last eviction,
+   * and return any compression/prompt-injection findings as
+   * `AdapterFinding[]`. Returns `[]` when the bridge binary isn't
+   * available (fail-open — Shield not built on this host) or when the
+   * window contains no actionable signal.
+   *
+   * Overridable in tests/subclasses like the other _check* methods.
+   */
+  protected async _checkAgenticThreats(_config: DaemonEngineConfig): Promise<AdapterFinding[]> {
+    if (!this._agenticBridge.isAvailable()) return [];
+
+    const resp = await this._agenticBridge.run();
+    if (!resp) return [];
+
+    const findings: AdapterFinding[] = [];
+    const sig = resp.compression;
+
+    if (sig.threat_level !== "None") {
+      findings.push({
+        id: `agentic-compression-${Date.now()}`,
+        title: `Agentic attack compression detected (channel ${sig.channel})`,
+        severity: severityFromRust(sig.threat_level),
+        description: `phases=[${sig.phases_observed.join("→")}] compression=${sig.compression_ratio.toFixed(2)}/min ttp_entropy=${sig.ttp_entropy.toFixed(2)} confidence=${sig.confidence.toFixed(2)}`,
+        source: "agentic-threat",
+        timestamp: Date.now(),
+        metadata: { channel: sig.channel, phases: sig.phases_observed },
+      });
+    }
+
+    if (resp.prompt_injection) {
+      findings.push({
+        id: `agentic-prompt-injection-${Date.now()}`,
+        title: "Prompt injection detected in agent telemetry",
+        severity: resp.prompt_injection.severity,
+        description: resp.prompt_injection.description,
+        source: "agentic-threat",
+        timestamp: Date.now(),
+        metadata: { threatType: resp.prompt_injection.threat_type },
+      });
+    }
+
+    return findings;
+  }
+}
+
+/** Maps the Rust `Severity` enum's string form to the daemon's finding severity. */
+function severityFromRust(level: "None" | "Low" | "Medium" | "High" | "Critical"): AdapterFinding["severity"] {
+  switch (level) {
+    case "Critical": return "critical";
+    case "High": return "high";
+    case "Medium": return "medium";
+    case "Low": return "low";
+    default: return "info";
   }
 }
 
