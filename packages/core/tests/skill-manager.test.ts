@@ -145,7 +145,16 @@ describe("SkillManager", () => {
   });
 
   it("execute returns an error when no executor is registered", async () => {
-    const result = await skills.execute("device-protect", {});
+    // NOTE: device-protect now HAS a real built-in executor (see
+    // builtin-executors.ts registerBuiltinExecutors()), so it can no longer
+    // be used to exercise the "no executor" path -- this test previously
+    // relied on that being unregistered and went stale when the executor
+    // was added. Register a fresh skill with no executor instead to keep
+    // testing the real no-executor error path.
+    const bare = makeBuilt("unregistered-skill", ["nonexistent trigger phrase"]);
+    skills.register(bare);
+
+    const result = await skills.execute("unregistered-skill", {});
     expect(result.success).toBe(false);
     expect(result.error).toContain("No executor registered");
   });

@@ -612,16 +612,22 @@ export class MemoryCore {
     const rows = this.db.query(sql).all(...params) as any[];
     const decrypted = rows.map((r) => ({ ...r, content: this.decryptMaybe(r.content) }));
 
-    // Vector recall path: compute cosine similarity between query and each row.
+    // Vector recall path: compute cosine similarity between query and each row,
+    // blended with an importance weight so critical/high entries outrank
+    // low/medium entries of comparable semantic similarity (matches the
+    // fallback keyword path's scoreResult() behavior below — importance
+    // must influence ranking on BOTH paths, not just the fallback).
     try {
       const { tokenize, cosineSimilarity } = await import("../evolve/skill-extractor");
+      const importanceWeight: Record<string, number> = { critical: 0.4, high: 0.2, medium: 0.1, low: 0 };
       const queryVec = tokenize(query);
       const scored = decrypted.map((r) => {
         const docVec = tokenize(`${r.key} ${r.content} ${r.tags || ""}`);
         const sim = cosineSimilarity(queryVec, docVec);
-        return { row: r, sim };
+        const blended = sim + (importanceWeight[r.importance] ?? 0);
+        return { row: r, sim, blended };
       });
-      scored.sort((a, b) => b.sim - a.sim);
+      scored.sort((a, b) => b.blended - a.blended);
       const threshold = 0.05;
       return scored
         .filter((s) => s.sim >= threshold)
