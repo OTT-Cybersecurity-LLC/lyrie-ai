@@ -39,6 +39,18 @@ export interface RemediationSuggestion {
   /** Confidence the suggestion fits the finding (0-1). */
   confidence: number;
   signature: "Lyrie.ai by OTT Cybersecurity LLC";
+  /**
+   * True only for mechanical, low-risk fixes safe to propose as a real
+   * generated diff/PR without human authorship of the fix itself — e.g. a
+   * missing security header added to a known config file, or a pinned
+   * dependency bumped to a known-good version. `suggestRemediation()`'s
+   * per-class functions in THIS file (SQLi/XSS/SSRF/etc) intentionally
+   * leave this `false`/`undefined`: those require understanding the
+   * surrounding application logic, which is exactly the "arbitrary
+   * application logic" case the auto-PR generator (see
+   * `../remediation-pr/generate.ts`) must not touch.
+   */
+  autoFixable?: boolean;
 }
 
 export const AUTO_REMEDIATION_VERSION = "lyrie-remediation-1.0.0";

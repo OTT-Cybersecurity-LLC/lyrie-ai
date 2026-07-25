@@ -312,6 +312,29 @@ export type {
   TlsInfo,
   WatchedHeader,
 } from "./watch";
+
+// SARIF-driven auto-remediation PRs (mechanical fixes only)
+export {
+  generateRemediationPr,
+  generateHeaderFix,
+  generateDependencyFix,
+  openRemediationPr,
+  realCommandRunner,
+} from "./remediation-pr";
+export type {
+  GenerateRemediationPrOptions,
+  GenerateRemediationPrResult,
+  CommandRunner,
+  OpenPrOptions,
+  OpenPrResult,
+  MechanicalFinding,
+  MissingHeaderFinding,
+  DependencyFixFinding,
+  MechanicalFindingKind,
+  GeneratedDiff,
+  MechanicalFixResult,
+  MechanicalFixSkipped,
+} from "./remediation-pr";
 export {
   ensureFtsIndex,
   searchAcrossSessions,
