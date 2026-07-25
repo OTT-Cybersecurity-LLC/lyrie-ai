@@ -53,17 +53,20 @@ jobs:
             if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
               echo "::notice::${NAME}@${VERSION} already published, skipping."
             else
-              if npm publish --provenance --access public 2>&1; then
+              PUBLISH_OUTPUT=$(npm publish --provenance --access public 2>&1)
+              PUBLISH_STATUS=$?
+              echo "$PUBLISH_OUTPUT"
+              if [ $PUBLISH_STATUS -eq 0 ]; then
                 echo "::notice::Published ${NAME}@${VERSION} successfully."
-              else
-                EXIT_CODE=$?
+              elif echo "$PUBLISH_OUTPUT" | grep -q 'E404'; then
                 # E404 on @lyrie scope = org not created yet — warn, don't fail the release
-                if npm publish --provenance --access public 2>&1 | grep -q 'E404'; then
-                  echo "::warning::${NAME}@${VERSION} — @lyrie npm org not yet created. Create org at npmjs.com then re-run."
-                else
-                  echo "::error::Failed to publish ${NAME}@${VERSION}"
-                  PUBLISH_FAILED=1
-                fi
+                echo "::warning::${NAME}@${VERSION} — @lyrie npm org not yet created. Create org at npmjs.com then re-run."
+              elif echo "$PUBLISH_OUTPUT" | grep -q 'You cannot publish over the previously published versions'; then
+                # Version already live on the registry (e.g. published outside this workflow) — not a real failure
+                echo "::notice::${NAME}@${VERSION} already live on npm registry, skipping."
+              else
+                echo "::error::Failed to publish ${NAME}@${VERSION}"
+                PUBLISH_FAILED=1
               fi
             fi
             popd > /dev/null
@@ -72,7 +75,45 @@ jobs:
             echo "::error::One or more npm packages failed to publish."
             exit 1
           fi
-          echo "::notice::npm publish step complete (org-missing warnings are non-blocking)."
+          echo "::notice::npm publish step complete (org-missing/already-published warnings are non-blocking)."
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install build tooling
+        run: python3 -m pip install --upgrade build twine
+      - name: Build sdist + wheel
+        working-directory: sdk/python
+        run: python3 -m build
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        working-directory: sdk/python
+        run: |
+          if [ -z "${TWINE_PASSWORD}" ]; then
+            echo "::warning::PYPI_API_TOKEN secret not set; skipping publish."
+            exit 0
+          fi
+          NAME=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])")
+          VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          if pip index versions "${NAME}" 2>/dev/null | grep -q "${VERSION}"; then
+            echo "::notice::${NAME}==${VERSION} already published on PyPI, skipping."
+          else
+            if python3 -m twine upload dist/* 2>&1 | tee /tmp/twine.log; then
+              echo "::notice::Published ${NAME}==${VERSION} to PyPI successfully."
+            elif grep -q 'File already exists' /tmp/twine.log; then
+              echo "::notice::${NAME}==${VERSION} already live on PyPI, skipping."
+            else
+              echo "::error::Failed to publish ${NAME}==${VERSION} to PyPI."
+              exit 1
+            fi
+          fi
 
   build-binaries:
     name: Build Binary (${{ matrix.os }} / ${{ matrix.target }})

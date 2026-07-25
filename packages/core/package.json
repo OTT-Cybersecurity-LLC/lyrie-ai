@@ -1,6 +1,6 @@
 {
   "name": "@lyrie/core",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "description": "Lyrie Agent Core — The brain",
   "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
   "repository": {
@@ -13,7 +13,7 @@
     "start": "bun run src/index.ts",
     "dev": "bun run --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target node",
-    "test": "bun test"
+    "test": "bun test --timeout=15000"
   },
   "dependencies": {
     "@noble/ciphers": "^2.2.0",

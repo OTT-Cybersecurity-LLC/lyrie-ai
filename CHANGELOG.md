@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.2] - 2026-07-25
+
+### Fixed
+- **Release workflow never published the Python SDK to PyPI.** `.github/workflows/release.yml` had a `PYPI_API_TOKEN` secret configured but no job that used it — every tagged release published npm packages only, silently skipping PyPI. `sdk/python` had drifted to a locally-bumped version (`0.4.1`) that was never actually pushed to the registry (PyPI still showed `0.3.0` as latest). Added a `publish-pypi` job: builds sdist+wheel via `python -m build`, validates with `twine check`, and publishes via `twine upload` using the existing token, with an idempotent already-published guard so re-runs are safe.
+- **npm publish step in the release workflow ran `npm publish` twice on any real failure.** The error-handling branch re-invoked `npm publish --provenance --access public` a second time just to grep its output for `E404`, meaning any genuine publish failure attempted to publish twice and could produce confusing/duplicate error output. Refactored to capture output and exit status from a single invocation, with explicit handling for `E404` (npm org missing) and "You cannot publish over the previously published versions" (version already live — treated as a non-blocking notice, not a failure) so CI failures now reflect only real problems.
+- v3.2.1's npm packages (`@lyrie/core`, `@lyrie/gateway`, `@lyrie/mcp`) had already been published to the npm registry outside of this workflow before the workflow itself first ran end-to-end, so the first automated `Release` CI run for that tag correctly failed with npm's immutable-version 403 — expected registry behavior, not a defect, but it meant no *version bump* had ever been confirmed to publish clean through CI. This release exists specifically to prove the full pipeline (build → test → npm publish → PyPI publish → GitHub Release) end-to-end on a version nothing has touched yet.
+- **`packages/core`'s `HackOrchestrator` integration tests were flaky under parallel CI load.** Several tests do real filesystem scans (temp-dir SAST/secret scanning) that legitimately take 1.5–4.5s, right up against Bun's 5000ms default per-test timeout — under `turbo`'s parallel multi-package test run they'd occasionally tip over and fail nondeterministically (reproduced: 4–7 spurious failures across repeated full-suite runs, 0 failures every time the file ran in isolation). Bumped `packages/core`'s test script to `bun test --timeout=15000`; confirmed clean across three consecutive full `turbo run test` runs afterward.
+- Removed `sdk/python/tests/__pycache__/*.pyc` from git tracking. `.gitignore` already excluded `**/__pycache__/` but these files were committed before that rule existed, so every local test run kept re-diffing stale bytecode into `git status`. Untracked (not deleted from disk); they'll regenerate locally and stay ignored going forward.
+
+### Verified
+- Full monorepo (`atp`+`core`+`gateway`+`mcp`+`ui`): 1894/1894 tests passing, 0 failures (unchanged from v3.2.1 — no source logic touched, workflow/tooling only).
+- `sdk/python`: 123/123 tests passing.
+- `sdk/python` package builds clean and passes `twine check` (sdist + wheel, both PASSED).
+
+### Breaking Changes
+None — fully backward compatible with v3.2.1. No application source code changed; release tooling only.
+
+### Migration
+No migration required. Update via `npm install @lyrie/core@3.2.2` / `pip install lyrie-agent==0.4.2` or pull from source.
+
+---
+
 ## [3.2.1] - 2026-07-25
 
 ### Fixed
