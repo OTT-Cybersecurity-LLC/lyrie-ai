@@ -16,6 +16,7 @@
     "test": "bun test --timeout=15000"
   },
   "dependencies": {
+    "@lyrie/atp": "workspace:*",
     "@noble/ciphers": "^2.2.0",
     "zod": "^3.23.0"
   }

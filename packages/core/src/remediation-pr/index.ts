@@ -18,3 +18,18 @@ export type {
   MechanicalFixResult,
   MechanicalFixSkipped,
 } from "./types";
+
+// ─── Self-healing: sandboxed re-validation + proof-of-fix ────────────────────
+export {
+  revalidateRemediation,
+  buildProofOfFixComment,
+  attachProofOfFix,
+  revalidateAndAttach,
+} from "./revalidate";
+export type {
+  RevalidationStatus,
+  RevalidationResult,
+  RevalidateRemediationOptions,
+  AttachProofOfFixOptions,
+  AttachProofOfFixResult,
+} from "./revalidate";

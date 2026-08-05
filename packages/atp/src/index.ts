@@ -111,3 +111,61 @@ export {
   isAuthorized,
 } from "./multisig";
 export type { MultiSigRequest } from "./multisig";
+
+// ─── Vaccine propagation (cross-agent signed rule push/pull) ────────────────
+export {
+  signVaccineRule,
+  verifyVaccineRule,
+  recordVaccineIngest,
+  newVaccineRuleId,
+  VaccineStore,
+  VaccinePublisher,
+  VaccineSubscriber,
+  VACCINE_VERSION,
+} from "./vaccine";
+export type {
+  VaccineRuleKind,
+  VaccineSeverity,
+  VaccineRuleBody,
+  SignedVaccineRule,
+  SignVaccineRuleInput,
+  VerifyVaccineRuleOptions,
+  RecordVaccineIngestInput,
+  VaccineTransport,
+  VaccineSubscriberHandler,
+  VaccineSubscriberOptions,
+  VaccineIngestResult,
+} from "./vaccine";
+
+// ─── Kill-switch (signed quarantine broadcast) ───────────────────────────────
+export {
+  signKillSwitchOrder,
+  verifyKillSwitchOrder,
+  recordKillSwitchEnforcement,
+  KillSwitchBroadcaster,
+  KillSwitchEnforcer,
+  KILL_SWITCH_VERSION,
+} from "./kill-switch";
+export type {
+  KillSwitchAction,
+  KillSwitchOrderBody,
+  SignedKillSwitchOrder,
+  SignKillSwitchOrderInput,
+  VerifyKillSwitchOrderOptions,
+  RecordKillSwitchEnforcementInput,
+  KillSwitchEnforcementHook,
+  KillSwitchEnforcerOptions,
+} from "./kill-switch";
+
+// ─── Zero-knowledge-style pentest attestation ────────────────────────────────
+export {
+  createTrustScoreAttestation,
+  verifyTrustScoreAttestation,
+  ZK_ATTESTATION_VERSION,
+} from "./zk-attestation";
+export type {
+  TrustScoreAttestation,
+  CreateTrustScoreAttestationInput,
+  VerifyTrustScoreAttestationOptions,
+  TrustScoreAttestationVerification,
+} from "./zk-attestation";

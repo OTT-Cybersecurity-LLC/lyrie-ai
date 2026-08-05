@@ -12,19 +12,23 @@
     },
     "packages/atp": {
       "name": "@lyrie/atp",
-      "version": "3.1.0",
+      "version": "3.2.2",
+      "bin": {
+        "lyrie-atp": "src/cli.ts",
+      },
     },
     "packages/core": {
       "name": "@lyrie/core",
-      "version": "3.1.0",
+      "version": "3.2.2",
       "dependencies": {
+        "@lyrie/atp": "workspace:*",
         "@noble/ciphers": "^2.2.0",
         "zod": "^3.23.0",
       },
     },
     "packages/gateway": {
       "name": "@lyrie/gateway",
-      "version": "3.1.0",
+      "version": "3.2.2",
       "dependencies": {
         "@lyrie/core": "workspace:*",
       },
@@ -35,7 +39,7 @@
     },
     "packages/mcp": {
       "name": "@lyrie/mcp",
-      "version": "3.1.0",
+      "version": "3.2.2",
       "dependencies": {
         "@lyrie/atp": "workspace:*",
         "@lyrie/core": "workspace:*",
@@ -47,7 +51,7 @@
     },
     "packages/ui": {
       "name": "@lyrie/ui",
-      "version": "3.1.0",
+      "version": "3.2.2",
       "dependencies": {
         "@lyrie/atp": "workspace:*",
         "clsx": "^2.1.1",
