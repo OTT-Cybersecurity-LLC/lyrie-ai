@@ -291,6 +291,53 @@ export type {
   AdapterFinding,
 } from "./engine/daemon";
 
+// Public Agentic-Attack-Compression live radar dashboard (Feature 3)
+export {
+  anonymizeSignal,
+  aggregateFeed,
+  CompressionSignalStore,
+  handleDashboardRequest,
+  createDashboardServer,
+  startDashboardServer,
+  renderRadarHtml,
+} from "./dashboard";
+export type {
+  AnonymizedSignal,
+  FeedAggregate,
+  FeedSnapshot,
+  CompressionStoreOptions,
+  DashboardServerOptions,
+  ThreatLevel as CompressionThreatLevel,
+  Band as CompressionBand,
+} from "./dashboard";
+
+// Living SBOM exploitability revalidation (Feature 5)
+export {
+  generateSbom,
+  toPurl,
+  canonicalJson,
+  sha256 as sbomSha256,
+  SbomStore,
+  SBOM_TOOL_VERSION,
+  revalidateSbom,
+  computeDeltas,
+  reattest,
+  runScheduledRevalidation,
+} from "./sbom";
+export type {
+  SbomManifest,
+  ManifestComponent,
+  SbomArtifact,
+  SbomComponent,
+  ComponentExploitability,
+  SbomExploitabilitySnapshot,
+  ExploitabilityDelta,
+  DeltaKind,
+  RevalidationReport as SbomRevalidationReport,
+  Reattestation,
+  ScheduledRevalidationResult,
+} from "./sbom";
+
 // Continuous exposure monitoring (`lyrie watch <domain>`)
 export {
   probeDomain,

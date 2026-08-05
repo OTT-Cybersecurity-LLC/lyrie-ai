@@ -54,6 +54,8 @@ export interface TickResult {
 }
 
 import { AgenticThreatBridge, type BehavioralEvent } from "./agentic-threat-bridge";
+import { anonymizeSignal } from "../dashboard/aggregate";
+import type { CompressionSignalStore } from "../dashboard/store";
 
 export const LYRIE_TICK_PROMPT = `# Tick Mode
 
@@ -232,8 +234,26 @@ export class DaemonEngine {
    */
   private _agenticBridge: AgenticThreatBridge = new AgenticThreatBridge();
 
+  /**
+   * Optional public-dashboard sink. When set, every agentic-attack-
+   * compression signature the detector emits is anonymized/aggregated (via
+   * `anonymizeSignal`) and published into this store for the public radar
+   * feed (Feature 3). No raw signal, host, tool, or finding detail is ever
+   * written — only the anonymized aggregate crosses this boundary.
+   */
+  private _compressionStore: CompressionSignalStore | null = null;
+
   /** The tick prompt used when calling the LLM for contextual analysis. */
   tickPrompt: string = DAEMON_TICK_PROMPT;
+
+  /**
+   * Attach (or detach with `null`) the public-dashboard compression store.
+   * When attached, `_checkAgenticThreats` publishes an anonymized aggregate
+   * for every non-"None" compression signature it observes.
+   */
+  setCompressionStore(store: CompressionSignalStore | null): void {
+    this._compressionStore = store;
+  }
 
   // ─── Event API ─────────────────────────────────────────────────────────────
 
@@ -485,6 +505,15 @@ export class DaemonEngine {
     const sig = resp.compression;
 
     if (sig.threat_level !== "None") {
+      // Publish an anonymized aggregate to the public dashboard feed (opt-in
+      // — only when a store has been attached via setCompressionStore()).
+      if (this._compressionStore) {
+        try {
+          this._compressionStore.publish(anonymizeSignal(sig));
+        } catch {
+          /* dashboard publish must never crash the tick loop */
+        }
+      }
       findings.push({
         id: `agentic-compression-${Date.now()}`,
         title: `Agentic attack compression detected (channel ${sig.channel})`,

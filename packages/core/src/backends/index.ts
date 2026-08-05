@@ -16,7 +16,8 @@ export {
   type LocalBackendConfig,
   type ModalBackendConfig,
 } from "./types";
-export { LocalBackend, emptySarif } from "./local";
+export { LocalBackend, emptySarif, sarifFromFindings, defaultLocalScanExecutor } from "./local";
+export type { LocalScanExecutor, LocalScanExecutorResult } from "./local";
 export { DaytonaBackend, extractSarifSummary, type FetchFn } from "./daytona";
 export { ModalBackend } from "./modal";
 export {
