@@ -23,11 +23,11 @@ export type { GCGConfig, GCGResult } from "./gcg";
 export { AutoDANStrategy } from "./autodan";
 export type { AutoDANConfig, AutoDANResult } from "./autodan";
 
-export { runCrescendo } from "./crescendo";
-export type { CrescendoConfig, CrescendoResult, CrescendoTurn } from "./crescendo";
+export { CrescendoStrategy, buildCrescendoFromVector } from "./crescendo";
+export type { CrescendoConfig, Message, AttackResult as CrescendoAttackResult } from "./crescendo";
 
-export { runTap } from "./tap";
-export type { TapConfig, TapResult, TapNode } from "./tap";
+export { TAPStrategy, generateAttackVariants, scoreBranch, makeTAPFromVector } from "./tap";
+export type { TAPConfig, TAPBranch, AttackResult as TAPAttackResult } from "./tap";
 
 export { runPair } from "./pair";
 export type { PairConfig, PairResult } from "./pair";
