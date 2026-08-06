@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { SarifViewer } from "@/sarif-viewer";
+import { SarifViewerElement as SarifViewer } from "@/sarif-viewer";
 
 // ---------------------------------------------------------------------------
 // Sample SARIF — realistic lyrie scan output

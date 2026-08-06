@@ -61,9 +61,9 @@
     "backend": "bun run scripts/backend.ts"
   },
   "devDependencies": {
+    "bun-types": "latest",
     "turbo": "^2.0.0",
-    "typescript": "^7.0.2",
-    "bun-types": "latest"
+    "typescript": "5.7.3"
   },
   "overrides": {
     "postcss": ">=8.5.14"
