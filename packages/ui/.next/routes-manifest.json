@@ -1,6 +1,7 @@
 {
   "version": 3,
   "pages404": true,
+  "appType": "app",
   "caseSensitive": false,
   "basePath": "",
   "redirects": [
@@ -8,11 +9,13 @@
       "source": "/:path+/",
       "destination": "/:path+",
       "internal": true,
+      "priority": true,
       "statusCode": 308,
       "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
     }
   ],
   "headers": [],
+  "onMatchHeaders": [],
   "rewrites": {
     "beforeFiles": [],
     "afterFiles": [],
@@ -27,6 +30,12 @@
       "namedRegex": "^/(?:/)?$"
     },
     {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
       "page": "/_not-found",
       "regex": "^/_not\\-found(?:/)?$",
       "routeKeys": {},
@@ -39,6 +48,12 @@
       "namedRegex": "^/agents(?:/)?$"
     },
     {
+      "page": "/evolve",
+      "regex": "^/evolve(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/evolve(?:/)?$"
+    },
+    {
       "page": "/memory",
       "regex": "^/memory(?:/)?$",
       "routeKeys": {},
@@ -49,6 +64,18 @@
       "regex": "^/overview(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/overview(?:/)?$"
+    },
+    {
+      "page": "/report",
+      "regex": "^/report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/report(?:/)?$"
+    },
+    {
+      "page": "/sarif-demo",
+      "regex": "^/sarif\\-demo(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sarif\\-demo(?:/)?$"
     },
     {
       "page": "/settings",
@@ -71,10 +98,11 @@
     "didPostponeHeader": "x-nextjs-postponed",
     "contentTypeHeader": "text/x-component",
     "suffix": ".rsc",
-    "prefetchSuffix": ".prefetch.rsc",
     "prefetchSegmentHeader": "next-router-segment-prefetch",
     "prefetchSegmentSuffix": ".segment.rsc",
-    "prefetchSegmentDirSuffix": ".segments"
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
   },
   "rewriteHeaders": {
     "pathHeader": "x-nextjs-rewritten-path",
