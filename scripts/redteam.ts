@@ -25,8 +25,8 @@ import { LyrieBlueTeam } from "../packages/core/src/aav/blue-team";
 import { AavReporter } from "../packages/core/src/aav/reporter";
 import type { OwaspLlmCategory, AttackSeverity, AttackPreset } from "../packages/core/src/aav/corpus/index";
 import { getPreset } from "../packages/core/src/aav/corpus/index";
-import { runCrescendo } from "../packages/core/src/aav/strategies/crescendo";
-import { runTap } from "../packages/core/src/aav/strategies/tap";
+import { CrescendoStrategy } from "../packages/core/src/aav/strategies/crescendo";
+import { TAPStrategy } from "../packages/core/src/aav/strategies/tap";
 import { runPair } from "../packages/core/src/aav/strategies/pair";
 
 type AavStrategy = "crescendo" | "tap" | "pair" | "gcg" | "autodan";
@@ -130,18 +130,11 @@ if (strategy === "crescendo" || strategy === "tap" || strategy === "pair") {
   let result: object;
 
   if (strategy === "crescendo") {
-    result = await runCrescendo(endpoint, {
-      maxTurns: 8,
-      style: "gradual",
-      targetBehavior,
-    }, apiKey);
+    const crescendo = new CrescendoStrategy();
+    result = await crescendo.attack(endpoint, model, targetBehavior, {}, undefined);
   } else if (strategy === "tap") {
-    result = await runTap(endpoint, {
-      maxDepth: 5,
-      branchingFactor: 3,
-      targetBehavior,
-      pruneThreshold: 0.3,
-    }, apiKey);
+    const tap = new TAPStrategy();
+    result = await tap.attack(endpoint, model, targetBehavior, "self", {}, undefined, undefined);
   } else {
     result = await runPair(endpoint, {
       maxIterations: 20,
