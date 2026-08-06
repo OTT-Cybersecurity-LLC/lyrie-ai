@@ -38,7 +38,22 @@ export function realTlsInspector(domain: string, timeoutMs = 8000): Promise<TlsI
     };
 
     const socket: TLSSocket = connect(
-      { host: domain, port: 443, servername: domain, timeout: timeoutMs, rejectUnauthorized: false },
+      {
+        host: domain,
+        port: 443,
+        servername: domain,
+        timeout: timeoutMs,
+        // Intentional: this is a read-only certificate *inspector*, not a
+        // data channel. We must still complete the handshake against
+        // expired/self-signed/misconfigured certs so posture scans can
+        // report *why* a cert is bad (expiry, issuer, fingerprint) instead
+        // of just failing to connect. No request/response body ever
+        // traverses this socket — see fetchWithTimeout() below for the
+        // actual data-fetching path, which uses normal validated TLS via
+        // the injected `fetchFn`. Do not reuse this socket for anything
+        // beyond reading the peer certificate.
+        rejectUnauthorized: false,
+      },
       () => {
         try {
           const cert = socket.getPeerCertificate(false);

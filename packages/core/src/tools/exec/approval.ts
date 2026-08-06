@@ -38,7 +38,10 @@ export const DANGEROUS_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
 
 /**
  * Commands that require approval in elevated/root context only.
- * (Not currently enforced at the pattern level — reserved for future use.)
+ * Enforced directly in `assessRisk` below (checked alongside
+ * DANGEROUS_PATTERNS) — a `sudo`-prefixed dangerous primitive is at least
+ * as risky as its unprivileged form, so it must not fall through to the
+ * generic "moderate" bucket, which does not block execution.
  */
 export const ELEVATED_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /sudo\s+rm/, reason: "sudo rm" },
@@ -77,6 +80,15 @@ export function assessRisk(command: string): RiskAssessment {
     .trim();
 
   for (const { pattern, reason } of DANGEROUS_PATTERNS) {
+    if (pattern.test(normalised)) {
+      return { needsApproval: true, reason, risk: "dangerous" };
+    }
+  }
+
+  // Elevated (sudo-prefixed) dangerous primitives — checked before the
+  // generic moderate bucket so `sudo rm`/`sudo dd` etc. actually require
+  // approval instead of silently passing as risk="moderate".
+  for (const { pattern, reason } of ELEVATED_PATTERNS) {
     if (pattern.test(normalised)) {
       return { needsApproval: true, reason, risk: "dangerous" };
     }

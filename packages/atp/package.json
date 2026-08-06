@@ -1,7 +1,7 @@
 {
   "name": "@lyrie/atp",
-  "version": "3.3.0",
-  "description": "Agent Trust Protocol (ATP) — the cryptographic standard for AI agent identity, scope, and action verification. Reference implementation.",
+  "version": "3.4.0",
+  "description": "Agent Trust Protocol (ATP) \u2014 the cryptographic standard for AI agent identity, scope, and action verification. Reference implementation.",
   "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
   "license": "MIT",
   "main": "src/index.ts",

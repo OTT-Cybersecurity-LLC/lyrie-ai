@@ -159,13 +159,21 @@ export type {
 
 // ─── Zero-knowledge-style pentest attestation ────────────────────────────────
 export {
+  commitFindings,
+  verifyCommitment,
   createTrustScoreAttestation,
   verifyTrustScoreAttestation,
   ZK_ATTESTATION_VERSION,
 } from "./zk-attestation";
 export type {
   TrustScoreAttestation,
+  TrustScoreAttestationBody,
   CreateTrustScoreAttestationInput,
+  CreateTrustScoreAttestationResult,
   VerifyTrustScoreAttestationOptions,
   TrustScoreAttestationVerification,
 } from "./zk-attestation";
+
+// ─── Signed Findings (ATP chain of custody for arbitrary findings) ──────────
+export { signFinding, verifySignedFinding } from "./finding-attestation";
+export type { SignedFinding, SignFindingInput } from "./finding-attestation";

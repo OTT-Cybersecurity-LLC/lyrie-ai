@@ -62,6 +62,21 @@ export type { DefenseReport, DefenseGrade, CategoryScore, Remediation as BlueTea
 // Lyrie AAV — Reporter (SARIF, Markdown, JSON)
 export { AavReporter } from "./aav/reporter";
 
+// Lyrie AAV — Multi-Agent Red/Blue Adversarial Loop
+export {
+  runAdversarialLoop,
+  base64WrapMutation,
+  roleplayFramingMutation,
+  homoglyphMutation,
+  DEFAULT_MUTATION_STRATEGIES,
+} from "./aav/adversarial-loop";
+export type {
+  MutationStrategy,
+  AdversarialLoopOptions,
+  AdversarialRoundResult,
+  AdversarialLoopResult,
+} from "./aav/adversarial-loop";
+
 // Lyrie AAV — Attack Corpus
 export {
   ATTACK_CORPUS,

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lyrie-agent"
-version = "0.5.0"
+version = "0.6.0"
 description = "Lyrie Agent SDK — embed the Lyrie Shield, Attack-Surface Mapper, Stages A–F validator, and pentest scanners in any Python project. Lyrie.ai by OTT Cybersecurity LLC."
 readme = "README.md"
 requires-python = ">=3.10"

@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.4.0] - 2026-08-07
+
+Phase-4 “beyond-Strix” release: seven differentiators that a stateless, single-agent
+pentest runner (e.g. Strix) structurally cannot do, because they require memory
+across scans, cryptographic identity, or multi-round adversarial iteration. All
+additions are opt-in and backward-compatible.
+
+### Added
+
+- **Continuous Trust Ledger.** `packages/core/src/hack/trust-ledger.ts` — a
+  `bun:sqlite`-backed history of every `computeTrustScore()` result per target,
+  with `.history()`, `.latest()`, `.delta()`, and `.formatDeltaSummary()` for
+  human-readable score-over-time reporting (e.g. "Score improved 68 → 80
+  (+12) since last scan"). Turns every scan from a stateless snapshot into a
+  trend.
+- **Verified auto-remediation → trust ledger bridge.**
+  `packages/core/src/hack/remediation-ledger-bridge.ts` closes the loop between
+  the existing self-healing PR pipeline (`remediation-pr/generate.ts` +
+  `revalidate.ts`) and the new ledger: a fix only raises the recorded trust
+  score when `revalidateRemediation()` returns `status: "verified-fixed"` —
+  `still-vulnerable` and `inconclusive` outcomes are never recorded as an
+  improvement. This guarantee is enforced in code and covered by a dedicated
+  test, not just documented.
+- **Red/Blue adversarial loop with payload mutation.**
+  `packages/core/src/aav/adversarial-loop.ts` — iterates red-team → blue-team
+  → red-team-with-mutated-payload across N rounds and reports convergence,
+  distinguishing findings that were genuinely fixed from ones that only
+  blocked the exact original PoC. Three mutation strategies: base64-wrap,
+  roleplay/fictional-framing, and homoglyph substitution.
+- **Supply-chain reachability analysis.** `packages/core/src/hack/reachability.ts`
+  cross-references the existing dependency graph against caller-supplied
+  vulnerable-package data and determines whether a vulnerable package is
+  actually *reachable* via a real import in the scanned source tree (high/
+  medium/low confidence), not just present in a manifest. Includes a
+  dependency-free semver-range comparator (documented limitations: no `||`
+  OR-ranges, no `x`-wildcards).
+- **ATP-signed findings.** `packages/atp/src/finding-attestation.ts` —
+  Ed25519 chain-of-custody signing for individual pentest findings and whole
+  hack reports, built on the existing ATP `signCanonical`/`verifyCanonical`
+  primitives (`AgentIdentityCertificate`-bound signatures, tamper-evident).
+- **Live posture watch with drift-severity classification.**
+  `packages/core/src/watch/drift-severity.ts` + `watch/run-once.ts` +
+  `scripts/watch-once.ts` — a cron/CI-friendly single-tick entry point on top
+  of the existing continuous `WatchEngine`, aggregating a tick's diff findings
+  into one severity verdict (info/low/medium/high/critical) and exiting
+  non-zero on high/critical drift for alerting pipelines.
+- **Threshold Trust Attestation (ZK-style commit/reveal).**
+  `packages/core/src/hack/trust-attestation.ts` wires the existing
+  commitment-based threshold attestation (`packages/atp/src/zk-attestation.ts`
+  — explicitly *not* a SNARK/STARK zero-knowledge proof, named precisely as a
+  threshold/range-disclosure commitment scheme) into the trust-score pipeline:
+  `attestTrustThreshold()` signs a public "score ≥ threshold" claim without
+  revealing raw findings, and structurally refuses to sign a false claim when
+  the report doesn't actually clear the threshold.
+
+### Verification
+
+All additions build on and reuse existing, already-tested primitives
+(trust-score, remediation-pr, dependency-graph, ATP crypto, watch engine,
+zk-attestation) rather than duplicating them. Combined full-suite run across
+`packages/core` + `packages/atp` after integration: 1944 tests passing, 0
+failing, 6396 assertions, zero new typecheck errors.
+
+---
+
 ## [3.3.0] - 2026-08-06
 
 Phase-3 “immune system” release: the self-defense features that were staged in

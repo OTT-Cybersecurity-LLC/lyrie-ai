@@ -8,6 +8,10 @@ export { diffPostureSnapshots } from "./diff";
 export { loadLastSnapshot, saveSnapshot, snapshotPath, watchDir } from "./store";
 export { WatchEngine } from "./engine";
 export type { WatchEngineConfig } from "./engine";
+export { classifyDriftSeverity } from "./drift-severity";
+export type { DriftSeverityLevel, DriftSeverityResult } from "./drift-severity";
+export { runWatchTick } from "./run-once";
+export type { RunWatchTickOptions, RunWatchTickResult } from "./run-once";
 export type {
   PostureSnapshot,
   ProbeOptions,
