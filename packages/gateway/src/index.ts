@@ -21,6 +21,7 @@
 
 import type { GatewayConfig } from "./common/types";
 import { MessageRouter, type EngineInterface } from "./common/router";
+import type { MessageHandler } from "./common/types";
 import { TelegramBot } from "./telegram/bot";
 import { WhatsAppBot } from "./whatsapp/bot";
 import { DiscordBot } from "./discord/bot";
@@ -153,9 +154,11 @@ class StubEngine implements EngineInterface {
 
   async process(message: { role: string; content: string; source?: string }) {
     return {
-      role: "assistant" as const,
-      content: `🛡️ Lyrie received: "${message.content.substring(0, 100)}"\n\n_Engine not connected — running in gateway-only mode._`,
-      timestamp: Date.now(),
+      message: {
+        role: "assistant" as const,
+        content: `🛡️ Lyrie received: "${message.content.substring(0, 100)}"\n\n_Engine not connected — running in gateway-only mode._`,
+        timestamp: Date.now(),
+      },
     };
   }
 }
@@ -285,7 +288,7 @@ export class LyrieGateway {
     }
 
     // — v0.3.2 multi-channel expansion —
-    const tryStart = async <T extends { onMessage: (h: ReturnType<typeof this.router.handler>) => void; start: () => Promise<void>; type: never extends never ? string : never }>(
+    const tryStart = async <T extends { onMessage: (h: MessageHandler) => void; start: () => Promise<void>; type: never extends never ? string : never }>(
       label: string,
       cfg: { dmPolicy?: "open" | "pairing" | "closed"; allowedUsers?: string[]; allowedChats?: string[] } | undefined,
       enabled: boolean | undefined,

@@ -23,7 +23,6 @@ function mockRunner(
   handler: (task: string, options: SubagentOptions) => SubagentResult,
 ): SubagentRunner {
   const runner = new SubagentRunner();
-  // @ts-expect-error — intentional override for testing
   runner.run = async (task: string, options: SubagentOptions = {}) => handler(task, options);
   return runner;
 }
@@ -190,7 +189,6 @@ describe("SubagentRunner.runParallel", () => {
 
     const runner = new SubagentRunner();
     // Override run to simulate 50ms work per task
-    // @ts-expect-error
     runner.run = async (task: string) => {
       await delay(50);
       return { success: true, output: task, durationMs: 50, model: "stub" };
@@ -242,7 +240,6 @@ describe("SubagentRunner — timeout enforcement", () => {
     const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
     const runner = new SubagentRunner();
-    // @ts-expect-error
     runner.run = async (_task: string, opts: SubagentOptions = {}) => {
       const limit = (opts.timeoutSeconds ?? 300) * 1000;
       const result = await Promise.race<SubagentResult>([

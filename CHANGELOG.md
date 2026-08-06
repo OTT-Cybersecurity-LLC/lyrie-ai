@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.0] - 2026-08-06
+
+Phase-3 “immune system” release: the self-defense features that were staged in
+v3.2.2's foundation branch are now wired end-to-end. All additions are opt-in
+and backward-compatible — no existing call-site changes behavior unless it
+explicitly passes the new options.
+
+### Added
+
+- **(2) Self-healing exploit chains — loop closed.** `generateRemediationPr()`
+  (`packages/core/src/remediation-pr/generate.ts`) now accepts an opt-in
+  `revalidate` option. When supplied AND a PR is actually opened, it runs
+  `revalidateAndAttach()` against the *patched* working tree on a sandboxed
+  execution backend (or an injected focused `verify` callback) and posts a
+  proof-of-fix comment back to the PR via the existing injectable
+  `CommandRunner`. Omitting `revalidate` preserves prior behavior exactly.
+  The hard self-repo safety gate (never open a PR against lyrie-agent's own
+  tree) is untouched.
+- **(2) LocalBackend now runs a real scan.** `packages/core/src/backends/local.ts`
+  no longer just prepares env vars in non-dry-run mode — it dispatches through
+  an injectable `LocalScanExecutor` whose *real default*
+  (`defaultLocalScanExecutor`) invokes the Lyrie OSS-scan pipeline
+  (`runOssScan`) against the target tree in place, then maps confirmed
+  findings into `status` / `highestSeverity` / `findingCount` / SARIF. The
+  dry-run path is unchanged; the executor is injectable so tests never shell
+  out to the full pipeline. It is **not** a stub — `status` reflects real
+  findings vs the `failOn` floor, and executor errors surface as
+  `status: "error"`, never a false pass.
+- **(3) Agentic Attack Compression live dashboard (public).** New
+  `packages/core/src/dashboard/` module: an anonymization/aggregation pipeline
+  (`anonymizeSignal`/`aggregateFeed`) that strips all host/tool/finding
+  specifics and reduces each `AttackCompressionSignature` to coarse
+  channel/phase/threat-level/band buckets, an in-memory (optionally
+  file-backed) ring `CompressionSignalStore`, and a `node:http` server
+  (zero new deps) exposing `GET /api/compression/feed` (JSON) plus a
+  self-contained radar HTML page. `DaemonEngine._checkAgenticThreats` now
+  publishes anonymized aggregates into an attached store
+  (`setCompressionStore()`) — opt-in, and only for non-“None” signatures.
+- **(4) ATP behavioral vaccine.** `packages/atp/src/vaccine.ts` — inoculation
+  signatures + application against agent telemetry (landed on this branch,
+  now released).
+- **(5) Living SBOM exploitability revalidation.** New
+  `packages/core/src/sbom/` module: minimal CycloneDX-1.5-style SBOM
+  generation from a manifest (`generateSbom` + purls) with an in-memory/
+  file-backed `SbomStore`; a revalidation flow (`revalidateSbom`) that
+  re-checks each component's exploitability against the existing
+  threat-intel/OSV client + composite exploit scoring; delta detection
+  (`computeDeltas`: newly/no-longer-exploitable, severity change, add/remove);
+  and hash-based re-attestation (`reattest`). A scheduler *hook*
+  (`runScheduledRevalidation`) is provided for an external caller to invoke
+  on an interval — no real cron/timer is installed. This is what makes the
+  SBOM “living”: the previous snapshot is persisted and diffed each run.
+- **(6) Trust attestation (zero-knowledge-style).** `packages/atp/src/zk-attestation.ts`
+  — attestation/verification of trust posture (landed on this branch, now
+  released).
+- **(7) Kill-switch.** `packages/atp/src/kill-switch.ts` +
+  `packages/core/src/rogue-ai/kill-switch-integration.ts` — emergency
+  agent-halt path wired into the rogue-AI hooks (landed on this branch, now
+  released).
+
+### Verified
+- `packages/core`: **1627/1627 tests passing, 0 failures** (bun test).
+- `packages/atp`: 208/208 · `packages/gateway`: 74/74 · `packages/mcp`: 47/47 — all passing, 0 failures.
+- `packages/core` bundles clean via `bun build src/index.ts --target node` (155 modules).
+
+### Breaking Changes
+None — fully backward compatible with v3.2.2. Every new capability is opt-in
+(new optional options / new modules); default behavior of existing APIs is
+unchanged.
+
+### Migration
+No migration required. Update via `npm install @lyrie/core@3.3.0` /
+`pip install lyrie-agent==0.5.0` or pull from source. To use the new features:
+pass `revalidate` to `generateRemediationPr`, attach a `CompressionSignalStore`
+via `DaemonEngine.setCompressionStore()` and serve it with
+`startDashboardServer`, or drive `runScheduledRevalidation` from your own
+scheduler.
+
+---
+
 ## [3.2.2] - 2026-07-25
 
 ### Fixed

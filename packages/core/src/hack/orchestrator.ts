@@ -603,7 +603,6 @@ function selfScanReport(
  * © OTT Cybersecurity LLC — Released under MIT License.
  */
 
-import type { RawFinding } from "../pentest/stages-validator";
 import type { AdapterFinding, AdapterResult } from "../adapters/adapter-types";
 import { NucleiAdapter } from "../adapters/nuclei";
 import { TrivyAdapter } from "../adapters/trivy";
@@ -612,7 +611,6 @@ import { TruffleHogAdapter } from "../adapters/trufflehog";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
-export type HackMode = "quick" | "standard" | "deep" | "paranoid";
 export type AdapterSet = "all" | "none" | Set<string>;
 
 export interface HackOptions {

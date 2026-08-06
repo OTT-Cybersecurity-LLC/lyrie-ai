@@ -175,27 +175,92 @@ describe("LocalBackend", () => {
     expect(JSON.parse(result.sarif!).version).toBe("2.1.0");
   });
 
-  it("non-dryRun reports prepared env keys in provider details", async () => {
-    const b = new LocalBackend();
-    const result = await b.run(
-      req({ intelOffline: true, env: { CUSTOM: "v" }, diffBase: "origin/main" }),
-    );
-    const keys = (result.provider as { envKeysPrepared: string[] }).envKeysPrepared;
-    expect(keys).toContain("LYRIE_INTEL_OFFLINE");
-    expect(keys).toContain("LYRIE_DIFF_BASE");
-    expect(keys).toContain("CUSTOM");
+  it("non-dryRun runs the injected scan executor and maps findings", async () => {
+    // Injected executor returns one confirmed high finding + one unconfirmed.
+    const b = new LocalBackend({}, async () => ({
+      findings: [
+        {
+          finding: {
+            id: "f1",
+            title: "SQL injection",
+            severity: "high",
+            description: "...",
+            file: "src/db.ts",
+            line: 42,
+          },
+          confirmed: true,
+          stages: [],
+          confidence: 0.9,
+          exploitabilityScore: 77,
+          signature: "Lyrie.ai by OTT Cybersecurity LLC",
+        },
+        {
+          finding: { id: "f2", title: "maybe", severity: "critical", description: "" },
+          confirmed: false,
+          stages: [],
+          confidence: 0.1,
+          signature: "Lyrie.ai by OTT Cybersecurity LLC",
+        },
+      ] as any,
+      filesScanned: 12,
+    }));
+    const result = await b.run(req({ failOn: "high" }));
+    // Only the confirmed high finding counts.
+    expect(result.findingCount).toBe(1);
+    expect(result.highestSeverity).toBe("high");
+    // high >= failOn:high -> fail.
+    expect(result.status).toBe("fail");
+    const sarif = JSON.parse(result.sarif!);
+    expect(sarif.version).toBe("2.1.0");
+    expect(sarif.runs[0].results).toHaveLength(1);
+    expect(sarif.runs[0].results[0].ruleId).toBe("f1");
+  });
+
+  it("non-dryRun: 0 confirmed findings -> pass", async () => {
+    const b = new LocalBackend({}, async () => ({ findings: [], filesScanned: 3 }));
+    const result = await b.run(req({ failOn: "low" }));
+    expect(result.status).toBe("pass");
+    expect(result.findingCount).toBe(0);
+    expect(result.highestSeverity).toBe("none");
+  });
+
+  it("non-dryRun: findings below failOn floor -> pass", async () => {
+    const b = new LocalBackend({}, async () => ({
+      findings: [
+        {
+          finding: { id: "lo", title: "low", severity: "low", description: "" },
+          confirmed: true,
+          stages: [],
+          confidence: 0.8,
+          signature: "Lyrie.ai by OTT Cybersecurity LLC",
+        },
+      ] as any,
+      filesScanned: 1,
+    }));
+    const result = await b.run(req({ failOn: "high" }));
+    expect(result.status).toBe("pass");
+    expect(result.highestSeverity).toBe("low");
+  });
+
+  it("non-dryRun: executor throwing -> status error, not a false pass", async () => {
+    const b = new LocalBackend({}, async () => {
+      throw new Error("scan pipeline exploded");
+    });
+    const result = await b.run(req());
+    expect(result.status).toBe("error");
+    expect(result.error).toContain("scan pipeline exploded");
   });
 
   it("costUsd is 0 by default (no LYRIE_LOCAL_COST_PER_SECOND)", async () => {
     delete process.env["LYRIE_LOCAL_COST_PER_SECOND"];
-    const result = await new LocalBackend().run(req());
+    const result = await new LocalBackend({}, async () => ({ findings: [], filesScanned: 0 })).run(req());
     expect(result.costUsd).toBe(0);
   });
 
-  it("costUsd is non-zero when LYRIE_LOCAL_COST_PER_SECOND is set", async () => {
+  it("costUsd is non-zero-capable when LYRIE_LOCAL_COST_PER_SECOND is set", async () => {
     process.env["LYRIE_LOCAL_COST_PER_SECOND"] = "1.0";
-    const result = await new LocalBackend().run(req());
-    // durationMs ≥ 0, cost = duration/1000 * 1.0 ≥ 0
+    const result = await new LocalBackend({}, async () => ({ findings: [], filesScanned: 0 })).run(req());
+    // cost = duration/1000 * 1.0 ≥ 0
     expect(result.costUsd).toBeGreaterThanOrEqual(0);
     delete process.env["LYRIE_LOCAL_COST_PER_SECOND"];
   });

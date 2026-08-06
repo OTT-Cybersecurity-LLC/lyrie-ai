@@ -1,9 +1,13 @@
 {
+  "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
-  "/memory/page": "/memory",
-  "/page": "/",
-  "/settings/page": "/settings",
   "/agents/page": "/agents",
+  "/evolve/page": "/evolve",
+  "/memory/page": "/memory",
   "/overview/page": "/overview",
+  "/page": "/",
+  "/report/page": "/report",
+  "/sarif-demo/page": "/sarif-demo",
+  "/settings/page": "/settings",
   "/shield/page": "/shield"
 }

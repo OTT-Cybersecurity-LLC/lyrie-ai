@@ -1,9 +1,13 @@
 {
+  "/_global-error/page": "app/_global-error/page.js",
   "/_not-found/page": "app/_not-found/page.js",
-  "/memory/page": "app/memory/page.js",
-  "/page": "app/page.js",
-  "/settings/page": "app/settings/page.js",
   "/agents/page": "app/agents/page.js",
+  "/evolve/page": "app/evolve/page.js",
+  "/memory/page": "app/memory/page.js",
   "/overview/page": "app/overview/page.js",
+  "/page": "app/page.js",
+  "/report/page": "app/report/page.js",
+  "/sarif-demo/page": "app/sarif-demo/page.js",
+  "/settings/page": "app/settings/page.js",
   "/shield/page": "app/shield/page.js"
 }

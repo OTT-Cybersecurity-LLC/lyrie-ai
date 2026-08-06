@@ -154,8 +154,8 @@ function RuleGroup({ ruleId, findings, defaultOpen = false }: RuleGroupProps) {
       </button>
       {open && (
         <div className="bg-black/20">
-          {findings.map((f) => (
-            <FindingRow key={`${f.ruleId}-${f.index}`} finding={f} />
+          {findings.map((f, i) => (
+            <FindingRow key={`${f.ruleId}-${i}`} finding={f} />
           ))}
         </div>
       )}

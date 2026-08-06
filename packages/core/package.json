@@ -1,6 +1,6 @@
 {
   "name": "@lyrie/core",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "description": "Lyrie Agent Core — The brain",
   "author": "OTT Cybersecurity LLC <dev@lyrie.ai> (https://lyrie.ai)",
   "repository": {
@@ -16,6 +16,7 @@
     "test": "bun test --timeout=15000"
   },
   "dependencies": {
+    "@lyrie/atp": "workspace:*",
     "@noble/ciphers": "^2.2.0",
     "zod": "^3.23.0"
   }

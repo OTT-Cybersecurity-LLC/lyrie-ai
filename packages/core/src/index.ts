@@ -57,7 +57,7 @@ export type { RedTeamTarget, RedTeamOptions, RedTeamScanResult, ProbeResult, Pro
 
 // Lyrie AAV — Blue Team Scorer
 export { LyrieBlueTeam } from "./aav/blue-team";
-export type { DefenseReport, DefenseGrade, CategoryScore, Remediation } from "./aav/blue-team";
+export type { DefenseReport, DefenseGrade, CategoryScore, Remediation as BlueTeamRemediation } from "./aav/blue-team";
 
 // Lyrie AAV — Reporter (SARIF, Markdown, JSON)
 export { AavReporter } from "./aav/reporter";
@@ -291,6 +291,53 @@ export type {
   AdapterFinding,
 } from "./engine/daemon";
 
+// Public Agentic-Attack-Compression live radar dashboard (Feature 3)
+export {
+  anonymizeSignal,
+  aggregateFeed,
+  CompressionSignalStore,
+  handleDashboardRequest,
+  createDashboardServer,
+  startDashboardServer,
+  renderRadarHtml,
+} from "./dashboard";
+export type {
+  AnonymizedSignal,
+  FeedAggregate,
+  FeedSnapshot,
+  CompressionStoreOptions,
+  DashboardServerOptions,
+  ThreatLevel as CompressionThreatLevel,
+  Band as CompressionBand,
+} from "./dashboard";
+
+// Living SBOM exploitability revalidation (Feature 5)
+export {
+  generateSbom,
+  toPurl,
+  canonicalJson,
+  sha256 as sbomSha256,
+  SbomStore,
+  SBOM_TOOL_VERSION,
+  revalidateSbom,
+  computeDeltas,
+  reattest,
+  runScheduledRevalidation,
+} from "./sbom";
+export type {
+  SbomManifest,
+  ManifestComponent,
+  SbomArtifact,
+  SbomComponent,
+  ComponentExploitability,
+  SbomExploitabilitySnapshot,
+  ExploitabilityDelta,
+  DeltaKind,
+  RevalidationReport as SbomRevalidationReport,
+  Reattestation,
+  ScheduledRevalidationResult,
+} from "./sbom";
+
 // Continuous exposure monitoring (`lyrie watch <domain>`)
 export {
   probeDomain,
@@ -428,7 +475,7 @@ export {
 export type { SkillPattern, ExtractionResult, ExtractorLLM, SkillExtractorOptions } from "./evolve/skill-extractor";
 
 export { Contexture, mmrSelect, CONTEXTURE_VERSION, CONTEXTURE_TABLE } from "./evolve/contexture";
-export type { SkillContext, RetrievalResult, ContextureOptions } from "./evolve/contexture";
+export type { SkillContext as ContextureSkillContext, RetrievalResult, ContextureOptions } from "./evolve/contexture";
 
 export { runDreamCycle, findPruneCandidates, pruneSkills, DREAM_VERSION } from "./evolve/dream-cycle";
 export type { DreamReport, DreamCycleOptions, PruneCandidate } from "./evolve/dream-cycle";

@@ -223,7 +223,7 @@ export class CDPClient {
       signal: AbortSignal.timeout(5_000),
     });
     if (!r.ok) throw new Error(`CDP list failed: ${r.status}`);
-    const targets: CDPTarget[] = await r.json();
+    const targets = (await r.json()) as CDPTarget[];
     return targets.filter((t) => t.type === "page");
   }
 
@@ -234,7 +234,7 @@ export class CDPClient {
       { method: "PUT", signal: AbortSignal.timeout(5_000) }
     );
     if (!r.ok) throw new Error(`CDP new tab failed: ${r.status}`);
-    return r.json();
+    return (await r.json()) as CDPTarget;
   }
 
   /** Close a target by id */

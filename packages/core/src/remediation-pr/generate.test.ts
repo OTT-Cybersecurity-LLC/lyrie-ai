@@ -18,6 +18,27 @@ import { generateRemediationPr } from "./generate";
 import type { CommandRunner } from "./pr";
 import type { DependencyFixFinding, MissingHeaderFinding } from "./types";
 import type { RemediationSuggestion } from "../hack/auto-remediation";
+import type { Backend, BackendRunResult } from "../backends/types";
+import { emptySarif } from "../backends/local";
+
+function fakeBackend(result: Partial<BackendRunResult> = {}): Backend {
+  return {
+    kind: "local",
+    displayName: "Fake Backend",
+    isConfigured: () => true,
+    preflight: async () => ({ ok: true }),
+    run: async (): Promise<BackendRunResult> => ({
+      backend: "local",
+      status: "pass",
+      highestSeverity: "none",
+      findingCount: 0,
+      sarif: emptySarif(),
+      durationMs: 3,
+      costUsd: 0,
+      ...result,
+    }),
+  };
+}
 
 function withFixtureRepo<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = mkdtempSync(join(tmpdir(), "lyrie-remediation-fixture-"));
@@ -182,6 +203,123 @@ describe("generateRemediationPr — non-auto-fixable findings", () => {
       };
       const result = await generateRemediationPr(finding, undefined, { repoDir: dir });
       expect(result.attempted).toBe(false);
+    });
+  });
+});
+
+describe("generateRemediationPr — self-healing loop (opt-in revalidate)", () => {
+  test("omitting revalidate: no re-validation, no proof-of-fix (unchanged behavior)", async () => {
+    await withFixtureRepo(async (dir) => {
+      writeFileSync(
+        join(dir, "next.config.ts"),
+        `import type { NextConfig } from "next";\n\nconst nextConfig: NextConfig = {};\n\nexport default nextConfig;\n`,
+        "utf8",
+      );
+      const finding: MissingHeaderFinding = {
+        kind: "missing-security-header",
+        header: "x-frame-options",
+        recommendedValue: "DENY",
+        configFile: "next.config.ts",
+        configKind: "next-config",
+      };
+      const { runner, calls } = fakeCommandRunner();
+      const result = await generateRemediationPr(finding, autoFixableSuggestion, {
+        repoDir: dir,
+        openPr: true,
+        commandRunner: runner,
+      });
+      expect(result.attempted).toBe(true);
+      if (result.attempted) {
+        expect(result.revalidation).toBeUndefined();
+        expect(result.proofOfFix).toBeUndefined();
+      }
+      // Only the 4 git + 1 gh-create calls — no `gh pr comment`.
+      expect(calls.map((c) => c.cmd)).toEqual(["git", "git", "git", "git", "gh"]);
+    });
+  });
+
+  test("revalidate with a passing backend: verified-fixed + proof-of-fix comment posted", async () => {
+    await withFixtureRepo(async (dir) => {
+      writeFileSync(
+        join(dir, "next.config.ts"),
+        `import type { NextConfig } from "next";\n\nconst nextConfig: NextConfig = {};\n\nexport default nextConfig;\n`,
+        "utf8",
+      );
+      const finding: MissingHeaderFinding = {
+        kind: "missing-security-header",
+        header: "x-frame-options",
+        recommendedValue: "DENY",
+        configFile: "next.config.ts",
+        configKind: "next-config",
+      };
+      const { runner, calls } = fakeCommandRunner();
+      const result = await generateRemediationPr(finding, autoFixableSuggestion, {
+        repoDir: dir,
+        openPr: true,
+        commandRunner: runner,
+        revalidate: { backend: fakeBackend({ status: "pass", findingCount: 0 }) },
+      });
+      expect(result.attempted).toBe(true);
+      if (result.attempted) {
+        expect(result.revalidation?.status).toBe("verified-fixed");
+        expect(result.proofOfFix?.ok).toBe(true);
+      }
+      // The extra trailing call is `gh pr comment` with the proof-of-fix body.
+      const last = calls[calls.length - 1];
+      expect(last.cmd).toBe("gh");
+      expect(last.args).toContain("comment");
+      expect(last.args.join(" ")).toContain("Lyrie Self-Heal");
+    });
+  });
+
+  test("revalidate with a focused verify callback returning false: still-vulnerable, comment still posted", async () => {
+    await withFixtureRepo(async (dir) => {
+      writeFileSync(
+        join(dir, "next.config.ts"),
+        `import type { NextConfig } from "next";\n\nconst nextConfig: NextConfig = {};\n\nexport default nextConfig;\n`,
+        "utf8",
+      );
+      const finding: MissingHeaderFinding = {
+        kind: "missing-security-header",
+        header: "x-frame-options",
+        recommendedValue: "DENY",
+        configFile: "next.config.ts",
+        configKind: "next-config",
+      };
+      const { runner } = fakeCommandRunner();
+      const result = await generateRemediationPr(finding, autoFixableSuggestion, {
+        repoDir: dir,
+        openPr: true,
+        commandRunner: runner,
+        revalidate: { verify: async () => false },
+      });
+      expect(result.attempted).toBe(true);
+      if (result.attempted) {
+        expect(result.revalidation?.status).toBe("still-vulnerable");
+        expect(result.proofOfFix?.ok).toBe(true);
+      }
+    });
+  });
+
+  test("revalidate is ignored when no PR is opened (diff-only mode)", async () => {
+    await withFixtureRepo(async (dir) => {
+      const finding: MissingHeaderFinding = {
+        kind: "missing-security-header",
+        header: "content-security-policy",
+        recommendedValue: "default-src 'self'",
+        configFile: "next.config.ts",
+        configKind: "next-config",
+      };
+      const result = await generateRemediationPr(finding, autoFixableSuggestion, {
+        repoDir: dir,
+        revalidate: { backend: fakeBackend({ status: "pass" }) },
+      });
+      expect(result.attempted).toBe(true);
+      if (result.attempted) {
+        // No PR => no revalidation ran.
+        expect(result.pr).toBeUndefined();
+        expect(result.revalidation).toBeUndefined();
+      }
     });
   });
 });

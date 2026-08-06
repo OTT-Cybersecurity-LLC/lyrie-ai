@@ -25,6 +25,7 @@ import { memoryStoreTool, memoryRecallTool, memoryForgetTool } from "./memory/me
 import { imageGenerateTool } from "./media/image-generate";
 import { ttsTool } from "./media/tts";
 import { browserToolDefinition } from "./browser";
+import { EditEngine, type EditApprovalMode } from "../edits/edit-engine";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

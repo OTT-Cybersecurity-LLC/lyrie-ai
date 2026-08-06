@@ -25,13 +25,47 @@ import { fileURLToPath } from "node:url";
 import { generateHeaderFix } from "./header-fix";
 import { generateDependencyFix } from "./dependency-fix";
 import { openRemediationPr, type CommandRunner, type OpenPrResult } from "./pr";
+import {
+  revalidateAndAttach,
+  type AttachProofOfFixResult,
+  type RevalidationResult,
+} from "./revalidate";
 import type {
   GeneratedDiff,
   MechanicalFinding,
   MechanicalFixResult,
   MechanicalFixSkipped,
 } from "./types";
+import type { Backend, BackendResourceHints } from "../backends/types";
 import type { RemediationSuggestion } from "../hack/auto-remediation";
+
+/**
+ * Opt-in self-heal re-validation config. When supplied AND a PR is actually
+ * opened, `generateRemediationPr` re-runs verification against the patched
+ * tree (via `revalidateAndAttach`) and posts a proof-of-fix comment to the
+ * PR. Omitting `revalidate` entirely preserves the previous behavior exactly
+ * (no re-validation, no extra `gh` calls).
+ */
+export interface RevalidateOption {
+  /**
+   * Execution backend to run the re-check on. Pass an explicit backend
+   * instance in tests to avoid any real sandbox network call. Omit to use
+   * `getBackend()` env resolution (defaults to local).
+   */
+  backend?: Backend;
+  /**
+   * Optional focused verification callback — takes priority over the generic
+   * backend re-scan when supplied (see revalidate.ts).
+   */
+  verify?: (repoDir: string, finding: MechanicalFinding) => Promise<boolean>;
+  /**
+   * When true AND no backend override supplied, re-validate with a local
+   * dry-run backend (never spawns a real scan). Safe default for demos.
+   */
+  dryRun?: boolean;
+  /** Resource/timeout hints forwarded to the backend request. */
+  resources?: BackendResourceHints;
+}
 
 export interface GenerateRemediationPrOptions {
   /** Working tree to patch. Required if openPr is true. */
@@ -41,11 +75,25 @@ export interface GenerateRemediationPrOptions {
   baseBranch?: string;
   /** Injectable command runner for tests. */
   commandRunner?: CommandRunner;
+  /**
+   * Opt-in self-healing loop. When present AND `openPr` opened a PR, run
+   * sandboxed re-validation against the patched tree and attach a
+   * proof-of-fix comment to the PR. Omit for no behavior change.
+   */
+  revalidate?: RevalidateOption;
 }
 
 export type GenerateRemediationPrResult =
   | { attempted: false; reason: string }
-  | { attempted: true; diff: GeneratedDiff; pr?: OpenPrResult };
+  | {
+      attempted: true;
+      diff: GeneratedDiff;
+      pr?: OpenPrResult;
+      /** Present only when `revalidate` was supplied AND a PR was opened. */
+      revalidation?: RevalidationResult;
+      /** Present only when a proof-of-fix comment was attached to the PR. */
+      proofOfFix?: AttachProofOfFixResult;
+    };
 
 /** This module's own directory \u2014 used only to compute lyrie-agent's repo root for the self-modification guard. */
 function lyrieAgentRepoRoot(): string {
@@ -130,5 +178,27 @@ export async function generateRemediationPr(
     opts.commandRunner,
   );
 
-  return { attempted: true, diff: result.diff, pr };
+  // ── Self-healing loop (opt-in) ────────────────────────────────────────────
+  // Only runs when the caller explicitly supplied `revalidate` AND a PR was
+  // actually opened. `revalidateAndAttach` itself is a no-op on `pr.ok=false`
+  // / missing prUrl, so no proof-of-fix is ever posted to a PR that failed to
+  // open. Re-validation runs against the same patched working tree.
+  if (!opts.revalidate) {
+    return { attempted: true, diff: result.diff, pr };
+  }
+
+  const { revalidation, attach } = await revalidateAndAttach(
+    {
+      repoDir: opts.repoDir,
+      finding,
+      backend: opts.revalidate.backend,
+      verify: opts.revalidate.verify,
+      dryRun: opts.revalidate.dryRun,
+      resources: opts.revalidate.resources,
+    },
+    pr,
+    opts.commandRunner,
+  );
+
+  return { attempted: true, diff: result.diff, pr, revalidation, proofOfFix: attach };
 }

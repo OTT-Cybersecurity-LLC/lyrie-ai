@@ -183,9 +183,13 @@ export class MiniMaxFleetProvider implements LyrieProvider {
   }
 
   async complete(messages: Message[], options: CompletionOptions): Promise<string> {
+    const safeMessages = messages.map((m) => ({
+      role: m.role === "tool" ? ("user" as const) : m.role,
+      content: m.content,
+    }));
     const msgs = [
       ...(options.system ? [{ role: "system" as const, content: options.system }] : []),
-      ...messages,
+      ...safeMessages,
     ];
     const result = await this.inner.complete("MiniMax-M2.7-highspeed", msgs, {
       maxTokens: options.maxTokens ?? 8192,
@@ -261,7 +265,7 @@ export class HermesFleetProvider implements LyrieProvider {
 
   async complete(messages: Message[], options: CompletionOptions): Promise<string> {
     const lyrieMessages = messages.map((m) => ({ role: m.role, content: m.content }));
-    const result = await this.inner.complete(lyrieMessages as any, {
+    const result = await this.inner.complete("hermes-3-70b", lyrieMessages as any, {
       system: options.system,
       maxTokens: options.maxTokens ?? 8192,
     });
@@ -294,7 +298,7 @@ export class OllamaFleetProvider implements LyrieProvider {
   }
 
   async complete(messages: Message[], options: CompletionOptions): Promise<string> {
-    const result = await this.inner.complete(messages as any, {
+    const result = await this.inner.complete("llama3.2:1b", messages as any, {
       system: options.system,
       maxTokens: options.maxTokens ?? 4096,
     });

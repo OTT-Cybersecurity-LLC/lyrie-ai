@@ -63,7 +63,7 @@ describe("AgentPermissionAnalyzer — critical tools", () => {
     const report = analyzer.analyze(manifest);
     const sqlFinding = report.findings.find((f) => f.tool === "execute_sql");
     expect(sqlFinding).toBeDefined();
-    expect(["critical", "high"]).toContain(sqlFinding?.severity);
+    expect(["critical", "high"]).toContain(sqlFinding!.severity);
   });
 
   it("identity management tools without controls produce critical findings", () => {

@@ -34,7 +34,7 @@ const SUPERAGI_CANDIDATES = [
   join(HOME, "superagi"),
   "/app/SuperAGI",
   process.env.SUPERAGI_DIR,
-].filter(Boolean).filter(existsSync) as string[];
+].filter((p): p is string => Boolean(p)).filter(existsSync);
 
 export function detectSuperAGI(): boolean {
   return SUPERAGI_CANDIDATES.length > 0 ||

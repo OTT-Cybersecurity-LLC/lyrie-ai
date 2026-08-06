@@ -92,7 +92,7 @@ export class ChannelGateway {
           timestamp: Date.now(),
         });
 
-        console.log(`\n${response.content}`);
+        console.log(`\n${response.message.content}`);
         prompt();
       });
     };

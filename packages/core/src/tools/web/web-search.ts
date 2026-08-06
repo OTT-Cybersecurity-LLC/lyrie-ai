@@ -90,7 +90,7 @@ export const webSearchTool = {
     },
     required: ["query"],
   },
-  async execute(params: { query: string; count?: number; country?: string; freshness?: string }) {
+  async execute(params: { query: string; count?: number; country?: string; freshness?: "day" | "week" | "month" }) {
     const searcher = new WebSearch();
     return await searcher.search(params.query, params);
   },

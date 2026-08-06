@@ -56,7 +56,7 @@ export class GCGStrategy {
     this.config = {
       ...DEFAULT_CONFIG,
       host: config.host ?? requireEnv("LYRIE_GPU_HOST"),
-      port: config.port ?? parseInt(process.env.LYRIE_GPU_PORT ?? "", 10) || (() => { throw new Error("GCGStrategy: LYRIE_GPU_PORT env var is required but not set"); })(),
+      port: config.port ?? (parseInt(process.env.LYRIE_GPU_PORT ?? "", 10) || (() => { throw new Error("GCGStrategy: LYRIE_GPU_PORT env var is required but not set"); })()),
       ...config,
     };
   }
