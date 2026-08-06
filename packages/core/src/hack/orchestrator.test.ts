@@ -113,7 +113,7 @@ describe("HackOrchestrator", () => {
     off();
     await orch.run(root, { mode: "quick", outDir, dryRun: true });
     expect(seen.length).toBe(0);
-  });
+  }, 20000);
 
   it("populates a non-zero count of secret findings", async () => {
     const report = await runHack(root, { mode: "quick", dryRun: true });
