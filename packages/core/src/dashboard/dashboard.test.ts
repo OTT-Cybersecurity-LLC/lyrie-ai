@@ -171,7 +171,7 @@ describe("dashboard server (loopback)", () => {
     try {
       const res = await fetch(`http://127.0.0.1:${port}/api/compression/feed`);
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { aggregate: { total: number } };
       expect(body.aggregate.total).toBe(1);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));

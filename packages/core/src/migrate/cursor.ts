@@ -51,7 +51,7 @@ export async function migrateFromCursor(ctx: MigrationContext): Promise<Migratio
     };
   }
 
-  log("Loaded ~/.cursor/settings.json");
+  log.ok("Loaded ~/.cursor/settings.json");
 
   // ── 2. Extract model configuration ──────────────────────────────────────────
   const modelConfig: Record<string, unknown> = {};
@@ -68,7 +68,7 @@ export async function migrateFromCursor(ctx: MigrationContext): Promise<Migratio
       const shortKey = key.replace(/^cursor\./, "");
       modelConfig[shortKey] = settings[key];
       itemsMigrated++;
-      log(`  → Setting: ${key} = ${settings[key]}`);
+      log.ok(`  → Setting: ${key} = ${settings[key]}`);
     }
   }
 
@@ -87,7 +87,7 @@ export async function migrateFromCursor(ctx: MigrationContext): Promise<Migratio
     if (settings[settingKey]) {
       providers.push({ name: providerName, apiKey: settings[settingKey] });
       itemsMigrated++;
-      log(`  → Provider key: ${providerName}`);
+      log.ok(`  → Provider key: ${providerName}`);
     }
   }
 
@@ -104,7 +104,7 @@ export async function migrateFromCursor(ctx: MigrationContext): Promise<Migratio
         .map((d) => d.name);
       extensions.push(...dirs);
       itemsMigrated += dirs.length;
-      log(`  → Extensions: ${dirs.length}`);
+      log.ok(`  → Extensions: ${dirs.length}`);
     } catch {
       warnings.push("Could not read extensions directory");
     }
@@ -122,8 +122,8 @@ export async function migrateFromCursor(ctx: MigrationContext): Promise<Migratio
       extensions,
     };
 
-    writeJson(join(ctx.lyrieDir, "config", "cursor-migration.json"), lyrieConfig);
-    log("Wrote config/cursor-migration.json");
+    writeJson(join(ctx.lyrieDir, "config", "cursor-migration.json"), lyrieConfig, ctx.dryRun);
+    log.ok("Wrote config/cursor-migration.json");
   }
 
   return {

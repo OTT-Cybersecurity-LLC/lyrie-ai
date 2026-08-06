@@ -160,7 +160,7 @@ describe("HackOrchestrator", () => {
     const reportOut = mkdtempSync(join(tmpdir(), "lyrie-hack-ss-"));
     const report = await runHack(root, { mode: "quick", outDir: reportOut });
     expect(report.selfScanRan).toBe(true);
-    expect(["clean", "suspicious", "blocked"]).toContain(report.selfScanVerdict);
+    expect(["clean", "suspicious", "blocked"]).toContain(report.selfScanVerdict!);
     rmSync(reportOut, { recursive: true, force: true });
   });
 

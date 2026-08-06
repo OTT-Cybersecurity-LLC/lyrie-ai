@@ -189,10 +189,12 @@ function createMockFetch(
 
 // ─── Test Setup ───────────────────────────────────────────────────────────────
 
-let origWebSocket: typeof WebSocket;
-let origFetch: typeof fetch;
+let origWebSocket: typeof WebSocket | undefined;
+let origFetch: typeof fetch | undefined;
 
 function setupMocks() {
+  origWebSocket = (global as any).WebSocket;
+  origFetch = (global as any).fetch;
   MockWebSocket.instances = [];
   (global as any).WebSocket = MockWebSocket;
   (global as any).fetch = createMockFetch();
@@ -865,7 +867,6 @@ describe("LyrieBrowser", () => {
 
     // Mock fs.writeFileSync
     let writtenPath = "";
-    const origImport = global.__originalImport;
 
     const browser = new LyrieBrowser();
     const tab = await browser.newTab();

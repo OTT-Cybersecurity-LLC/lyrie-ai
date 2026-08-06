@@ -129,7 +129,6 @@ describe("spawnSubagentTool.execute()", () => {
     let ranTask = "";
     // Temporarily patch the runner
     const original = defaultSubagentRunner.run.bind(defaultSubagentRunner);
-    // @ts-expect-error
     defaultSubagentRunner.run = async (task: string, _opts: any) => {
       ranTask = task;
       return { success: true, output: "stubbed", durationMs: 1, model: "stub" };
@@ -137,7 +136,6 @@ describe("spawnSubagentTool.execute()", () => {
 
     const res = await spawnSubagentTool.execute({ task: "scan example.com" });
 
-    // @ts-expect-error
     defaultSubagentRunner.run = original;
 
     expect(ranTask).toBe("scan example.com");
@@ -147,7 +145,6 @@ describe("spawnSubagentTool.execute()", () => {
 
   it("propagates sub-agent error correctly", async () => {
     const original = defaultSubagentRunner.run.bind(defaultSubagentRunner);
-    // @ts-expect-error
     defaultSubagentRunner.run = async () => ({
       success: false,
       output: "",
@@ -158,7 +155,6 @@ describe("spawnSubagentTool.execute()", () => {
 
     const res = await spawnSubagentTool.execute({ task: "boom" });
 
-    // @ts-expect-error
     defaultSubagentRunner.run = original;
 
     expect(res.success).toBe(false);
@@ -167,7 +163,6 @@ describe("spawnSubagentTool.execute()", () => {
 
   it("includes durationMs and model in metadata on success", async () => {
     const original = defaultSubagentRunner.run.bind(defaultSubagentRunner);
-    // @ts-expect-error
     defaultSubagentRunner.run = async () => ({
       success: true,
       output: "all good",
@@ -177,7 +172,6 @@ describe("spawnSubagentTool.execute()", () => {
 
     const res = await spawnSubagentTool.execute({ task: "check CVEs" });
 
-    // @ts-expect-error
     defaultSubagentRunner.run = original;
 
     expect(res.metadata?.durationMs).toBe(99);
@@ -187,7 +181,6 @@ describe("spawnSubagentTool.execute()", () => {
   it("passes model override to runner", async () => {
     let capturedModel: string | undefined;
     const original = defaultSubagentRunner.run.bind(defaultSubagentRunner);
-    // @ts-expect-error
     defaultSubagentRunner.run = async (_task: string, opts: any) => {
       capturedModel = opts.model;
       return { success: true, output: "ok", durationMs: 1, model: opts.model ?? "default" };
@@ -195,7 +188,6 @@ describe("spawnSubagentTool.execute()", () => {
 
     await spawnSubagentTool.execute({ task: "check", model: "claude-opus-4-6" });
 
-    // @ts-expect-error
     defaultSubagentRunner.run = original;
 
     expect(capturedModel).toBe("claude-opus-4-6");
@@ -204,7 +196,6 @@ describe("spawnSubagentTool.execute()", () => {
   it("passes timeoutSeconds to runner", async () => {
     let capturedTimeout: number | undefined;
     const original = defaultSubagentRunner.run.bind(defaultSubagentRunner);
-    // @ts-expect-error
     defaultSubagentRunner.run = async (_task: string, opts: any) => {
       capturedTimeout = opts.timeoutSeconds;
       return { success: true, output: "ok", durationMs: 1, model: "stub" };
@@ -212,7 +203,6 @@ describe("spawnSubagentTool.execute()", () => {
 
     await spawnSubagentTool.execute({ task: "quick task", timeoutSeconds: 60 });
 
-    // @ts-expect-error
     defaultSubagentRunner.run = original;
 
     expect(capturedTimeout).toBe(60);
@@ -221,7 +211,6 @@ describe("spawnSubagentTool.execute()", () => {
   it("passes context=fork to runner", async () => {
     let capturedCtx: string | undefined;
     const original = defaultSubagentRunner.run.bind(defaultSubagentRunner);
-    // @ts-expect-error
     defaultSubagentRunner.run = async (_task: string, opts: any) => {
       capturedCtx = opts.context;
       return { success: true, output: "ok", durationMs: 1, model: "stub" };
@@ -229,7 +218,6 @@ describe("spawnSubagentTool.execute()", () => {
 
     await spawnSubagentTool.execute({ task: "fork task", context: "fork", parentContext: "ctx" });
 
-    // @ts-expect-error
     defaultSubagentRunner.run = original;
 
     expect(capturedCtx).toBe("fork");

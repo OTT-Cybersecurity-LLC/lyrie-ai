@@ -67,13 +67,13 @@ describe("IrcBot", () => {
 
   it("ingestEvent dispatches to handler", async () => {
     const bot = new IrcBot({ enabled: true, server: "irc.libera.chat", nick: "lyrie" });
-    let seen: string | null = null;
+    const seenBox: { value: string | null } = { value: null };
     bot.onMessage(async (m) => {
-      seen = `${m.senderId}:${m.text}`;
+      seenBox.value = `${m.senderId}:${m.text}`;
       return { text: "ok" };
     });
     await bot.start();
     await bot.ingestEvent({ nick: "alice", target: "#lyrie", message: "hello" });
-    expect(seen).toBe("alice:hello");
+    expect(seenBox.value).toBe("alice:hello");
   });
 });

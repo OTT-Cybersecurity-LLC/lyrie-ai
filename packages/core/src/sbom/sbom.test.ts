@@ -9,10 +9,10 @@
 import { describe, expect, test } from "bun:test";
 import { ThreatIntelClient } from "../pentest/threat-intel/client";
 import type { ThreatAdvisory } from "../pentest/threat-intel/types";
-import { generateSbom, SbomStore, toPurl, sha256 } from "./generate";
+import { generateSbom, SbomStore, toPurl, sha256, type SbomManifest } from "./generate";
 import { revalidateSbom, computeDeltas, reattest } from "./revalidate";
 import { runScheduledRevalidation } from "./scheduler";
-import type { SbomManifest, SbomExploitabilitySnapshot } from "./types";
+import type { SbomExploitabilitySnapshot, DeltaKind } from "./types";
 
 const MANIFEST: SbomManifest = {
   name: "demo-app",
@@ -131,7 +131,7 @@ describe("computeDeltas", () => {
       { bomRef: "b", name: "b", exploitable: true, severity: "medium", score: 40, cves: ["Y"], inKev: false },
     ]);
     const kinds = computeDeltas(prev, cur).map((d) => d.kind).sort();
-    expect(kinds).toEqual(["component-removed", "severity-decreased", "severity-increased"].sort());
+    expect(kinds).toEqual((<DeltaKind[]>["component-removed", "severity-decreased", "severity-increased"]).sort());
   });
 });
 

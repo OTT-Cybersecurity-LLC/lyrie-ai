@@ -190,9 +190,11 @@ export const defaultLocalScanExecutor: LocalScanExecutor = async (request, confi
     throw new Error(`local scan failed: ${result.reason}${result.detail ? ` — ${result.detail}` : ""}`);
   }
 
+  const okResult = result as Exclude<typeof result, { ok: false }>;
+
   return {
-    findings: result.findings,
-    filesScanned: result.filesScanned,
+    findings: okResult.findings,
+    filesScanned: okResult.filesScanned,
   };
 };
 

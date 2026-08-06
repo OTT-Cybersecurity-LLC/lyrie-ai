@@ -57,7 +57,7 @@ function validatedFinding(severity: Severity, confirmed = true) {
 function secretFinding(severity: Severity) {
   return {
     id: `s-${severity}-${Math.random()}`,
-    type: "generic-secret" as const,
+    type: "generic-high-entropy" as const,
     severity,
     file: "config.js",
     line: 1,

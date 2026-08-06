@@ -20,6 +20,7 @@ import {
   safeReadJson,
   safeReadText,
   writeJson,
+  writeText,
   listDirs,
   listFiles,
   MigrationLogger,

@@ -10,7 +10,6 @@ import { getById, getByCategory } from "./corpus/index";
 const DRY_TARGET: RedTeamTarget = {
   endpoint: "http://localhost:11434/v1",
   model: "llama3",
-  dryRun: true,
 };
 
 // ─── scoreVerdict tests ───────────────────────────────────────────────────────

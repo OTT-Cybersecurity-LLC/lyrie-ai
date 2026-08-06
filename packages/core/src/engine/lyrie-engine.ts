@@ -271,7 +271,7 @@ export class LyrieEngine {
       timestamp: Date.now(),
     };
 
-    await this.skills.checkForImprovement(message, responseMsg);
+    await this.skills.checkForImprovement(message.content, responseMsg.content, [], totalToolCalls > 0);
 
     return {
       message: responseMsg,

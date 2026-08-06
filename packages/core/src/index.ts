@@ -57,7 +57,7 @@ export type { RedTeamTarget, RedTeamOptions, RedTeamScanResult, ProbeResult, Pro
 
 // Lyrie AAV — Blue Team Scorer
 export { LyrieBlueTeam } from "./aav/blue-team";
-export type { DefenseReport, DefenseGrade, CategoryScore, Remediation } from "./aav/blue-team";
+export type { DefenseReport, DefenseGrade, CategoryScore, Remediation as BlueTeamRemediation } from "./aav/blue-team";
 
 // Lyrie AAV — Reporter (SARIF, Markdown, JSON)
 export { AavReporter } from "./aav/reporter";
@@ -475,7 +475,7 @@ export {
 export type { SkillPattern, ExtractionResult, ExtractorLLM, SkillExtractorOptions } from "./evolve/skill-extractor";
 
 export { Contexture, mmrSelect, CONTEXTURE_VERSION, CONTEXTURE_TABLE } from "./evolve/contexture";
-export type { SkillContext, RetrievalResult, ContextureOptions } from "./evolve/contexture";
+export type { SkillContext as ContextureSkillContext, RetrievalResult, ContextureOptions } from "./evolve/contexture";
 
 export { runDreamCycle, findPruneCandidates, pruneSkills, DREAM_VERSION } from "./evolve/dream-cycle";
 export type { DreamReport, DreamCycleOptions, PruneCandidate } from "./evolve/dream-cycle";

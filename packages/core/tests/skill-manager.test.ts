@@ -162,7 +162,7 @@ describe("SkillManager", () => {
   // ─── Self-Improvement ─────────────────────────────────────────────────────
 
   it("checkForImprovement runs without throwing", async () => {
-    const result = await skills.checkForImprovement("test input", { ok: true });
+    const result = await skills.checkForImprovement("test input", { ok: true }, [], true);
     // checkForImprovement returns either null or a SkillExtractionCandidate;
     // we just want to make sure it doesn't throw
     expect(result === null || typeof result === "object").toBe(true);

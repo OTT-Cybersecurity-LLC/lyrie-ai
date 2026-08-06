@@ -33,8 +33,14 @@ export interface EngineMessage {
   timestamp?: number;
 }
 
+/** Matches LyrieEngine's ProcessResult shape: { message: { content }, toolCallsMade, turns, model, durationMs }. */
+export interface EngineProcessResult {
+  message: EngineMessage;
+  content?: string;
+}
+
 export interface EngineInterface {
-  process(message: EngineMessage): Promise<EngineMessage>;
+  process(message: EngineMessage): Promise<EngineProcessResult>;
   readonly running: boolean;
 }
 

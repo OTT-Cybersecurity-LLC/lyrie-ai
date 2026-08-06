@@ -52,14 +52,14 @@ export async function migrateFromClaudeCode(ctx: MigrationContext): Promise<Migr
     };
   }
 
-  log("Loaded claude_desktop_config.json");
+  log.ok("Loaded claude_desktop_config.json");
 
   // ── 2. Import MCP servers ────────────────────────────────────────────────────
   const mcpServers: Record<string, any> = desktopConfig.mcpServers ?? {};
   const importedMcpServers: any[] = [];
 
   for (const [name, serverConfig] of Object.entries(mcpServers)) {
-    log(`  → MCP server: ${name}`);
+    log.ok(`  → MCP server: ${name}`);
     importedMcpServers.push({
       name,
       command: serverConfig.command,
@@ -82,7 +82,7 @@ export async function migrateFromClaudeCode(ctx: MigrationContext): Promise<Migr
   for (const [configKey, providerName] of Object.entries(providerKeys)) {
     const value = desktopConfig[configKey] ?? desktopConfig.env?.[configKey.toUpperCase()];
     if (value) {
-      log(`  → Provider key: ${providerName}`);
+      log.ok(`  → Provider key: ${providerName}`);
       providers.push({ name: providerName, apiKey: value });
       itemsMigrated++;
     }
@@ -105,8 +105,8 @@ export async function migrateFromClaudeCode(ctx: MigrationContext): Promise<Migr
 
     if (model) lyrieConfig.defaultModel = model;
 
-    writeJson(join(ctx.lyrieDir, "config", "claude-code-migration.json"), lyrieConfig);
-    log("Wrote config/claude-code-migration.json");
+    writeJson(join(ctx.lyrieDir, "config", "claude-code-migration.json"), lyrieConfig, ctx.dryRun);
+    log.ok("Wrote config/claude-code-migration.json");
   }
 
   return {
