@@ -21,15 +21,21 @@ _Pentests apps. Defends agents. Researches binaries. Trains itself. One daemon._
 
 ---
 
-## 🆕 What's New in v3.1.0
+## 🆕 What's New in v3.3.0
 
-- **Memory Encryption**: XChaCha20-Poly1305 implementation for sensitive threat data (`@noble/ciphers`)
-- **7 New PoC Generators**: prompt injection, auth bypass, CSRF, open redirect, race condition, secret exposure, XXE
-- **3 New Deep Scanners**: Rust analysis, taint engine, AI deep analysis
-- **UI Workspace Fix**: Proper `@lyrie/atp` workspace resolution
-- **Expanded Test Suite**: 1,737 tests passing across `@lyrie/atp`, `@lyrie/core`, `@lyrie/gateway`, `@lyrie/mcp`, `@lyrie/ui`
-- **New Security Modules**: Domain verification, ML-based threat classifier, URL guardianship
-- **Fully backward compatible** with v3.0.0 — no migration required
+- **Self-Heal Loop**: closed end-to-end — detect → remediate → revalidate → attach, with automated remediation-PR revalidation and rogue-AI hooks
+- **Compression Dashboard**: attack-compression telemetry aggregated across store, server, and a live UI
+- **Living SBOM**: generate, revalidate, and schedule software bill-of-materials with typed manifests
+- **ATP Vaccine & Kill-Switch**: agent vaccine, trust attestation, and kill-switch integration for the Agent Trust Protocol
+- **AAV Expansion**: Crescendo + TAP multi-turn adversarial attack strategies (alongside PAIR / GCG / AutoDAN)
+- **1,977 tests passing** across `@lyrie/atp`, `@lyrie/core`, `@lyrie/gateway`, `@lyrie/mcp`, `@lyrie/ui`
+- **Fully backward compatible** with v3.x — no migration required
+
+### Since v3.1.0
+
+- **v3.2.0** — ATP CLI, standalone MCP Shield middleware, `lyrie hack` trust score, OAST audit
+- **v3.2.1** — memory-recall importance fix
+- **v3.2.2** — stability & maintenance
 
 See [CHANGELOG.md](CHANGELOG.md) for the complete list.
 
